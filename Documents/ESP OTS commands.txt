@@ -1,0 +1,10 @@
+Create new object:
+	Alarm: 		0100000000020012ac420261a2ed11ba29b81308cc
+	Ringtone: 	0100000000030012ac420261a2ed11ba29b81308cc
+
+
+Alarm action write:
+01008EA23663054B55525741FF00010503  - state 1/mode 0/timestamp 6336 A28E/len 5/KURWA/vol 256/rising 0/nap 1/dur 5/amount 3
+00028EA23663054B55525741FF01000700  - state 0/mode 2/timestamp 6336 A28E/len 5/KURWA/vol 256/rising 1/nap 0/dur 7/amount always
+00018EA2366307054B555257415F01000700  - state 0/mode 1/timestamp 6336 A28E/ days 5F/len 5/KURWA/vol 256/rising 1/nap 0/dur 7/amount always
+
