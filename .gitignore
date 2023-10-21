@@ -51,6 +51,6 @@ Module.symvers
 Mkfile.old
 dkms.conf
 
-.vscode/
-.devcontainer/
+.vscode/*
+.devcontainer/*
 build/
