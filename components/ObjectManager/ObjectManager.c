@@ -2,19 +2,23 @@
 #include "ObjectManagerIdList.h"
 #include "ObjectTransfer_defs.h"
 #include "FilterOrder.h"
-#include "inwokacja.h"
-#include "esp_log.h"
+#include "project_defs.h"
+
 #include <string.h>
 #include <stdlib.h>
+#include <inttypes.h>
+#include "esp_log.h"
 #include "esp_err.h"
 #include "esp_spiffs.h"
+
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include "FreeRTOSConfig.h"
-#include "time.h"
-//#include "portmacro.h"
 
-//#define REMOVE
+#include "time.h"
+#include <sys/stat.h>
+#include <dirent.h>
+#include <unistd.h>
 
 #define OBJECT_TAG "FILESYSTEM"
 #define MAX_FILES_NUMBER 5
@@ -37,88 +41,195 @@ static void ObjectManager_print_file();
 static void ObjectManager_print_current_object();
 static void ObjectManager_set_current_object_from_file(uint64_t id);
 
-void ObjectManager_init(void)
+static esp_err_t ObjectManager_init_directories()
 {
-    ESP_LOGI(OBJECT_TAG, "Initializing SPIFFS");
-
-    esp_err_t ret = esp_vfs_spiffs_register(&conf);
-
-    if (ret != ESP_OK) {
-        if (ret == ESP_FAIL) {
-            ESP_LOGE(OBJECT_TAG, "Failed to mount or format filesystem");
-
-        } else if (ret == ESP_ERR_NOT_FOUND) {
-            ESP_LOGE(OBJECT_TAG, "Failed to find SPIFFS partition");
-        } else {
-            ESP_LOGE(OBJECT_TAG, "Failed to initialize SPIFFS (%s)", esp_err_to_name(ret));
-        }
-        return;
-    }
-
-    size_t total = 0, used = 0;
-    ret = esp_spiffs_info(conf.partition_label, &total, &used);
-    if (ret != ESP_OK) {
-        ESP_LOGE(OBJECT_TAG, "Failed to get SPIFFS partition information (%s)", esp_err_to_name(ret));
-    } else {
-        ESP_LOGI(OBJECT_TAG, "Partition size: total: %d, used: %d", total, used);
-    }
-
-    #ifdef REMOVE
-    remove(FILE_LIST_NAME);
-    remove("/spiffs/100.txt");
-    remove("/spiffs/101.txt");
-    remove("/spiffs/102.txt");
-    remove("/spiffs/103.txt");
-    remove("/spiffs/104.txt");
-    remove("/spiffs/105.txt");
-    remove("/spiffs/106.txt");
-    remove("/spiffs/107.txt");
-    remove("/spiffs/108.txt");
-    remove("/spiffs/109.txt");
-    remove("/spiffs/10a.txt");
-    remove("/spiffs/10b.txt");
-    remove("/spiffs/10c.txt");
-    remove("/spiffs/10d.txt");
-    remove("/spiffs/10e.txt");
-    remove("/spiffs/10f.txt");
-    remove("/spiffs/110.txt");
-    remove("/spiffs/111.txt");
-    remove("/spiffs/112.txt");
-    remove("/spiffs/113.txt");
-    remove("/spiffs/114.txt");
-    remove("/spiffs/115.txt");
-    remove("/spiffs/116.txt");
-    remove("/spiffs/117.txt");
-    remove("/spiffs/118.txt");
-    remove("/spiffs/119.txt");
-    remove("/spiffs/11a.txt");
-    remove("/spiffs/11b.txt");
-    remove("/spiffs/11c.txt");
-    remove("/spiffs/11d.txt");
-    remove("/spiffs/11e.txt");
-
-    #else
-    FILE* stream = fopen(FILE_LIST_NAME, "a+");
-    fseek( stream, 0, SEEK_SET );
-    char line[50];
-    uint64_t id;
-    char *ptr;
-
-    while(fgets(line, sizeof(line), stream))
+    DIR *directory = opendir(MOUNT_POINT);
+    if (directory == NULL)
     {
-        ESP_LOGI(OBJECT_TAG, "Line: %s", line);
-        id = strtoull(line, &ptr, 16);
+        ESP_LOGE(OBJECT_TAG, "SD Card directory not found");
+        return ESP_ERR_NOT_FOUND;
+    }
 
-        if(id)
+    ESP_LOGI(OBJECT_TAG, "Listing files on SD CARD");
+    struct dirent *entry;
+    while ((entry = readdir(directory)) != NULL)
+    {
+        ESP_LOGI(OBJECT_TAG, "  [%d] %s", entry->d_ino, entry->d_name);
+    }
+
+    if (directory)
+    {
+        closedir(directory);
+    }
+
+    directory = opendir(ALARMS_PATH);
+    if (directory == NULL)
+    {
+        ESP_LOGW(OBJECT_TAG, "No alarms directory on SC CARD. Creating a new one...");
+        int ret = mkdir(ALARMS_PATH, ACCESSPERMS);
+        if (ret)
         {
-            ObjectManager_list_add_by_id(id);
-            ESP_LOGI(OBJECT_TAG, "File found: /spiffs/%x.txt", (uint32_t)id);
+            ESP_LOGE(OBJECT_TAG, "Creating alarms folder failed.");
+            return ESP_FAIL;
         }
     }
-    fclose(stream);
+    else
+    {
+        closedir(directory);
+    }
+    
+    directory = opendir(RIGNTONES_PATH);
+    if (directory == NULL)
+    {
+        ESP_LOGW(OBJECT_TAG, "No ringtones directory on SC CARD. Creating a new one...");
+        int ret = mkdir(RIGNTONES_PATH, ACCESSPERMS);
+        if (ret)
+        {
+            ESP_LOGE(OBJECT_TAG, "Creating ringtones folder failed. err=%d", ret);
+            return ESP_FAIL;
+        }
+    }
+    else
+    {
+        closedir(directory);
+    }
+
+    return ESP_OK;
+}
+
+static esp_err_t ObjectManager_init_list()
+{
+    DIR *alarms_directory = opendir(ALARMS_PATH);
+    if (alarms_directory == NULL)
+    {
+        ESP_LOGE(OBJECT_TAG, "Open alarms direction fail.");
+        return ESP_ERR_NOT_FOUND;
+    }
+
+    DIR *ringtones_directory = opendir(RIGNTONES_PATH);
+    if (ringtones_directory == NULL)
+    {
+        ESP_LOGE(OBJECT_TAG, "Open ringtones direction fail.");
+        return ESP_ERR_NOT_FOUND;
+    }
+
+    struct dirent *entry;
+    while ((entry = readdir(alarms_directory)) != NULL)
+    {
+        if ( strstr(entry->d_name, ALARM_FILE_TYPE) == NULL )
+        {
+            ESP_LOGW(OBJECT_TAG, "File %s is not a alarm type: %s. Deleting file.", entry->d_name, ALARM_FILE_TYPE);
+            int result = remove(entry->d_name);
+            if (result)
+            {
+                ESP_LOGW(OBJECT_TAG, "Removeing file %s failed.", entry->d_name);
+            }
+        }
+
+        int result = access(entry->d_name, F_OK);
+        ESP_LOGI(OBJECT_TAG, "Check if %s is a file.", entry->d_name);
+        if (result)
+        {
+            continue;
+        }
+        ESP_LOGI(OBJECT_TAG, "Adding file %s to list.", entry->d_name);
+
+        FILE *alarm_file = fopen(entry->d_name, "r");
+        if (alarm_file == NULL)
+        {
+            ESP_LOGE(OBJECT_TAG, "Opening %s file failed.", entry->d_name);
+            continue;
+        }
+
+        struct stat file_stats;
+        result = fstat(fileno(alarm_file), &file_stats);
+        if (result)
+        {
+            ESP_LOGW(OBJECT_TAG, "Getting file %s stats failed.", entry->d_name);
+        }
+        else
+        {   
+            ESP_LOGI(OBJECT_TAG, "File ID = %d.", file_stats.st_dev);
+            ObjectManager_list_add_by_id(file_stats.st_dev);
+        }
+
+        result = fclose(alarm_file);
+        if (result)
+        {
+            ESP_LOGE(OBJECT_TAG, "Closing %s file failed.", entry->d_name);
+        }
+    }
+
+    while ((entry = readdir(ringtones_directory)) != NULL)
+    {
+        if ( strstr(entry->d_name, RINGTONE_FILE_TYPE) == NULL )
+        {
+            ESP_LOGW(OBJECT_TAG, "File %s is not a alarm type: %s. Deleting file.", entry->d_name, RINGTONE_FILE_TYPE);
+            int result = remove(entry->d_name);
+            if (result)
+            {
+                ESP_LOGW(OBJECT_TAG, "Removeing file %s failed.", entry->d_name);
+            }
+        }
+
+        int result = access(entry->d_name, F_OK);
+        ESP_LOGI(OBJECT_TAG, "Check if %s is a file.", entry->d_name);
+        if (result)
+        {
+            continue;
+        }
+        ESP_LOGI(OBJECT_TAG, "Adding file %s to list.", entry->d_name);
+
+        FILE *ringtone_file = fopen(entry->d_name, "r");
+        if (ringtone_file == NULL)
+        {
+            ESP_LOGE(OBJECT_TAG, "Opening %s file failed.", entry->d_name);
+            continue;
+        }
+
+        //TODO add to list
+        struct stat file_stats;
+        result = fstat(fileno(ringtone_file), &file_stats);
+        if (result)
+        {
+            ESP_LOGW(OBJECT_TAG, "Getting file %s stats failed.", entry->d_name);
+        }
+        else
+        {   
+            ESP_LOGI(OBJECT_TAG, "File ID = %d.", file_stats.st_dev);
+            ObjectManager_list_add_by_id(file_stats.st_dev);
+        }
+
+        result = fclose(ringtone_file);
+        if (result)
+        {
+            ESP_LOGE(OBJECT_TAG, "Closing %s file failed.", entry->d_name);
+        }
+    }
 
     FilterOrder_make_list();
-    #endif
+
+    return ESP_OK;
+}
+
+esp_err_t ObjectManager_init(void)
+{   
+    
+    esp_err_t ret = ObjectManager_init_directories();
+    if (ret)
+    {
+        ESP_LOGE(OBJECT_TAG, "Object Manager directories initialization fail. err=%d", ret);
+        return ret;
+    }
+
+    ret = ObjectManager_init_list();
+    if (ret)
+    {
+        ESP_LOGE(OBJECT_TAG, "Object Manager list initialization fail. err=%d", ret);
+        return ret;
+    }
+
+    return ESP_OK;
 }
 
 object_t* ObjectManager_get_object(void)
@@ -134,9 +245,9 @@ void ObjectManager_null_current_object(void)
 esp_err_t ObjectManager_create_object(uint32_t size, esp_bt_uuid_t type, oacp_op_code_result_t *result)
 {
     size_t total = 0, used = 0;
-    esp_err_t ret = esp_spiffs_info(conf.partition_label, &total, &used);
+    esp_spiffs_info(conf.partition_label, &total, &used);
 
-    ESP_LOGI(OBJECT_TAG, "Requested object size: %u", size);
+    ESP_LOGI(OBJECT_TAG, "Requested object size: %" PRIu32, size);
 
     if(size > total - used)
     {
@@ -179,7 +290,7 @@ esp_err_t ObjectManager_create_object(uint32_t size, esp_bt_uuid_t type, oacp_op
 
     ESP_LOGI(OBJECT_TAG, "Creating object");
     object_id_list_t* object = ObjectManager_list_add();
-    ESP_LOGI(OBJECT_TAG, "Object created, ID: %x", (uint32_t)object->id);
+    ESP_LOGI(OBJECT_TAG, "Object created, ID: %" PRIx64, object->id);
 
     if(current_object == NULL)
     {
@@ -229,7 +340,7 @@ esp_err_t ObjectManager_create_object(uint32_t size, esp_bt_uuid_t type, oacp_op
     fprintf(f, "\n");
     fprintf(f, "Properties: 0000000%02x\n", PROPERTY_ALL_WITHOUT_MARK);
     fclose(f);
-    ESP_LOGI(OBJECT_TAG, "File created: %x.txt", (uint32_t)object->id);
+    ESP_LOGI(OBJECT_TAG, "File created: %" PRIx64 ".txt", object->id);
 
     char id_string[20];
     ESP_LOGI(OBJECT_TAG, "ID converted to string: %s\n", id_to_string(id_string, object->id));
@@ -503,7 +614,7 @@ esp_err_t ObjectManager_request_number(uint32_t *number, olcp_op_code_result_t *
         object = object->next;
     }
 
-    ESP_LOGI(OBJECT_TAG, "Number of objects: %u", *number);
+    ESP_LOGI(OBJECT_TAG, "Number of objects: %" PRIu32, *number);
     *result = OLCP_RES_SUCCESS;
     return ESP_OK;
 }
@@ -596,7 +707,7 @@ esp_err_t ObjectManager_change_alarm_data_in_file()
     fprintf(f, "ALARM PROPERTIES\n");
     fprintf(f, "Enable: %02x\n", current_object->params.alarm.enable);
     fprintf(f, "Mode: %02x\n", current_object->params.alarm.mode);
-    fprintf(f, "Timestamp: %08x\n", current_object->params.alarm.timestamp);
+    fprintf(f, "Timestamp: %08" PRIx32 "\n", current_object->params.alarm.timestamp);
     fprintf(f, "Days: %02x\n", current_object->params.alarm.days);
     fprintf(f, "Description length: %01x\n", current_object->params.alarm.description_len);
     fprintf(f, "Description: ");
@@ -723,7 +834,7 @@ static void ObjectManager_print_current_object()
         }
         printf("\n");
         printf("ID: %llx\n", current_object->id);
-        printf("Properties: 0x%x\n\n", current_object->properties);
+        printf("Properties: 0x%" PRIx32 "\n\n", current_object->properties);
     }
 
     if(ObjectManager_check_type(current_object->type.uuid.uuid128) == ALARM_TYPE && current_object->params.alarm.set)

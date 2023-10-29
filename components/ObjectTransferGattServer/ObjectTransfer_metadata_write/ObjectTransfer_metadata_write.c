@@ -147,7 +147,7 @@ static esp_err_t ObjectTransfer_write_properties(esp_gatt_if_t gatts_if, esp_ble
     }
 
     object->properties = new_properties;
-    ESP_LOGI("WRITE", "Object properties changed to: 0x%x", object->properties);
+    ESP_LOGI("WRITE", "Object properties changed to: 0x%" PRIx32, object->properties);
     ret = esp_ble_gatts_set_attr_value(handle_table[OPT_IDX_CHAR_OBJECT_PROPERTIES_VAL], 4, (uint8_t*)&object->properties);
 
     if(param->write.need_rsp)
@@ -288,14 +288,13 @@ static esp_err_t ObjectTransfer_write_OACP(esp_gatt_if_t gatts_if, esp_ble_gatts
 
     esp_gatt_rsp_t rsp;
     rsp.handle = handle_table[OPT_IDX_CHAR_OBJECT_OACP_VAL];
-    esp_err_t ret;
 
     if(param->write.len == 0 && param->write.need_rsp)
     {
         ESP_LOGE(TAG, "INVALID ATTR VAL LENGTH");
         ESP_LOGE(TAG, "LEN: %d", param->write.len);
 
-        ret = esp_ble_gatts_send_response(gatts_if, param->write.conn_id, param->write.trans_id, INVALID_ATTR_VAL_LENGTH, &rsp);
+        esp_ble_gatts_send_response(gatts_if, param->write.conn_id, param->write.trans_id, INVALID_ATTR_VAL_LENGTH, &rsp);
         return ESP_OK;
     }
 
@@ -472,14 +471,13 @@ static esp_err_t ObjectTransfer_write_OLCP(esp_gatt_if_t gatts_if, esp_ble_gatts
 
     esp_gatt_rsp_t rsp;
     rsp.handle = handle_table[OPT_IDX_CHAR_OBJECT_OLCP_VAL];
-    esp_err_t ret;
 
     if(param->write.len == 0 && param->write.need_rsp)
     {
         ESP_LOGE(TAG, "INVALID ATTR VAL LENGTH");
         ESP_LOGE(TAG, "LEN: %d", param->write.len);
 
-        ret = esp_ble_gatts_send_response(gatts_if, param->write.conn_id, param->write.trans_id, INVALID_ATTR_VAL_LENGTH, &rsp);
+        esp_ble_gatts_send_response(gatts_if, param->write.conn_id, param->write.trans_id, INVALID_ATTR_VAL_LENGTH, &rsp);
         return ESP_OK;
     }
 

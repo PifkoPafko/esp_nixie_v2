@@ -60,7 +60,7 @@ typedef struct object{
 #define ALARM_TYPE 0
 #define RINGTONE_TYPE 1
 
-void ObjectManager_init(void);
+esp_err_t ObjectManager_init(void);
 object_t* ObjectManager_get_object(void);
 void ObjectManager_null_current_object(void);
 esp_err_t ObjectManager_create_object(uint32_t size, esp_bt_uuid_t type, oacp_op_code_result_t *result);

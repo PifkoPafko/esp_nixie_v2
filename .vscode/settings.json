@@ -62,9 +62,16 @@
     "xtr1common": "c",
     "xutility": "c",
     "set": "c",
-    "algorithm": "c"
+    "algorithm": "c",
+    "esp_bt_defs.h": "c",
+    "stat.h": "c",
+    "project_defs.h": "c",
+    "dirent.h": "c"
   },
   "idf.flashType": "UART",
-  "idf.portWin": "COM7",
-  "idf.adapterTargetName": "esp32"
+  "idf.portWin": "COM3",
+  "idf.adapterTargetName": "esp32s3",
+  "idf.openOcdConfigs": [
+    "board/esp32s3-bridge.cfg"
+  ]
 }
