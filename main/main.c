@@ -179,7 +179,6 @@ void app_main(void)
             return;
         }
     }
-    ESP_ERROR_CHECK( ret );
 
     ESP_LOGI(MAIN_TAG, "Initializing bluetooth");
     ret = bt_init();
