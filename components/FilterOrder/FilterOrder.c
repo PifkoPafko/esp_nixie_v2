@@ -291,12 +291,8 @@ static int size_compare(uint64_t rID, uint64_t lID, bool asc)
 
 static char* read_name_from_file(char* dest, uint64_t id)
 {
-    char file[30];
-    strcpy(file, "/spiffs/");
-    itoa(id, &file[8], 16);
-    strcat(file, ".txt");
+    FILE* f = ObjectManager_open_file("r", id);
 
-    FILE* f = fopen(file, "r");
     char line[50];
 
     fgets(line, sizeof(line), f);
@@ -316,12 +312,7 @@ static char* read_name_from_file(char* dest, uint64_t id)
 
 static uint8_t* read_type_from_file(uint8_t* dest, uint64_t id)
 {
-    char file[30];
-    strcpy(file, "/spiffs/");
-    itoa(id, &file[8], 16);
-    strcat(file, ".txt");
-
-    FILE* f = fopen(file, "r");
+    FILE* f = ObjectManager_open_file("r", id);
     char line[50];
 
     fgets(line, sizeof(line), f);
@@ -349,12 +340,7 @@ static uint8_t* read_type_from_file(uint8_t* dest, uint64_t id)
 
 static uint32_t read_current_size_from_file(uint64_t id)
 {
-    char file[30];
-    strcpy(file, "/spiffs/");
-    itoa(id, &file[8], 16);
-    strcat(file, ".txt");
-
-    FILE* f = fopen(file, "r");
+    FILE* f = ObjectManager_open_file("r", id);
     char line[50];
 
     fgets(line, sizeof(line), f);
@@ -496,12 +482,7 @@ static bool current_size_between(uint64_t id)
 
 static bool alloc_size_between(uint64_t id)
 {
-    char file[30];
-    strcpy(file, "/spiffs/");
-    itoa(id, &file[8], 16);
-    strcat(file, ".txt");
-
-    FILE* f = fopen(file, "r");
+    FILE* f = ObjectManager_open_file("r", id);
     char line[50];
 
     fgets(line, sizeof(line), f);
@@ -526,12 +507,7 @@ static bool alloc_size_between(uint64_t id)
 
 static bool marked_objects(uint64_t id)
 {
-    char file[30];
-    strcpy(file, "/spiffs/");
-    itoa(id, &file[8], 16);
-    strcat(file, ".txt");
-
-    FILE* f = fopen(file, "r");
+    FILE* f = ObjectManager_open_file("r", id);
     char line[50];
 
     fgets(line, sizeof(line), f);

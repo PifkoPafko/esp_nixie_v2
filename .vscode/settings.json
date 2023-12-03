@@ -66,10 +66,12 @@
     "esp_bt_defs.h": "c",
     "stat.h": "c",
     "project_defs.h": "c",
-    "dirent.h": "c"
+    "dirent.h": "c",
+    "alarm.h": "c",
+    "cstring": "c"
   },
   "idf.flashType": "UART",
-  "idf.portWin": "COM3",
+  "idf.portWin": "COM5",
   "idf.adapterTargetName": "esp32s3",
   "idf.openOcdConfigs": [
     "board/esp32s3-bridge.cfg"

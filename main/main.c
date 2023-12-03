@@ -131,10 +131,10 @@ static esp_err_t sd_cad_init()
     sdmmc_card_t *card;
     const char mount_point[] = MOUNT_POINT;
     sdmmc_host_t host = SDMMC_HOST_DEFAULT();
-    host.max_freq_khz = 1000;          // TODO: Change in future to higher value
+    host.max_freq_khz = 10000;          // TODO: Change in future to higher value
     sdmmc_slot_config_t slot_config = SDMMC_SLOT_CONFIG_DEFAULT();
 
-    slot_config.width = 4;
+    slot_config.width = 1;
     slot_config.cmd = 35;
     slot_config.clk = 36;
     slot_config.d0 = 37;
@@ -145,6 +145,8 @@ static esp_err_t sd_cad_init()
 
     ESP_LOGI(MAIN_TAG, "Mounting filesystem");
     esp_err_t ret = esp_vfs_fat_sdmmc_mount(mount_point, &host, &slot_config, &mount_config, &card);
+
+    ret = esp_vfs_fat_sdcard_format(mount_point, card);     //TODO remember to delete this
 
     if (ret != ESP_OK) {
         if (ret == ESP_FAIL) {

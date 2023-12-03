@@ -8,6 +8,8 @@
 #include "esp_gatts_api.h"
 #include "esp_log.h"
 
+#include "stdlib.h"
+
 #define TAG "WRITE_EVENT"
 
 static esp_err_t ObjectTransfer_write_name(esp_gatt_if_t gatts_if, esp_ble_gatts_cb_param_t *param, uint16_t *handle_table);
@@ -34,6 +36,7 @@ static esp_err_t ObjectTransfer_write_OLCP_Clear_Marking(esp_gatt_if_t gatts_if,
 static esp_err_t ObjectTransfer_write_OLCP_OP_NS(esp_gatt_if_t gatts_if, esp_ble_gatts_cb_param_t *param, uint16_t *handle_table);
 
 static esp_err_t ObjectTransfer_write_Alarm_Action(esp_gatt_if_t gatts_if, esp_ble_gatts_cb_param_t *param, uint16_t *handle_table);
+static esp_err_t ObjectTransfer_write_Ringtone_Action(esp_gatt_if_t gatts_if, esp_ble_gatts_cb_param_t *param, uint16_t *handle_table);
 
 
 static esp_err_t ObjectTransfer_write_OLCP_CCC(esp_gatt_if_t gatts_if, esp_ble_gatts_cb_param_t *param, uint16_t *handle_table);
@@ -48,6 +51,7 @@ esp_err_t ObjectTranfer_metadata_write_event(esp_gatt_if_t gatts_if, esp_ble_gat
     else if(param->write.handle == handle_table[OPT_IDX_CHAR_OBJECT_OLCP_IND_CFG]) ObjectTransfer_write_OLCP_CCC(gatts_if, param, handle_table);
     else if(param->write.handle == handle_table[OPT_IDX_CHAR_OBJECT_LIST_FILTER_VAL]) ObjectTransfer_write_list_filter(gatts_if, param, handle_table);
     else if(param->write.handle == handle_table[OPT_IDX_CHAR_OBJECT_ALARM_ACTION_VAL]) ObjectTransfer_write_Alarm_Action(gatts_if, param, handle_table);
+    else if(param->write.handle == handle_table[OPT_IDX_CHAR_OBJECT_RINGTONE_ACTION_VAL]) ObjectTransfer_write_Ringtone_Action(gatts_if, param, handle_table);
 
     return ESP_OK;
 }
@@ -889,7 +893,7 @@ static esp_err_t ObjectTransfer_write_OLCP_CCC(esp_gatt_if_t gatts_if, esp_ble_g
 
 static esp_err_t ObjectTransfer_write_Alarm_Action(esp_gatt_if_t gatts_if, esp_ble_gatts_cb_param_t *param, uint16_t *handle_table)
 {
-    ESP_LOGD(TAG, "Object Properties WRITE EVENT");
+    ESP_LOGI(TAG, "Object Alarm Action WRITE EVENT, payload length: %u", param->write.len);
 
     esp_gatt_rsp_t rsp;
     rsp.handle = handle_table[OPT_IDX_CHAR_OBJECT_ALARM_ACTION_VAL];
@@ -908,63 +912,42 @@ static esp_err_t ObjectTransfer_write_Alarm_Action(esp_gatt_if_t gatts_if, esp_b
     {
         ESP_LOGI(TAG, "Wrong type - required: Alarm");
         ret = esp_ble_gatts_send_response(gatts_if, param->write.conn_id, param->write.trans_id, WRITE_REQUEST_REJECTED, &rsp);
-    }
-
-    if(param->write.len < 12 && param->write.need_rsp)
-    {
-        ret = esp_ble_gatts_send_response(gatts_if, param->write.conn_id, param->write.trans_id, INVALID_ATTR_VAL_LENGTH, &rsp);
         return ESP_OK;
     }
 
-    uint8_t enable = param->write.value[0];
-    uint8_t mode = param->write.value[1];
-    if(mode > 3)
+    alarm_mode_args_t alarm;
+    uint8_t result = set_alarm_values(&alarm, param->write.value, param->write.len);
+
+    if(result && param->write.need_rsp)
     {
-        ret = esp_ble_gatts_send_response(gatts_if, param->write.conn_id, param->write.trans_id, WRITE_REQUEST_REJECTED, &rsp);
-        return ESP_OK;
-    }
-
-    uint8_t mode_len = mode==1?1:0;
-
-    uint32_t timestamp;
-    memcpy(&timestamp, &param->write.value[2], 4);
-
-    uint8_t days=0;
-    if(mode == 1)
-    {
-        days = param->write.value[6];
-    }
-
-    uint8_t description_len = param->write.value[6+mode_len];
-    if(description_len > 20)
-    {
-        ret = esp_ble_gatts_send_response(gatts_if, param->write.conn_id, param->write.trans_id, INVALID_ATTR_VAL_LENGTH, &rsp);
-        return ESP_OK;
-    }
-
-    if(param->write.len != (12+mode_len+description_len) && param->write.need_rsp)
-    {
-        ret = esp_ble_gatts_send_response(gatts_if, param->write.conn_id, param->write.trans_id, INVALID_ATTR_VAL_LENGTH, &rsp);
+        ESP_LOGI(TAG, "Wrong Alarm payload");
+        ret = esp_ble_gatts_send_response(gatts_if, param->write.conn_id, param->write.trans_id, result, &rsp);
         return ESP_OK;
     }
 
     object->params.alarm.set = true;
-    object->params.alarm.enable = enable;
-    object->params.alarm.mode = mode;
-    object->params.alarm.timestamp = timestamp;
-    object->params.alarm.days = days;
-    object->params.alarm.description_len = description_len;
-    strncpy(object->params.alarm.description, (char*)&param->write.value[7+mode_len], description_len);
-    object->params.alarm.description[description_len] = '\0';
-    object->params.alarm.volume = param->write.value[7+mode_len+description_len];
-    object->params.alarm.risingSoundEnable = param->write.value[8+mode_len+description_len];
-    object->params.alarm.napEnable = param->write.value[9+mode_len+description_len];
-    object->params.alarm.napDuration = param->write.value[10+mode_len+description_len];
-    object->params.alarm.napAmount = param->write.value[11+mode_len+description_len];
+    memcpy((uint8_t*)&object->params.alarm.alarm_args, &alarm, sizeof(alarm));
 
     ObjectManager_change_alarm_data_in_file();
 
     ESP_LOGI("WRITE", "Object alarm data changed");
+
+    if(param->write.need_rsp)
+    {
+        ret = esp_ble_gatts_send_response(gatts_if, param->write.conn_id, param->write.trans_id, STATUS_OK, &rsp);
+        if(ret) return ret;
+    }
+
+    return ESP_OK;
+}
+
+static esp_err_t ObjectTransfer_write_Ringtone_Action(esp_gatt_if_t gatts_if, esp_ble_gatts_cb_param_t *param, uint16_t *handle_table)
+{
+    ESP_LOGD(TAG, "Object Ringtone Action WRITE EVENT");
+
+    esp_gatt_rsp_t rsp;
+    rsp.handle = handle_table[OPT_IDX_CHAR_OBJECT_RINGTONE_ACTION_VAL];
+    esp_err_t ret;
 
     if(param->write.need_rsp)
     {

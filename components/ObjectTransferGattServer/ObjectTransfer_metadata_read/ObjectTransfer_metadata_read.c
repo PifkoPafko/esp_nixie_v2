@@ -245,23 +245,82 @@ static esp_err_t ObjectTransfer_read_alarm_action(esp_gatt_if_t gatts_if, esp_bl
         ObjectManager_printf_alarm_info();
 
         esp_gatt_rsp_t rsp;
-        uint8_t mode_len = object->params.alarm.mode==1?1:0;
+        uint8_t *payload = rsp.attr_value.value;
 
-        memcpy(rsp.attr_value.value, &object->params.alarm.enable, 1);
-        memcpy(&rsp.attr_value.value[1], &object->params.alarm.mode, 1);
-        memcpy(&rsp.attr_value.value[2], &object->params.alarm.timestamp, 4);
-        if(object->params.alarm.mode == 1) memcpy(&rsp.attr_value.value[6], &object->params.alarm.days, 1);
-        memcpy(&rsp.attr_value.value[6+mode_len], &object->params.alarm.description_len, 1);
-        memcpy(&rsp.attr_value.value[7+mode_len], (uint8_t*)object->params.alarm.description, object->params.alarm.description_len);
-        memcpy(&rsp.attr_value.value[7+mode_len+object->params.alarm.description_len], &object->params.alarm.volume, 1);
-        memcpy(&rsp.attr_value.value[8+mode_len+object->params.alarm.description_len], &object->params.alarm.risingSoundEnable, 1);
-        memcpy(&rsp.attr_value.value[9+mode_len+object->params.alarm.description_len], &object->params.alarm.napEnable, 1);
-        memcpy(&rsp.attr_value.value[10+mode_len+object->params.alarm.description_len], &object->params.alarm.napDuration, 1);
-        memcpy(&rsp.attr_value.value[11+mode_len+object->params.alarm.description_len], &object->params.alarm.napAmount, 1);
+        memcpy(payload, &object->params.alarm.alarm_args.mode, ALARM_FIELD_SIZE);
+        payload += ALARM_FIELD_SIZE;
+
+        memcpy(payload, &object->params.alarm.alarm_args.enable, ALARM_FIELD_SIZE);
+        payload += ALARM_FIELD_SIZE;
+
+        memcpy(payload, &object->params.alarm.alarm_args.desc_len, ALARM_FIELD_SIZE);
+        payload += ALARM_FIELD_SIZE;
+
+        memcpy(payload, (uint8_t*)object->params.alarm.alarm_args.desc, object->params.alarm.alarm_args.desc_len);
+        payload += object->params.alarm.alarm_args.desc_len;
+
+        memcpy(payload, &object->params.alarm.alarm_args.hour, ALARM_FIELD_SIZE);
+        payload += ALARM_FIELD_SIZE;
+
+        memcpy(payload, &object->params.alarm.alarm_args.minute, ALARM_FIELD_SIZE);
+        payload += ALARM_FIELD_SIZE;
+
+        switch(object->params.alarm.alarm_args.mode)
+        {
+            case ALARM_SINGLE_MODE:
+            {
+                memcpy(payload, &object->params.alarm.alarm_args.args.single_alarm_args.day, ALARM_FIELD_SIZE);
+                payload += ALARM_FIELD_SIZE;
+
+                memcpy(payload, &object->params.alarm.alarm_args.args.single_alarm_args.month, ALARM_FIELD_SIZE);
+                payload += ALARM_FIELD_SIZE;
+
+                memcpy(payload, &object->params.alarm.alarm_args.args.single_alarm_args.year, ALARM_FIELD_SIZE);
+                payload += ALARM_FIELD_SIZE;
+
+                rsp.attr_value.len = ALARM_MODE_SINGLE_PAYLOAD_SIZE_MIN + object->params.alarm.alarm_args.desc_len;
+                break;
+            }
+                
+
+            case ALARM_WEEKLY_MODE:
+            {
+                memcpy(payload, &object->params.alarm.alarm_args.args.days, ALARM_FIELD_SIZE);
+                payload += ALARM_FIELD_SIZE;
+
+                rsp.attr_value.len = ALARM_MODE_WEEKLY_PAYLOAD_SIZE_MIN + object->params.alarm.alarm_args.desc_len;
+                break;
+            }
+                
+
+            case ALARM_MONTHLY_MODE:
+            {
+                memcpy(payload, &object->params.alarm.alarm_args.args.day, ALARM_FIELD_SIZE);
+                payload += ALARM_FIELD_SIZE;
+
+                rsp.attr_value.len = ALARM_MODE_MONTHLY_PAYLOAD_SIZE_MIN + object->params.alarm.alarm_args.desc_len;
+                break;
+            }
+                
+
+            case ALARM_YEARLY_MODE:
+            {
+                memcpy(payload, &object->params.alarm.alarm_args.args.yearly_alarm_args.day, ALARM_FIELD_SIZE);
+                payload += ALARM_FIELD_SIZE;
+
+                memcpy(payload, &object->params.alarm.alarm_args.args.yearly_alarm_args.month, ALARM_FIELD_SIZE);
+                payload += ALARM_FIELD_SIZE;
+
+                rsp.attr_value.len = ALARM_MODE_YEARLY_PAYLOAD_SIZE_MIN + object->params.alarm.alarm_args.desc_len;
+                break;
+            }
+        }
+        
+        memcpy(payload, &object->params.alarm.alarm_args.volume, ALARM_FIELD_SIZE);
+        payload += ALARM_FIELD_SIZE;
 
         rsp.attr_value.handle = handle_table[OPT_IDX_CHAR_OBJECT_ALARM_ACTION_VAL];
         rsp.attr_value.offset = 0;
-        rsp.attr_value.len = 12+mode_len+object->params.alarm.description_len;
         rsp.attr_value.auth_req = ESP_GATT_AUTH_REQ_NONE;
         esp_err_t err = esp_ble_gatts_send_response(gatts_if, param->read.conn_id, param->read.trans_id, STATUS_OK, &rsp);
 

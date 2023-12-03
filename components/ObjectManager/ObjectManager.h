@@ -4,6 +4,7 @@
 #include "esp_err.h"
 #include "esp_gatts_api.h"
 #include "ObjectTransfer_defs.h"
+#include "alarm.h"
 
 #define DATA_LEN_MAX 2000
 #define NAME_LEN_MAX 32
@@ -22,24 +23,26 @@
 
 #define TYPE_UNSPECIFIED_    0xCA2A    //inversed of little endian
 
+typedef enum {
+    WAIT_FOR_ACTION = 0,
+    WAIT_FOR_FILE_TYPE,
+    WAIT_FOR_FILE_SIZE,
+    ONGOING,
+} action_status_t;
+
 typedef struct alarm{
     bool set;
-    bool enable;
-    uint8_t mode;
-    uint32_t timestamp;
-    uint8_t days;
-    uint8_t description_len;
-    char description[21];
-    uint8_t volume;
-    bool risingSoundEnable;
-    bool napEnable;
-    uint8_t napDuration;
-    uint8_t napAmount;
+    alarm_mode_args_t alarm_args;
 } alarm_t;
 
 typedef struct ringtone{
     uint8_t XD;
 } ringtone_t;
+
+typedef struct file_transfer{
+    uint32_t bytes_done;
+    action_status_t status;
+} file_transfer_t;
 
 typedef union params{
     alarm_t alarm;
@@ -81,6 +84,9 @@ esp_err_t ObjectManager_change_alarm_data_in_file();
 void ObjectManager_printf_alarm_info();
 bool seekfor(FILE *stream, const char* str, fpos_t *pos);
 FILE* ObjectManager_open_file(const char* option,  uint64_t id);
+void ObjectManager_truncate_rest(uint64_t id, uint32_t offset);
+FILE* ObjectManager_open_temp_file(const char* option);
 int ObjectManager_check_type(uint8_t *uuid);
+void print_all_files();
 
 #endif
