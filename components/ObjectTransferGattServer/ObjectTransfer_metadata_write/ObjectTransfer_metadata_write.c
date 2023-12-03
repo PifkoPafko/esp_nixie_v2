@@ -915,8 +915,8 @@ static esp_err_t ObjectTransfer_write_Alarm_Action(esp_gatt_if_t gatts_if, esp_b
         return ESP_OK;
     }
 
-    alarm_mode_args_t alarm;
-    uint8_t result = set_alarm_values(&alarm, param->write.value, param->write.len);
+    uint8_t result = set_alarm_values(param->write.value, param->write.len);
+    alarm_mode_args_t alarm = get_alarm_values();
 
     if(result && param->write.need_rsp)
     {
@@ -925,10 +925,10 @@ static esp_err_t ObjectTransfer_write_Alarm_Action(esp_gatt_if_t gatts_if, esp_b
         return ESP_OK;
     }
 
-    object->params.alarm.set = true;
-    memcpy((uint8_t*)&object->params.alarm.alarm_args, &alarm, sizeof(alarm));
+    object->set_custom_object = true;
+    // memcpy((uint8_t*)&object->params.alarm.alarm_args, &alarm, sizeof(alarm));
 
-    ObjectManager_change_alarm_data_in_file();
+    ObjectManager_change_alarm_data_in_file(alarm);
 
     ESP_LOGI("WRITE", "Object alarm data changed");
 

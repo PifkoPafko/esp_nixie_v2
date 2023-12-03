@@ -176,12 +176,10 @@ esp_err_t ObjectManager_create_object(uint32_t size, esp_bt_uuid_t type, oacp_op
     fprintf(f, "%s\n", id_to_string(id_string, object->id));
     fclose(f);
 
-    print_all_files();
-
     switch(ret_type)
     {
         case ALARM_TYPE:
-            current_object->params.alarm.set = false;
+            current_object->set_custom_object = false;
             break;
 
         case RINGTONE_TYPE:
@@ -524,7 +522,7 @@ esp_err_t ObjectManager_change_properties_in_file()
     return ESP_OK;
 }
 
-esp_err_t ObjectManager_change_alarm_data_in_file()
+esp_err_t ObjectManager_change_alarm_data_in_file(alarm_mode_args_t alarm)
 {
     FILE* f = ObjectManager_open_file("r+", current_object->id);
 
@@ -535,44 +533,44 @@ esp_err_t ObjectManager_change_alarm_data_in_file()
 
     if(!found) fprintf(f, "\n");
     fprintf(f, "ALARM PROPERTIES\n");
-    fprintf(f, "Mode: %02x\n", current_object->params.alarm.alarm_args.mode);
-    fprintf(f, "Enable: %02x\n", current_object->params.alarm.alarm_args.enable);
-    fprintf(f, "Description length: %01x\n", current_object->params.alarm.alarm_args.desc_len);
-    fprintf(f, "Description: %s\n", current_object->params.alarm.alarm_args.desc);
-    fprintf(f, "Hour: %02x\n", current_object->params.alarm.alarm_args.hour);
-    fprintf(f, "Minute: %02x\n", current_object->params.alarm.alarm_args.minute);
+    fprintf(f, "Mode: %02x\n", alarm.mode);
+    fprintf(f, "Enable: %02x\n", alarm.enable);
+    fprintf(f, "Description length: %01x\n", alarm.desc_len);
+    fprintf(f, "Description: %s\n", alarm.desc);
+    fprintf(f, "Hour: %02x\n", alarm.hour);
+    fprintf(f, "Minute: %02x\n", alarm.minute);
     
-    switch(current_object->params.alarm.alarm_args.mode) 
+    switch(alarm.mode) 
     {
         case ALARM_SINGLE_MODE:
         {
-            fprintf(f, "Day: %02x\n", current_object->params.alarm.alarm_args.args.single_alarm_args.day);
-            fprintf(f, "Month: %02x\n", current_object->params.alarm.alarm_args.args.single_alarm_args.month);
-            fprintf(f, "Year: %02x\n", current_object->params.alarm.alarm_args.args.single_alarm_args.year);
+            fprintf(f, "Day: %02x\n", alarm.args.single_alarm_args.day);
+            fprintf(f, "Month: %02x\n", alarm.args.single_alarm_args.month);
+            fprintf(f, "Year: %02x\n", alarm.args.single_alarm_args.year);
             break;
         }
             
         case ALARM_WEEKLY_MODE:
         {
-            fprintf(f, "Days: %02x\n", current_object->params.alarm.alarm_args.args.days);
+            fprintf(f, "Days: %02x\n", alarm.args.days);
             break;
         }
             
         case ALARM_MONTHLY_MODE:
         {
-            fprintf(f, "Day: %02x\n", current_object->params.alarm.alarm_args.args.day);
+            fprintf(f, "Day: %02x\n", alarm.args.day);
             break;
         }
             
         case ALARM_YEARLY_MODE:
         {
-            fprintf(f, "Day: %02x\n", current_object->params.alarm.alarm_args.args.yearly_alarm_args.day);
-            fprintf(f, "Month: %02x\n", current_object->params.alarm.alarm_args.args.yearly_alarm_args.month);
+            fprintf(f, "Day: %02x\n", alarm.args.yearly_alarm_args.day);
+            fprintf(f, "Month: %02x\n", alarm.args.yearly_alarm_args.month);
             break;
         }
     }
 
-    fprintf(f, "Volume: %02x\n", current_object->params.alarm.alarm_args.volume);
+    fprintf(f, "Volume: %02x\n", alarm.volume);
 
     uint32_t truncate_offset = ftell(f);
     fseek(f, 0, SEEK_SET);
@@ -629,9 +627,10 @@ void ObjectManager_printf_alarm_info()
 
     if(found)
     {
-        printf("State: %s\n", current_object->params.alarm.alarm_args.enable?"enabled":"disabled");
+        alarm_mode_args_t alarm = get_alarm_values();
+        printf("State: %s\n", alarm.enable?"enabled":"disabled");
 
-        switch(current_object->params.alarm.alarm_args.mode)
+        switch(alarm.mode)
         {
             case ALARM_SINGLE_MODE:
                 printf("Mode: single\n");
@@ -650,31 +649,31 @@ void ObjectManager_printf_alarm_info()
                 break;
         }
 
-        printf("Description length: %u\n", current_object->params.alarm.alarm_args.desc_len);
-        printf("Description: %s\n", current_object->params.alarm.alarm_args.desc);
-        printf("Hour: %u\n", current_object->params.alarm.alarm_args.hour);
-        printf("Minute: %u\n", current_object->params.alarm.alarm_args.minute);
+        printf("Description length: %u\n", alarm.desc_len);
+        printf("Description: %s\n", alarm.desc);
+        printf("Hour: %u\n", alarm.hour);
+        printf("Minute: %u\n", alarm.minute);
 
-        switch(current_object->params.alarm.alarm_args.mode)
+        switch(alarm.mode)
         {
             case ALARM_SINGLE_MODE:
-                printf("Day: %u\n", current_object->params.alarm.alarm_args.args.single_alarm_args.day);
-                printf("Month: %u\n", current_object->params.alarm.alarm_args.args.single_alarm_args.month);
-                printf("Year: %u\n", current_object->params.alarm.alarm_args.args.single_alarm_args.year);
+                printf("Day: %u\n", alarm.args.single_alarm_args.day);
+                printf("Month: %u\n", alarm.args.single_alarm_args.month);
+                printf("Year: %u\n", alarm.args.single_alarm_args.year);
                 break;
             case ALARM_WEEKLY_MODE:
-                printf("Days: %u\n", current_object->params.alarm.alarm_args.args.days);
+                printf("Days: %u\n", alarm.args.days);
                 break;
             case ALARM_MONTHLY_MODE:
-                printf("Day: %u\n", current_object->params.alarm.alarm_args.args.day);
+                printf("Day: %u\n", alarm.args.day);
                 break;
             case ALARM_YEARLY_MODE:
-                printf("Day: %u\n", current_object->params.alarm.alarm_args.args.yearly_alarm_args.day);
-                printf("Month: %u\n", current_object->params.alarm.alarm_args.args.yearly_alarm_args.month);
+                printf("Day: %u\n", alarm.args.yearly_alarm_args.day);
+                printf("Month: %u\n", alarm.args.yearly_alarm_args.month);
                 break;
         }
         
-        printf("Volume: %d\n", current_object->params.alarm.alarm_args.volume);
+        printf("Volume: %d\n", alarm.volume);
     }
 }
 
@@ -698,7 +697,7 @@ static void ObjectManager_print_current_object()
         printf("Properties: 0x%" PRIx32 "\n\n", current_object->properties);
     }
 
-    if(ObjectManager_check_type(current_object->type.uuid.uuid128) == ALARM_TYPE && current_object->params.alarm.set)
+    if(ObjectManager_check_type(current_object->type.uuid.uuid128) == ALARM_TYPE && current_object->set_custom_object)
     {
         ObjectManager_printf_alarm_info();
     }
@@ -760,81 +759,82 @@ static void ObjectManager_set_current_object_from_file(uint64_t id)
     {
         case ALARM_TYPE:
         {
+            alarm_mode_args_t * alarm_p = get_alarm_pointer();
             fpos_t pos;
             bool found = seekfor(f, "ALARM PROPERTIES\n", &pos);
             if(!found)
             {
-                current_object->params.alarm.set = false;
+                current_object->set_custom_object = false;
                 break;
             }
 
-            current_object->params.alarm.set = true;
+            current_object->set_custom_object = true;
 
             char line[70];
             char *ptr;
 
             fgets(line, sizeof(line), f);
-            current_object->params.alarm.alarm_args.mode = strtol(&line[strlen("Mode: ") ], &ptr, 16);
+            alarm_p->mode = strtol(&line[strlen("Mode: ") ], &ptr, 16);
 
             fgets(line, sizeof(line), f);
-            current_object->params.alarm.alarm_args.enable = strtol(&line[strlen("Enable: ") ], &ptr, 16);
+            alarm_p->enable = strtol(&line[strlen("Enable: ") ], &ptr, 16);
 
             fgets(line, sizeof(line), f);
-            current_object->params.alarm.alarm_args.desc_len = strtol(&line[strlen("Description length: ") ], &ptr, 16);
+            alarm_p->desc_len = strtol(&line[strlen("Description length: ") ], &ptr, 16);
 
             fgets(line, sizeof(line), f);
-            strncpy((char*)current_object->params.alarm.alarm_args.desc, (char*)&line[strlen("Description: ")], current_object->params.alarm.alarm_args.desc_len);
-            current_object->params.alarm.alarm_args.desc[current_object->params.alarm.alarm_args.desc_len] = '\0';
+            strncpy((char*)alarm_p->desc, (char*)&line[strlen("Description: ")], alarm_p->desc_len);
+            alarm_p->desc[alarm_p->desc_len] = '\0';
 
             fgets(line, sizeof(line), f);
-            current_object->params.alarm.alarm_args.hour = strtol(&line[strlen("Hour: ") ], &ptr, 16);
+            alarm_p->hour = strtol(&line[strlen("Hour: ") ], &ptr, 16);
 
             fgets(line, sizeof(line), f);
-            current_object->params.alarm.alarm_args.minute = strtol(&line[strlen("Minute: ") ], &ptr, 16);
+            alarm_p->minute = strtol(&line[strlen("Minute: ") ], &ptr, 16);
 
-            switch(current_object->params.alarm.alarm_args.mode) 
+            switch(alarm_p->mode) 
             {
                 case ALARM_SINGLE_MODE:
                 {
                     fgets(line, sizeof(line), f);
-                    current_object->params.alarm.alarm_args.args.single_alarm_args.day = strtol(&line[strlen("Day: ") ], &ptr, 16);
+                    alarm_p->args.single_alarm_args.day = strtol(&line[strlen("Day: ") ], &ptr, 16);
 
                     fgets(line, sizeof(line), f);
-                    current_object->params.alarm.alarm_args.args.single_alarm_args.month = strtol(&line[strlen("Month: ") ], &ptr, 16);
+                    alarm_p->args.single_alarm_args.month = strtol(&line[strlen("Month: ") ], &ptr, 16);
 
                     fgets(line, sizeof(line), f);
-                    current_object->params.alarm.alarm_args.args.single_alarm_args.year = strtol(&line[strlen("Year: ") ], &ptr, 16);
+                    alarm_p->args.single_alarm_args.year = strtol(&line[strlen("Year: ") ], &ptr, 16);
                     break;
                 }
                     
                 case ALARM_WEEKLY_MODE:
                 {
                     fgets(line, sizeof(line), f);
-                    current_object->params.alarm.alarm_args.args.days = strtol(&line[strlen("Days: ") ], &ptr, 16);
+                    alarm_p->args.days = strtol(&line[strlen("Days: ") ], &ptr, 16);
                     break;
                 }
                     
                 case ALARM_MONTHLY_MODE:
                 {
                     fgets(line, sizeof(line), f);
-                    current_object->params.alarm.alarm_args.args.day = strtol(&line[strlen("Day: ") ], &ptr, 16);
+                    alarm_p->args.day = strtol(&line[strlen("Day: ") ], &ptr, 16);
                     break;
                 }
                     
                 case ALARM_YEARLY_MODE:
                 {
                     fgets(line, sizeof(line), f);
-                    current_object->params.alarm.alarm_args.args.yearly_alarm_args.day = strtol(&line[strlen("Day: ") ], &ptr, 16);
+                    alarm_p->args.yearly_alarm_args.day = strtol(&line[strlen("Day: ") ], &ptr, 16);
 
                     fgets(line, sizeof(line), f);
-                    current_object->params.alarm.alarm_args.args.yearly_alarm_args.month = strtol(&line[strlen("Month: ") ], &ptr, 16);
+                    alarm_p->args.yearly_alarm_args.month = strtol(&line[strlen("Month: ") ], &ptr, 16);
                     
                     break;
                 }
             }
 
             fgets(line, sizeof(line), f);
-            current_object->params.alarm.alarm_args.volume = strtol(&line[strlen("Volume: ") ], &ptr, 16);
+            alarm_p->volume = strtol(&line[strlen("Volume: ") ], &ptr, 16);
             
             break;
         }

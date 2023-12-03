@@ -39,7 +39,9 @@ typedef struct
     uint8_t volume;
 }alarm_mode_args_t;
 
-uint8_t set_alarm_values(alarm_mode_args_t *alarm, uint8_t *payload, uint16_t payload_len);
+uint8_t set_alarm_values(uint8_t *payload, uint16_t payload_len);
+alarm_mode_args_t get_alarm_values();
+alarm_mode_args_t* get_alarm_pointer();
 
 #define ALARM_SINGLE_MODE   0
 #define ALARM_WEEKLY_MODE   1

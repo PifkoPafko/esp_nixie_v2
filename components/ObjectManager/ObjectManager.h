@@ -30,24 +30,10 @@ typedef enum {
     ONGOING,
 } action_status_t;
 
-typedef struct alarm{
-    bool set;
-    alarm_mode_args_t alarm_args;
-} alarm_t;
-
-typedef struct ringtone{
-    uint8_t XD;
-} ringtone_t;
-
 typedef struct file_transfer{
     uint32_t bytes_done;
     action_status_t status;
 } file_transfer_t;
-
-typedef union params{
-    alarm_t alarm;
-    ringtone_t ringtone;
-}params_t;
 
 typedef struct object{
     size_t size;
@@ -57,7 +43,7 @@ typedef struct object{
     esp_bt_uuid_t type;
     uint64_t id;
     uint32_t properties;
-    params_t params;
+    bool set_custom_object;
 } object_t;
 
 #define ALARM_TYPE 0
@@ -80,7 +66,7 @@ esp_err_t ObjectManager_clear_marking(olcp_op_code_result_t *result);
 
 esp_err_t ObjectManager_change_name_in_file();
 esp_err_t ObjectManager_change_properties_in_file();
-esp_err_t ObjectManager_change_alarm_data_in_file();
+esp_err_t ObjectManager_change_alarm_data_in_file(alarm_mode_args_t alarm);
 void ObjectManager_printf_alarm_info();
 bool seekfor(FILE *stream, const char* str, fpos_t *pos);
 FILE* ObjectManager_open_file(const char* option,  uint64_t id);
