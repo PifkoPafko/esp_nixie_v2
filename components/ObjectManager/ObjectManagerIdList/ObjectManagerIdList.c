@@ -125,6 +125,11 @@ object_id_list_t* ObjectManager_list_add(void)
         elem_prev->next = new_elem;
         new_elem->prev = elem_prev;
     }
+    else
+    {
+        new_elem->prev = NULL;
+        first_elem = new_elem;
+    }
 
     if(elem)
     {
@@ -207,45 +212,23 @@ esp_err_t ObjectManager_list_delete_by_id(uint64_t id)
             if(elem == first_elem)
             {
                 first_elem = elem->next;
+                if (first_elem) 
+                {
+                    first_elem->prev = NULL;
+                }
             }
 
-            if(elem->next == NULL)
+            if(elem->next)
+            {
+                elem->next->prev = elem->prev;
+            }
+            else
             {
                 last_elem = elem->prev;
-            }
-
-            free(elem);
-            ObjectManager_null_current_object();
-            break;
-        }
-        elem_prev = elem;
-        elem = elem->next;
-    }
-
-    return ESP_OK;
-}
-
-esp_err_t ObjectManager_list_delete(object_id_list_t *object)
-{
-    object_id_list_t *elem = first_elem;
-    object_id_list_t *elem_prev = NULL;
-    while(elem)
-    {
-        if(object == elem)
-        {
-            if(elem_prev)
-            {
-                elem_prev->next = elem->next;
-            }
-
-            if(elem == first_elem)
-            {
-                first_elem = elem->next;
-            }
-
-            if(elem->next == NULL)
-            {
-                last_elem = elem->prev;
+                if (last_elem) 
+                {
+                    last_elem->next = NULL;
+                }
             }
 
             free(elem);

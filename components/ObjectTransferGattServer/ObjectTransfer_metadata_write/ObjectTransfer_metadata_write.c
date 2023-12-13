@@ -37,6 +37,7 @@ static esp_err_t ObjectTransfer_write_OLCP_OP_NS(esp_gatt_if_t gatts_if, esp_ble
 
 static esp_err_t ObjectTransfer_write_Alarm_Action(esp_gatt_if_t gatts_if, esp_ble_gatts_cb_param_t *param, uint16_t *handle_table);
 static esp_err_t ObjectTransfer_write_Ringtone_Action(esp_gatt_if_t gatts_if, esp_ble_gatts_cb_param_t *param, uint16_t *handle_table);
+static esp_err_t ObjectTransfer_write_wifi_action(esp_gatt_if_t gatts_if, esp_ble_gatts_cb_param_t *param, uint16_t *handle_table);
 
 
 static esp_err_t ObjectTransfer_write_OLCP_CCC(esp_gatt_if_t gatts_if, esp_ble_gatts_cb_param_t *param, uint16_t *handle_table);
@@ -52,6 +53,7 @@ esp_err_t ObjectTranfer_metadata_write_event(esp_gatt_if_t gatts_if, esp_ble_gat
     else if(param->write.handle == handle_table[OPT_IDX_CHAR_OBJECT_LIST_FILTER_VAL]) ObjectTransfer_write_list_filter(gatts_if, param, handle_table);
     else if(param->write.handle == handle_table[OPT_IDX_CHAR_OBJECT_ALARM_ACTION_VAL]) ObjectTransfer_write_Alarm_Action(gatts_if, param, handle_table);
     else if(param->write.handle == handle_table[OPT_IDX_CHAR_OBJECT_RINGTONE_ACTION_VAL]) ObjectTransfer_write_Ringtone_Action(gatts_if, param, handle_table);
+    else if(param->write.handle == handle_table[OPT_IDX_CHAR_OBJECT_WIFI_ACTION_VAL]) ObjectTransfer_write_wifi_action(gatts_if, param, handle_table);
 
     return ESP_OK;
 }
@@ -346,10 +348,9 @@ static esp_err_t ObjectTransfer_write_OACP_Create(esp_gatt_if_t gatts_if, esp_bl
     rsp.handle = handle_table[OPT_IDX_CHAR_OBJECT_OACP_VAL];
 
     uint8_t status = STATUS_OK;
-    uint8_t indicate_data[3];
+    uint8_t indicate_data[2];
     uint8_t indicate_data_len = 0;
     indicate_data[0] = OACP_OP_CODE_RESPONSE;
-    indicate_data[1] = param->write.value[0];
 
     if(param->write.len != DATA_LEN_UUID16 && param->write.len != DATA_LEN_UUID128)
     {
@@ -383,8 +384,8 @@ static esp_err_t ObjectTransfer_write_OACP_Create(esp_gatt_if_t gatts_if, esp_bl
 
     oacp_op_code_result_t result;
     ObjectManager_create_object(size, type, &result);
-    indicate_data_len = 3;
-    indicate_data[2] = result;
+    indicate_data_len = 2;
+    indicate_data[1] = result;
     esp_ble_gatts_send_indicate(gatts_if, param->write.conn_id, handle_table[OPT_IDX_CHAR_OBJECT_OACP_VAL], indicate_data_len, indicate_data, true);
 
     return ESP_OK;
@@ -396,11 +397,9 @@ static esp_err_t ObjectTransfer_write_OACP_Delete(esp_gatt_if_t gatts_if, esp_bl
     rsp.handle = handle_table[OPT_IDX_CHAR_OBJECT_OACP_VAL];
 
     uint8_t status = STATUS_OK;
-    uint8_t indicate_data[3];
+    uint8_t indicate_data[2];
     uint8_t indicate_data_len = 0;
     indicate_data[0] = OACP_OP_CODE_RESPONSE;
-    indicate_data[1] = param->write.value[0];
-
 
     if(param->write.len != 1)
     {
@@ -422,8 +421,8 @@ static esp_err_t ObjectTransfer_write_OACP_Delete(esp_gatt_if_t gatts_if, esp_bl
 
     oacp_op_code_result_t result;
     ObjectManager_delete_object(&result);
-    indicate_data_len = 3;
-    indicate_data[2] = result;
+    indicate_data_len = 2;
+    indicate_data[1] = result;
     esp_ble_gatts_send_indicate(gatts_if, param->write.conn_id, handle_table[OPT_IDX_CHAR_OBJECT_OACP_VAL], indicate_data_len, indicate_data, true);
 
     return ESP_OK;
@@ -533,11 +532,9 @@ static esp_err_t ObjectTransfer_write_OLCP_First(esp_gatt_if_t gatts_if, esp_ble
     rsp.handle = handle_table[OPT_IDX_CHAR_OBJECT_OLCP_VAL];
 
     uint8_t status = STATUS_OK;
-    uint8_t indicate_data[3];
+    uint8_t indicate_data[2];
     uint8_t indicate_data_len = 0;
     indicate_data[0] = OLCP_OP_CODE_RESPONSE;
-    indicate_data[1] = param->write.value[0];
-
 
     if(param->write.len != 1)
     {
@@ -555,8 +552,8 @@ static esp_err_t ObjectTransfer_write_OLCP_First(esp_gatt_if_t gatts_if, esp_ble
 
     olcp_op_code_result_t result;
     ObjectManager_first_object(&result);
-    indicate_data_len = 3;
-    indicate_data[2] = result;
+    indicate_data_len = 2;
+    indicate_data[1] = result;
     esp_ble_gatts_send_indicate(gatts_if, param->write.conn_id, handle_table[OPT_IDX_CHAR_OBJECT_OLCP_VAL], indicate_data_len, indicate_data, true);
 
     return ESP_OK;
@@ -568,11 +565,9 @@ static esp_err_t ObjectTransfer_write_OLCP_Last(esp_gatt_if_t gatts_if, esp_ble_
     rsp.handle = handle_table[OPT_IDX_CHAR_OBJECT_OLCP_VAL];
 
     uint8_t status = STATUS_OK;
-    uint8_t indicate_data[3];
+    uint8_t indicate_data[2];
     uint8_t indicate_data_len = 0;
     indicate_data[0] = OLCP_OP_CODE_RESPONSE;
-    indicate_data[1] = param->write.value[0];
-
 
     if(param->write.len != 1)
     {
@@ -590,8 +585,8 @@ static esp_err_t ObjectTransfer_write_OLCP_Last(esp_gatt_if_t gatts_if, esp_ble_
 
     olcp_op_code_result_t result;
     ObjectManager_last_object(&result);
-    indicate_data_len = 3;
-    indicate_data[2] = result;
+    indicate_data_len = 2;
+    indicate_data[1] = result;
     esp_ble_gatts_send_indicate(gatts_if, param->write.conn_id, handle_table[OPT_IDX_CHAR_OBJECT_OLCP_VAL], indicate_data_len, indicate_data, true);
 
     return ESP_OK;
@@ -603,11 +598,9 @@ static esp_err_t ObjectTransfer_write_OLCP_Previous(esp_gatt_if_t gatts_if, esp_
     rsp.handle = handle_table[OPT_IDX_CHAR_OBJECT_OLCP_VAL];
 
     uint8_t status = STATUS_OK;
-    uint8_t indicate_data[3];
+    uint8_t indicate_data[2];
     uint8_t indicate_data_len = 0;
     indicate_data[0] = OLCP_OP_CODE_RESPONSE;
-    indicate_data[1] = param->write.value[0];
-
 
     if(param->write.len != 1)
     {
@@ -625,8 +618,8 @@ static esp_err_t ObjectTransfer_write_OLCP_Previous(esp_gatt_if_t gatts_if, esp_
 
     olcp_op_code_result_t result;
     ObjectManager_previous_object(&result);
-    indicate_data_len = 3;
-    indicate_data[2] = result;
+    indicate_data_len = 2;
+    indicate_data[1] = result;
     esp_ble_gatts_send_indicate(gatts_if, param->write.conn_id, handle_table[OPT_IDX_CHAR_OBJECT_OLCP_VAL], indicate_data_len, indicate_data, true);
 
     return ESP_OK;
@@ -638,11 +631,9 @@ static esp_err_t ObjectTransfer_write_OLCP_Next(esp_gatt_if_t gatts_if, esp_ble_
     rsp.handle = handle_table[OPT_IDX_CHAR_OBJECT_OLCP_VAL];
 
     uint8_t status = STATUS_OK;
-    uint8_t indicate_data[3];
+    uint8_t indicate_data[2];
     uint8_t indicate_data_len = 0;
     indicate_data[0] = OLCP_OP_CODE_RESPONSE;
-    indicate_data[1] = param->write.value[0];
-
 
     if(param->write.len != 1)
     {
@@ -660,8 +651,8 @@ static esp_err_t ObjectTransfer_write_OLCP_Next(esp_gatt_if_t gatts_if, esp_ble_
 
     olcp_op_code_result_t result;
     ObjectManager_next_object(&result);
-    indicate_data_len = 3;
-    indicate_data[2] = result;
+    indicate_data_len = 2;
+    indicate_data[1] = result;
     esp_ble_gatts_send_indicate(gatts_if, param->write.conn_id, handle_table[OPT_IDX_CHAR_OBJECT_OLCP_VAL], indicate_data_len, indicate_data, true);
 
     return ESP_OK;
@@ -673,11 +664,9 @@ static esp_err_t ObjectTransfer_write_OLCP_Goto(esp_gatt_if_t gatts_if, esp_ble_
     rsp.handle = handle_table[OPT_IDX_CHAR_OBJECT_OLCP_VAL];
 
     uint8_t status = STATUS_OK;
-    uint8_t indicate_data[3];
+    uint8_t indicate_data[2];
     uint8_t indicate_data_len = 0;
     indicate_data[0] = OLCP_OP_CODE_RESPONSE;
-    indicate_data[1] = param->write.value[0];
-
 
     if(param->write.len != 7)
     {
@@ -707,8 +696,8 @@ static esp_err_t ObjectTransfer_write_OLCP_Goto(esp_gatt_if_t gatts_if, esp_ble_
     ESP_LOGI(TAG, "Searching for ID: %llx", id);
 
     ObjectManager_goto_object(id, &result);
-    indicate_data_len = 3;
-    indicate_data[2] = result;
+    indicate_data_len = 2;
+    indicate_data[1] = result;
     esp_ble_gatts_send_indicate(gatts_if, param->write.conn_id, handle_table[OPT_IDX_CHAR_OBJECT_OLCP_VAL], indicate_data_len, indicate_data, true);
 
     return ESP_OK;
@@ -720,11 +709,9 @@ static esp_err_t ObjectTransfer_write_OLCP_Order(esp_gatt_if_t gatts_if, esp_ble
     rsp.handle = handle_table[OPT_IDX_CHAR_OBJECT_OLCP_VAL];
 
     uint8_t status = STATUS_OK;
-    uint8_t indicate_data[3];
+    uint8_t indicate_data[2];
     uint8_t indicate_data_len = 0;
     indicate_data[0] = OLCP_OP_CODE_RESPONSE;
-    indicate_data[1] = param->write.value[0];
-
 
     if(param->write.len != 2)
     {
@@ -763,8 +750,8 @@ static esp_err_t ObjectTransfer_write_OLCP_Order(esp_gatt_if_t gatts_if, esp_ble
         FilterOrder_make_list();
     }
 
-    indicate_data_len = 3;
-    indicate_data[2] = result;
+    indicate_data_len = 2;
+    indicate_data[1] = result;
     esp_ble_gatts_send_indicate(gatts_if, param->write.conn_id, handle_table[OPT_IDX_CHAR_OBJECT_OLCP_VAL], indicate_data_len, indicate_data, true);
 
     return ESP_OK;
@@ -822,11 +809,9 @@ static esp_err_t ObjectTransfer_write_OLCP_Clear_Marking(esp_gatt_if_t gatts_if,
     rsp.handle = handle_table[OPT_IDX_CHAR_OBJECT_OLCP_VAL];
 
     uint8_t status = STATUS_OK;
-    uint8_t indicate_data[3];
+    uint8_t indicate_data[2];
     uint8_t indicate_data_len = 0;
     indicate_data[0] = OLCP_OP_CODE_RESPONSE;
-    indicate_data[1] = param->write.value[0];
-
 
     if(param->write.len != 1)
     {
@@ -844,8 +829,8 @@ static esp_err_t ObjectTransfer_write_OLCP_Clear_Marking(esp_gatt_if_t gatts_if,
 
     olcp_op_code_result_t result;
     ObjectManager_clear_marking(&result);
-    indicate_data_len = 3;
-    indicate_data[2] = result;
+    indicate_data_len = 2;
+    indicate_data[1] = result;
     esp_ble_gatts_send_indicate(gatts_if, param->write.conn_id, handle_table[OPT_IDX_CHAR_OBJECT_OLCP_VAL], indicate_data_len, indicate_data, true);
 
     return ESP_OK;
@@ -856,15 +841,14 @@ static esp_err_t ObjectTransfer_write_OLCP_OP_NS(esp_gatt_if_t gatts_if, esp_ble
     esp_gatt_rsp_t rsp;
     rsp.handle = handle_table[OPT_IDX_CHAR_OBJECT_OLCP_VAL];
 
-    uint8_t indicate_data[3];
+    uint8_t indicate_data[2];
     uint8_t indicate_data_len = 0;
     indicate_data[0] = OLCP_OP_CODE_RESPONSE;
-    indicate_data[1] = param->write.value[0];
 
     esp_ble_gatts_send_response(gatts_if, param->write.conn_id, param->write.trans_id, STATUS_OK, &rsp);
     ESP_LOGE(TAG, "OP CODE NOT SUPPORTED");
-    indicate_data_len = 3;
-    indicate_data[2] = OACP_RES_OP_CODE_NOT_SUPPORTED;
+    indicate_data_len = 2;
+    indicate_data[1] = OACP_RES_OP_CODE_NOT_SUPPORTED;
     esp_ble_gatts_send_indicate(gatts_if, param->write.conn_id, handle_table[OPT_IDX_CHAR_OBJECT_OLCP_VAL], indicate_data_len, indicate_data, true);
 
     return ESP_OK;
@@ -926,7 +910,6 @@ static esp_err_t ObjectTransfer_write_Alarm_Action(esp_gatt_if_t gatts_if, esp_b
     }
 
     object->set_custom_object = true;
-    // memcpy((uint8_t*)&object->params.alarm.alarm_args, &alarm, sizeof(alarm));
 
     ObjectManager_change_alarm_data_in_file(alarm);
 
@@ -947,6 +930,23 @@ static esp_err_t ObjectTransfer_write_Ringtone_Action(esp_gatt_if_t gatts_if, es
 
     esp_gatt_rsp_t rsp;
     rsp.handle = handle_table[OPT_IDX_CHAR_OBJECT_RINGTONE_ACTION_VAL];
+    esp_err_t ret;
+
+    if(param->write.need_rsp)
+    {
+        ret = esp_ble_gatts_send_response(gatts_if, param->write.conn_id, param->write.trans_id, STATUS_OK, &rsp);
+        if(ret) return ret;
+    }
+
+    return ESP_OK;
+}
+
+static esp_err_t ObjectTransfer_write_wifi_action(esp_gatt_if_t gatts_if, esp_ble_gatts_cb_param_t *param, uint16_t *handle_table)
+{
+    ESP_LOGD(TAG, "Object Ringtone Action WRITE EVENT");
+
+    esp_gatt_rsp_t rsp;
+    rsp.handle = handle_table[OPT_IDX_CHAR_OBJECT_WIFI_ACTION_VAL];
     esp_err_t ret;
 
     if(param->write.need_rsp)

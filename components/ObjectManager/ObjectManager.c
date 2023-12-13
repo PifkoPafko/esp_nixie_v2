@@ -88,18 +88,6 @@ void ObjectManager_null_current_object(void)
 
 esp_err_t ObjectManager_create_object(uint32_t size, esp_bt_uuid_t type, oacp_op_code_result_t *result)
 {
-    size_t total = 0, used = 0;
-    // esp_spiffs_info(conf.partition_label, &total, &used);           //TODO change for SD CARD
-
-    ESP_LOGI(OBJECT_TAG, "Requested object size: %" PRIu32, size);
-
-    if(size > total - used)
-    {
-        ESP_LOGE(OBJECT_TAG, "Insufficient Resources - available space: %u", total - used);
-        *result = OACP_RES_INSUF_RSR;
-        return ESP_OK;
-    }
-
     ESP_LOGI(OBJECT_TAG, "Requested object type UUID:");
     if(type.len == ESP_UUID_LEN_16) ESP_LOGI(OBJECT_TAG, "%02x", type.uuid.uuid16);
     else if(type.len == ESP_UUID_LEN_128) ESP_LOG_BUFFER_HEX_LEVEL(OBJECT_TAG, type.uuid.uuid128, ESP_UUID_LEN_128, ESP_LOG_INFO);
@@ -167,7 +155,7 @@ esp_err_t ObjectManager_create_object(uint32_t size, esp_bt_uuid_t type, oacp_op
     fprintf(f, "\n");
     fprintf(f, "Properties: %x\n", PROPERTY_ALL_WITHOUT_MARK);
     fclose(f);
-    ESP_LOGI(OBJECT_TAG, "File created: %" PRIx64 ".txt", object->id);
+    ESP_LOGI(OBJECT_TAG, "File created: %" PRIx64, object->id);
 
     
     f = fopen(FILE_LIST_NAME, "a+");
@@ -206,7 +194,7 @@ esp_err_t ObjectManager_delete_object(oacp_op_code_result_t *result)
 
     if((current_object->properties & PROPERTY_DELETE) == 0)
     {
-        ESP_LOGE(OBJECT_TAG, "Procedure not permittet");
+        ESP_LOGE(OBJECT_TAG, "Procedure not permitted");
         *result = OACP_RES_PROCEDURE_NOT_PERMIT;
         return ESP_OK;
     }
@@ -239,7 +227,7 @@ esp_err_t ObjectManager_delete_object(oacp_op_code_result_t *result)
     fseek(file_src, 0, SEEK_SET);
 
     unsigned int line_counter = 0;
-    FILE* file_dest = fopen("/spiffs/temp.txt", "w");
+    FILE* file_dest = fopen(TEMP_FILE_PATH, "w");
     while(fgets(line, sizeof(line), file_src))
     {
         line_counter++;
@@ -252,7 +240,7 @@ esp_err_t ObjectManager_delete_object(oacp_op_code_result_t *result)
     fclose(file_src);
     fclose(file_dest);
     remove(FILE_LIST_NAME);
-    rename("/spiffs/temp.txt", FILE_LIST_NAME);
+    rename(TEMP_FILE_PATH, FILE_LIST_NAME);
 
     *result = OACP_RES_SUCCESS;
 
@@ -599,108 +587,108 @@ static char* id_to_string(char* bfr, uint64_t id)
 
 static void ObjectManager_print_file()
 {
-    if(current_object == NULL)
-    {
-        return;
-    }
+    // if(current_object == NULL)
+    // {
+    //     return;
+    // }
 
-    FILE* f = ObjectManager_open_file("r", current_object->id);
+    // FILE* f = ObjectManager_open_file("r", current_object->id);
 
-    char line[70];
+    // char line[70];
 
-    while(fgets(line, sizeof(line), f))
-    {
-        printf("%s", line);
-    }
+    // while(fgets(line, sizeof(line), f))
+    // {
+    //     printf("%s", line);
+    // }
 
-    fclose(f);
+    // fclose(f);
 }
 
 void ObjectManager_printf_alarm_info()
 {
-    if(current_object == NULL) return;
+    // if(current_object == NULL) return;
 
-    FILE* f = ObjectManager_open_file("r", current_object->id);
-    fpos_t pos;
-    bool found = seekfor(f, "ALARM PROPERTIES\n", &pos);
-    fclose(f);
+    // FILE* f = ObjectManager_open_file("r", current_object->id);
+    // fpos_t pos;
+    // bool found = seekfor(f, "ALARM PROPERTIES\n", &pos);
+    // fclose(f);
 
-    if(found)
-    {
-        alarm_mode_args_t alarm = get_alarm_values();
-        printf("State: %s\n", alarm.enable?"enabled":"disabled");
+    // if(found)
+    // {
+    //     alarm_mode_args_t alarm = get_alarm_values();
+    //     printf("State: %s\n", alarm.enable?"enabled":"disabled");
 
-        switch(alarm.mode)
-        {
-            case ALARM_SINGLE_MODE:
-                printf("Mode: single\n");
-                break;
+    //     switch(alarm.mode)
+    //     {
+    //         case ALARM_SINGLE_MODE:
+    //             printf("Mode: single\n");
+    //             break;
 
-            case ALARM_WEEKLY_MODE:
-                printf("Mode: weekly\n");
-                break;
+    //         case ALARM_WEEKLY_MODE:
+    //             printf("Mode: weekly\n");
+    //             break;
 
-            case ALARM_MONTHLY_MODE:
-                printf("Mode: monthly\n");
-                break;
+    //         case ALARM_MONTHLY_MODE:
+    //             printf("Mode: monthly\n");
+    //             break;
 
-            case ALARM_YEARLY_MODE:
-                printf("Mode: yearly\n");
-                break;
-        }
+    //         case ALARM_YEARLY_MODE:
+    //             printf("Mode: yearly\n");
+    //             break;
+    //     }
 
-        printf("Description length: %u\n", alarm.desc_len);
-        printf("Description: %s\n", alarm.desc);
-        printf("Hour: %u\n", alarm.hour);
-        printf("Minute: %u\n", alarm.minute);
+    //     printf("Description length: %u\n", alarm.desc_len);
+    //     printf("Description: %s\n", alarm.desc);
+    //     printf("Hour: %u\n", alarm.hour);
+    //     printf("Minute: %u\n", alarm.minute);
 
-        switch(alarm.mode)
-        {
-            case ALARM_SINGLE_MODE:
-                printf("Day: %u\n", alarm.args.single_alarm_args.day);
-                printf("Month: %u\n", alarm.args.single_alarm_args.month);
-                printf("Year: %u\n", alarm.args.single_alarm_args.year);
-                break;
-            case ALARM_WEEKLY_MODE:
-                printf("Days: %u\n", alarm.args.days);
-                break;
-            case ALARM_MONTHLY_MODE:
-                printf("Day: %u\n", alarm.args.day);
-                break;
-            case ALARM_YEARLY_MODE:
-                printf("Day: %u\n", alarm.args.yearly_alarm_args.day);
-                printf("Month: %u\n", alarm.args.yearly_alarm_args.month);
-                break;
-        }
+    //     switch(alarm.mode)
+    //     {
+    //         case ALARM_SINGLE_MODE:
+    //             printf("Day: %u\n", alarm.args.single_alarm_args.day);
+    //             printf("Month: %u\n", alarm.args.single_alarm_args.month);
+    //             printf("Year: %u\n", alarm.args.single_alarm_args.year);
+    //             break;
+    //         case ALARM_WEEKLY_MODE:
+    //             printf("Days: %u\n", alarm.args.days);
+    //             break;
+    //         case ALARM_MONTHLY_MODE:
+    //             printf("Day: %u\n", alarm.args.day);
+    //             break;
+    //         case ALARM_YEARLY_MODE:
+    //             printf("Day: %u\n", alarm.args.yearly_alarm_args.day);
+    //             printf("Month: %u\n", alarm.args.yearly_alarm_args.month);
+    //             break;
+    //     }
         
-        printf("Volume: %d\n", alarm.volume);
-    }
+    //     printf("Volume: %d\n", alarm.volume);
+    // }
 }
 
 static void ObjectManager_print_current_object()
 {
-    if(current_object)
-    {
-        printf("\nSize: 0x%x\n", current_object->size);
-        printf("Allocated size: 0x%x\n", current_object->alloc_size);
-        printf("Name: %s\n", current_object->name);
-        printf("Name length: %u\n", current_object->name_len);
-        printf("UUID type: %u\n", current_object->type.len);
-        printf("UUID: ");
+    // if(current_object)
+    // {
+    //     printf("\nSize: 0x%x\n", current_object->size);
+    //     printf("Allocated size: 0x%x\n", current_object->alloc_size);
+    //     printf("Name: %s\n", current_object->name);
+    //     printf("Name length: %u\n", current_object->name_len);
+    //     printf("UUID type: %u\n", current_object->type.len);
+    //     printf("UUID: ");
 
-        for(int i=15; i>=0; i--)
-        {
-            printf("%02x", current_object->type.uuid.uuid128[i]);
-        }
-        printf("\n");
-        printf("ID: %llx\n", current_object->id);
-        printf("Properties: 0x%" PRIx32 "\n\n", current_object->properties);
-    }
+    //     for(int i=15; i>=0; i--)
+    //     {
+    //         printf("%02x", current_object->type.uuid.uuid128[i]);
+    //     }
+    //     printf("\n");
+    //     printf("ID: %llx\n", current_object->id);
+    //     printf("Properties: 0x%" PRIx32 "\n\n", current_object->properties);
 
-    if(ObjectManager_check_type(current_object->type.uuid.uuid128) == ALARM_TYPE && current_object->set_custom_object)
-    {
-        ObjectManager_printf_alarm_info();
-    }
+    //     if(ObjectManager_check_type(current_object->type.uuid.uuid128) == ALARM_TYPE && current_object->set_custom_object)
+    //     {
+    //         ObjectManager_printf_alarm_info();
+    //     }
+    // }
 }
 
 static void ObjectManager_set_current_object_from_file(uint64_t id)

@@ -18,15 +18,12 @@ uint8_t set_alarm_values(uint8_t *payload, uint16_t payload_len)
     }
 
     alarm.mode = *payload;
-    ESP_LOGI(TAG, "Alarm mode: %u", alarm.mode);
     payload += ALARM_FIELD_SIZE;
 
     alarm.enable = *payload;
-    ESP_LOGI(TAG, "Alarm enable: %u", alarm.enable);
     payload += ALARM_FIELD_SIZE;
 
     alarm.desc_len = *payload;
-    ESP_LOGI(TAG, "Alarm desc_len: %u", alarm.desc_len);
     payload += ALARM_FIELD_SIZE;
 
     if(alarm.mode >= ALARM_MODES_NUM)

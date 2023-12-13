@@ -84,12 +84,11 @@ static esp_err_t bt_init()
         return ret;
     }
 
-    // esp_err_t local_mtu_ret = esp_ble_gatt_set_local_mtu(500);
-    // if (local_mtu_ret){
-    //     ESP_LOGE(MAIN_TAG, "set local  MTU failed, error code = %x", local_mtu_ret);
-    //     return ret;
-    // }
-
+    ret = esp_ble_gatt_set_local_mtu(512);
+    if (ret){
+        ESP_LOGE(MAIN_TAG, "set local  MTU failed, error code = %x", ret);
+        return ret;
+    }
 
     /* set the security iocap & auth_req & key size & init key response key parameters to the stack*/
     esp_ble_auth_req_t auth_req = ESP_LE_AUTH_REQ_SC_MITM_BOND;     //bonding with peer device after authentication
@@ -134,13 +133,14 @@ static esp_err_t sd_cad_init()
     host.max_freq_khz = 10000;          // TODO: Change in future to higher value
     sdmmc_slot_config_t slot_config = SDMMC_SLOT_CONFIG_DEFAULT();
 
-    slot_config.width = 1;
-    slot_config.cmd = 35;
-    slot_config.clk = 36;
-    slot_config.d0 = 37;
-    slot_config.d1 = 15;
-    slot_config.d2 = 16;
-    slot_config.d3 = 17;
+    slot_config.width = 4;
+    slot_config.cmd = 16;
+    slot_config.clk = 15;
+    slot_config.d0 = 17;
+    slot_config.d1 = 5;
+    slot_config.d2 = 6;
+    slot_config.d3 = 7;
+    slot_config.cd = 4;
     slot_config.flags |= SDMMC_SLOT_FLAG_INTERNAL_PULLUP;
 
     ESP_LOGI(MAIN_TAG, "Mounting filesystem");

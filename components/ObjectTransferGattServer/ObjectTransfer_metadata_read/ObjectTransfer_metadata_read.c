@@ -16,6 +16,7 @@ static esp_err_t ObjectTransfer_read_id(esp_gatt_if_t gatts_if, esp_ble_gatts_cb
 static esp_err_t ObjectTransfer_read_properties(esp_gatt_if_t gatts_if, esp_ble_gatts_cb_param_t *param, uint16_t *handle_table);
 static esp_err_t ObjectTransfer_read_list_filter(esp_gatt_if_t gatts_if, esp_ble_gatts_cb_param_t *param, uint16_t *handle_table);
 static esp_err_t ObjectTransfer_read_alarm_action(esp_gatt_if_t gatts_if, esp_ble_gatts_cb_param_t *param, uint16_t *handle_table);
+static esp_err_t ObjectTransfer_read_wifi_action(esp_gatt_if_t gatts_if, esp_ble_gatts_cb_param_t *param, uint16_t *handle_table);
 
 
 esp_err_t ObjectTranfer_metadata_read_event(esp_gatt_if_t gatts_if, esp_ble_gatts_cb_param_t *param, uint16_t *handle_table)
@@ -27,6 +28,7 @@ esp_err_t ObjectTranfer_metadata_read_event(esp_gatt_if_t gatts_if, esp_ble_gatt
     else if(param->read.handle == handle_table[OPT_IDX_CHAR_OBJECT_PROPERTIES_VAL]) ObjectTransfer_read_properties(gatts_if, param, handle_table);
     else if(param->read.handle == handle_table[OPT_IDX_CHAR_OBJECT_LIST_FILTER_VAL]) ObjectTransfer_read_list_filter(gatts_if, param, handle_table);
     else if(param->read.handle == handle_table[OPT_IDX_CHAR_OBJECT_ALARM_ACTION_VAL]) ObjectTransfer_read_alarm_action(gatts_if, param, handle_table);
+    else if(param->read.handle == handle_table[OPT_IDX_CHAR_OBJECT_WIFI_ACTION_VAL]) ObjectTransfer_read_wifi_action(gatts_if, param, handle_table);
 
     return ESP_OK;
 }                           /*!< Gatt server callback param of ESP_GATTS_READ_EVT */
@@ -327,5 +329,21 @@ static esp_err_t ObjectTransfer_read_alarm_action(esp_gatt_if_t gatts_if, esp_bl
 
         if(err) return err;
     }
+    return ESP_OK;
+}
+
+static esp_err_t ObjectTransfer_read_wifi_action(esp_gatt_if_t gatts_if, esp_ble_gatts_cb_param_t *param, uint16_t *handle_table)
+{
+    ESP_LOGI(TAG, "Object alarm data READ EVENT");
+
+    if(param->read.need_rsp)
+    {
+        esp_gatt_rsp_t rsp;
+        rsp.attr_value.handle = handle_table[OPT_IDX_CHAR_OBJECT_WIFI_ACTION_VAL];
+
+        esp_err_t err = esp_ble_gatts_send_response(gatts_if, param->read.conn_id, param->read.trans_id, STATUS_OK, &rsp);
+        if(err) return err;
+    }
+
     return ESP_OK;
 }
