@@ -100,7 +100,7 @@ static const uint16_t GATTS_CHAR_OBJECT_OACP            = 0x2AC5;
 static const uint16_t GATTS_CHAR_OBJECT_OLCP            = 0x2AC6;
 static const uint16_t GATTS_CHAR_OBJECT_LIST_FILTER     = 0x2AC7;
 static uint8_t GATTS_CHAR_ALARM_ACTION[16]              = {0x26, 0xab, 0x57, 0xe0, 0x57, 0xab, 0x45, 0x98, 0xaf, 0xf2, 0x06, 0xe5, 0x27, 0x3f, 0x91, 0x9e};
-static uint8_t GATTS_CHAR_RINGTONE_ACTION[16]           = {0x26, 0xab, 0x57, 0xe0, 0x57, 0xab, 0x45, 0x98, 0xaf, 0xf2, 0x06, 0xe5, 0x27, 0x5c, 0xe5, 0x40};
+// static uint8_t GATTS_CHAR_RINGTONE_ACTION[16]           = {0x26, 0xab, 0x57, 0xe0, 0x57, 0xab, 0x45, 0x98, 0xaf, 0xf2, 0x06, 0xe5, 0x27, 0x5c, 0xe5, 0x40};
 static uint8_t GATTS_CHAR_WIFI_ACTION[16]               = {0x26, 0xab, 0x57, 0xe0, 0x57, 0xab, 0x45, 0x98, 0xaf, 0xf2, 0x06, 0xe5, 0x27, 0x2a, 0x14, 0x80};
 
 static const uint16_t primary_service_uuid          = ESP_GATT_UUID_PRI_SERVICE;
@@ -240,35 +240,35 @@ static const esp_gatts_attr_db_t gatt_db[OPT_IDX_NB] =
     {{ESP_GATT_RSP_BY_APP}, {ESP_UUID_LEN_128, GATTS_CHAR_ALARM_ACTION, ESP_GATT_PERM_READ | ESP_GATT_PERM_WRITE,
       GATTS_DEMO_CHAR_VAL_LEN_MAX, 0, NULL}},
 
-    /* Object Ringstone Action Characteristic Declaration */
-    [OPT_IDX_CHAR_OBJECT_RINGTONE_ACTION]     =
-    {{ESP_GATT_AUTO_RSP}, {ESP_UUID_LEN_16, (uint8_t *)&char_declaration_uuid, ESP_GATT_PERM_READ,
-      CHAR_DECLARATION_SIZE, CHAR_DECLARATION_SIZE, (uint8_t *)&char_prop_read_write}},
+    // /* Object Ringstone Action Characteristic Declaration */
+    // [OPT_IDX_CHAR_OBJECT_RINGTONE_ACTION]     =
+    // {{ESP_GATT_AUTO_RSP}, {ESP_UUID_LEN_16, (uint8_t *)&char_declaration_uuid, ESP_GATT_PERM_READ,
+    //   CHAR_DECLARATION_SIZE, CHAR_DECLARATION_SIZE, (uint8_t *)&char_prop_read_write}},
 
-    /* Object Ringstone Action Characteristic Value */
-    [OPT_IDX_CHAR_OBJECT_RINGTONE_ACTION_VAL] =
-    {{ESP_GATT_RSP_BY_APP}, {ESP_UUID_LEN_128, GATTS_CHAR_RINGTONE_ACTION, ESP_GATT_PERM_WRITE,
-      GATTS_DEMO_CHAR_VAL_LEN_MAX, 0, NULL}},
+    // /* Object Ringstone Action Characteristic Value */
+    // [OPT_IDX_CHAR_OBJECT_RINGTONE_ACTION_VAL] =
+    // {{ESP_GATT_RSP_BY_APP}, {ESP_UUID_LEN_128, GATTS_CHAR_RINGTONE_ACTION, ESP_GATT_PERM_WRITE,
+    //   GATTS_DEMO_CHAR_VAL_LEN_MAX, 0, NULL}},
 
-    /* Object Ringstone Action Characteristic Configuration Descriptor */
-    [OPT_IDX_CHAR_OBJECT_RINGTONE_ACTION_CFG]  =
-    {{ESP_GATT_AUTO_RSP}, {ESP_UUID_LEN_16, (uint8_t *)&character_client_config_uuid, ESP_GATT_PERM_WRITE,
-      sizeof(uint16_t),  0, NULL}},
+    // /* Object Ringstone Action Characteristic Configuration Descriptor */
+    // [OPT_IDX_CHAR_OBJECT_RINGTONE_ACTION_CFG]  =
+    // {{ESP_GATT_AUTO_RSP}, {ESP_UUID_LEN_16, (uint8_t *)&character_client_config_uuid, ESP_GATT_PERM_WRITE,
+    //   sizeof(uint16_t),  0, NULL}},
 
     /* Object Wifi Action Characteristic Declaration */
     [OPT_IDX_CHAR_OBJECT_WIFI_ACTION]     =
     {{ESP_GATT_AUTO_RSP}, {ESP_UUID_LEN_16, (uint8_t *)&char_declaration_uuid, ESP_GATT_PERM_READ,
-      CHAR_DECLARATION_SIZE, CHAR_DECLARATION_SIZE, (uint8_t *)&char_prop_read_write}},
+      CHAR_DECLARATION_SIZE, CHAR_DECLARATION_SIZE, (uint8_t *)&char_prop_write_indicate}},
 
     /* Object Wifi Action Characteristic Value */
     [OPT_IDX_CHAR_OBJECT_WIFI_ACTION_VAL] =
-    {{ESP_GATT_RSP_BY_APP}, {ESP_UUID_LEN_128, GATTS_CHAR_WIFI_ACTION, ESP_GATT_PERM_READ,
+    {{ESP_GATT_RSP_BY_APP}, {ESP_UUID_LEN_128, GATTS_CHAR_WIFI_ACTION, ESP_GATT_PERM_WRITE,
       GATTS_DEMO_CHAR_VAL_LEN_MAX, 0, NULL}},
 
     /* Object Wifi Action Characteristic Configuration Descriptor */
     [OPT_IDX_CHAR_OBJECT_WIFI_ACTION_CFG]  =
     {{ESP_GATT_AUTO_RSP}, {ESP_UUID_LEN_16, (uint8_t *)&character_client_config_uuid, ESP_GATT_PERM_WRITE,
-      sizeof(uint16_t),  0, NULL}},
+      GATTS_DEMO_CHAR_VAL_LEN_MAX, 0, NULL}}
 };
 
 static char *esp_key_type_to_str(esp_ble_key_type_t key_type)

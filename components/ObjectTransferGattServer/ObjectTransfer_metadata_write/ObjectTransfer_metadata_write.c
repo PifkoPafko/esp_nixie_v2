@@ -36,11 +36,12 @@ static esp_err_t ObjectTransfer_write_OLCP_Clear_Marking(esp_gatt_if_t gatts_if,
 static esp_err_t ObjectTransfer_write_OLCP_OP_NS(esp_gatt_if_t gatts_if, esp_ble_gatts_cb_param_t *param, uint16_t *handle_table);
 
 static esp_err_t ObjectTransfer_write_Alarm_Action(esp_gatt_if_t gatts_if, esp_ble_gatts_cb_param_t *param, uint16_t *handle_table);
-static esp_err_t ObjectTransfer_write_Ringtone_Action(esp_gatt_if_t gatts_if, esp_ble_gatts_cb_param_t *param, uint16_t *handle_table);
+// static esp_err_t ObjectTransfer_write_Ringtone_Action(esp_gatt_if_t gatts_if, esp_ble_gatts_cb_param_t *param, uint16_t *handle_table);
+
 static esp_err_t ObjectTransfer_write_wifi_action(esp_gatt_if_t gatts_if, esp_ble_gatts_cb_param_t *param, uint16_t *handle_table);
-
-
-static esp_err_t ObjectTransfer_write_OLCP_CCC(esp_gatt_if_t gatts_if, esp_ble_gatts_cb_param_t *param, uint16_t *handle_table);
+static esp_err_t ObjectTransfer_write_wifi_CCC(esp_gatt_if_t gatts_if, esp_ble_gatts_cb_param_t *param, uint16_t *handle_table);
+static esp_err_t ObjectTransfer_write_wifi_search(esp_gatt_if_t gatts_if, esp_ble_gatts_cb_param_t *param, uint16_t *handle_table);
+static esp_err_t ObjectTransfer_write_wifi_connect(esp_gatt_if_t gatts_if, esp_ble_gatts_cb_param_t *param, uint16_t *handle_table);
 
 esp_err_t ObjectTranfer_metadata_write_event(esp_gatt_if_t gatts_if, esp_ble_gatts_cb_param_t *param, uint16_t *handle_table)
 {
@@ -52,8 +53,9 @@ esp_err_t ObjectTranfer_metadata_write_event(esp_gatt_if_t gatts_if, esp_ble_gat
     else if(param->write.handle == handle_table[OPT_IDX_CHAR_OBJECT_OLCP_IND_CFG]) ObjectTransfer_write_OLCP_CCC(gatts_if, param, handle_table);
     else if(param->write.handle == handle_table[OPT_IDX_CHAR_OBJECT_LIST_FILTER_VAL]) ObjectTransfer_write_list_filter(gatts_if, param, handle_table);
     else if(param->write.handle == handle_table[OPT_IDX_CHAR_OBJECT_ALARM_ACTION_VAL]) ObjectTransfer_write_Alarm_Action(gatts_if, param, handle_table);
-    else if(param->write.handle == handle_table[OPT_IDX_CHAR_OBJECT_RINGTONE_ACTION_VAL]) ObjectTransfer_write_Ringtone_Action(gatts_if, param, handle_table);
+    // else if(param->write.handle == handle_table[OPT_IDX_CHAR_OBJECT_RINGTONE_ACTION_VAL]) ObjectTransfer_write_Ringtone_Action(gatts_if, param, handle_table);
     else if(param->write.handle == handle_table[OPT_IDX_CHAR_OBJECT_WIFI_ACTION_VAL]) ObjectTransfer_write_wifi_action(gatts_if, param, handle_table);
+    else if(param->write.handle == handle_table[OPT_IDX_CHAR_OBJECT_WIFI_ACTION_CFG]) ObjectTransfer_write_wifi_CCC(gatts_if, param, handle_table);
 
     return ESP_OK;
 }
@@ -924,36 +926,128 @@ static esp_err_t ObjectTransfer_write_Alarm_Action(esp_gatt_if_t gatts_if, esp_b
     return ESP_OK;
 }
 
-static esp_err_t ObjectTransfer_write_Ringtone_Action(esp_gatt_if_t gatts_if, esp_ble_gatts_cb_param_t *param, uint16_t *handle_table)
-{
-    ESP_LOGD(TAG, "Object Ringtone Action WRITE EVENT");
+// static esp_err_t ObjectTransfer_write_Ringtone_Action(esp_gatt_if_t gatts_if, esp_ble_gatts_cb_param_t *param, uint16_t *handle_table)
+// {
+//     ESP_LOGD(TAG, "Object Ringtone Action WRITE EVENT");
 
-    esp_gatt_rsp_t rsp;
-    rsp.handle = handle_table[OPT_IDX_CHAR_OBJECT_RINGTONE_ACTION_VAL];
-    esp_err_t ret;
+//     esp_gatt_rsp_t rsp;
+//     rsp.handle = handle_table[OPT_IDX_CHAR_OBJECT_RINGTONE_ACTION_VAL];
+//     esp_err_t ret;
 
-    if(param->write.need_rsp)
-    {
-        ret = esp_ble_gatts_send_response(gatts_if, param->write.conn_id, param->write.trans_id, STATUS_OK, &rsp);
-        if(ret) return ret;
-    }
+//     if(param->write.need_rsp)
+//     {
+//         ret = esp_ble_gatts_send_response(gatts_if, param->write.conn_id, param->write.trans_id, STATUS_OK, &rsp);
+//         if(ret) return ret;
+//     }
 
-    return ESP_OK;
-}
+//     return ESP_OK;
+// }
 
 static esp_err_t ObjectTransfer_write_wifi_action(esp_gatt_if_t gatts_if, esp_ble_gatts_cb_param_t *param, uint16_t *handle_table)
 {
-    ESP_LOGD(TAG, "Object Ringtone Action WRITE EVENT");
+    ESP_LOGD(TAG, "Object Wifi Action WRITE EVENT");
 
     esp_gatt_rsp_t rsp;
     rsp.handle = handle_table[OPT_IDX_CHAR_OBJECT_WIFI_ACTION_VAL];
-    esp_err_t ret;
 
-    if(param->write.need_rsp)
+    if(param->write.len == 0 && param->write.need_rsp)
     {
-        ret = esp_ble_gatts_send_response(gatts_if, param->write.conn_id, param->write.trans_id, STATUS_OK, &rsp);
-        if(ret) return ret;
+        ESP_LOGE(TAG, "INVALID ATTR VAL LENGTH");
+        ESP_LOGE(TAG, "LEN: %d", param->write.len);
+
+        esp_ble_gatts_send_response(gatts_if, param->write.conn_id, param->write.trans_id, INVALID_ATTR_VAL_LENGTH, &rsp);
+        return ESP_OK;
+    }
+
+    switch(param->write.value[0])
+    {
+        case 0x01:
+            ObjectTransfer_write_wifi_search(gatts_if, param, handle_table);
+            break;
+        
+        case 0x02:
+            ObjectTransfer_write_wifi_connect(gatts_if, param, handle_table);
+            break;
+
+        default:
+            esp_gatt_rsp_t rsp;
+            esp_ble_gatts_send_response(gatts_if, param->write.conn_id, param->write.trans_id, WRITE_REQUEST_REJECTED, &rsp);
+            break;
     }
 
     return ESP_OK;
 }
+
+static esp_err_t ObjectTransfer_write_wifi_CCC(esp_gatt_if_t gatts_if, esp_ble_gatts_cb_param_t *param, uint16_t *handle_table)
+{
+    if(param->write.len == 2){
+        uint16_t descr_value = param->write.value[1]<<8 | param->write.value[0];
+        if (descr_value == 0x0002){
+            ESP_LOGI(TAG, "Wifi indicate enable");
+            uint8_t indicate_data[15];
+            for (int i = 0; i < sizeof(indicate_data); ++i)
+            {
+                indicate_data[i] = i % 0xff;
+            }
+        }
+        else if (descr_value == 0x0000){
+            ESP_LOGI(TAG, "Wifi indicate disable");
+        }else{
+            ESP_LOGE(TAG, "unknown descr value");;
+        }
+    }
+    return ESP_OK;
+}
+
+static esp_err_t ObjectTransfer_write_wifi_search(esp_gatt_if_t gatts_if, esp_ble_gatts_cb_param_t *param, uint16_t *handle_table)
+{
+    esp_gatt_rsp_t rsp;
+    rsp.handle = handle_table[OPT_IDX_CHAR_OBJECT_WIFI_ACTION_VAL];
+    uint8_t status = STATUS_OK;
+
+    if(param->write.len != 1)
+    {
+        ESP_LOGE(TAG, "INVALID ATTR VAL LENGTH");
+        ESP_LOGE(TAG, "LEN: %d", param->write.len);
+
+        status = INVALID_ATTR_VAL_LENGTH;
+    }
+
+    if(param->write.need_rsp)
+    {
+        esp_ble_gatts_send_response(gatts_if, param->write.conn_id, param->write.trans_id, status, &rsp);
+    }
+
+    if(status != STATUS_OK) return ESP_OK;
+
+
+
+    return ESP_OK;
+}
+
+static esp_err_t ObjectTransfer_write_wifi_connect(esp_gatt_if_t gatts_if, esp_ble_gatts_cb_param_t *param, uint16_t *handle_table)
+{
+    esp_gatt_rsp_t rsp;
+    rsp.handle = handle_table[OPT_IDX_CHAR_OBJECT_WIFI_ACTION_VAL];
+    uint8_t status = STATUS_OK;
+
+    if(param->write.len != 1)
+    {
+        ESP_LOGE(TAG, "INVALID ATTR VAL LENGTH");
+        ESP_LOGE(TAG, "LEN: %d", param->write.len);
+
+        status = INVALID_ATTR_VAL_LENGTH;
+    }
+
+    if(param->write.need_rsp)
+    {
+        esp_ble_gatts_send_response(gatts_if, param->write.conn_id, param->write.trans_id, status, &rsp);
+    }
+
+    if(status != STATUS_OK) return ESP_OK;
+
+    
+
+    return ESP_OK;
+}
+
