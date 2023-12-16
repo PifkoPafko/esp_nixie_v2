@@ -68,7 +68,13 @@
     "project_defs.h": "c",
     "dirent.h": "c",
     "alarm.h": "c",
-    "cstring": "c"
+    "cstring": "c",
+    "wifi.h": "c",
+    "sdmmc_host.h": "c",
+    "esp_wifi.h": "c",
+    "sntp.h": "c",
+    "esp_sntp.h": "c",
+    "ip.h": "c"
   },
   "idf.flashType": "UART",
   "idf.portWin": "COM5",

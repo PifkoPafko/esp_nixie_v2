@@ -33,6 +33,9 @@
 #include "sdmmc_cmd.h"
 #include "driver/sdmmc_host.h"
 
+#include "esp_wifi.h"
+#include "wifi.h"
+
 #define MAIN_TAG    "MAIN"
 #define ESP_APP_ID  0x55
 
@@ -161,6 +164,58 @@ static esp_err_t sd_cad_init()
     return ret;
 }
 
+static esp_err_t wifi_init()
+{
+    esp_err_t ret = esp_netif_init();
+    if (ret){
+        ESP_LOGE(MAIN_TAG, "esp_netif_init, error code = %x", ret);
+        return ret;
+    }
+
+    esp_event_loop_create_default();
+    if (ret){
+        ESP_LOGE(MAIN_TAG, "esp_event_loop_create_default, error code = %x", ret);
+        return ret;
+    }
+
+    esp_netif_create_default_wifi_sta();
+    if (ret){
+        ESP_LOGE(MAIN_TAG, "esp_netif_create_default_wifi_sta, error code = %x", ret);
+        return ret;
+    }
+
+    wifi_init_config_t cfg = WIFI_INIT_CONFIG_DEFAULT();
+    esp_wifi_init(&cfg);
+    if (ret){
+        ESP_LOGE(MAIN_TAG, "esp_wifi_init, error code = %x", ret);
+        return ret;
+    }
+
+    esp_wifi_set_mode(WIFI_MODE_STA);
+    if (ret){
+        ESP_LOGE(MAIN_TAG, "esp_wifi_set_mode, error code = %x", ret);
+        return ret;
+    }
+
+    esp_event_handler_instance_t instance_any_id;
+    esp_event_handler_instance_t instance_got_ip;
+
+    ESP_ERROR_CHECK(esp_event_handler_instance_register(WIFI_EVENT,
+                                                        ESP_EVENT_ANY_ID,
+                                                        &wifi_event_handler,
+                                                        NULL,
+                                                        &instance_any_id));
+    ESP_ERROR_CHECK(esp_event_handler_instance_register(IP_EVENT,
+                                                        IP_EVENT_STA_GOT_IP,
+                                                        &wifi_event_handler,
+                                                        NULL,
+                                                        &instance_got_ip));
+
+    wifi_sta_init();
+
+    return ESP_OK;
+}
+
 void app_main(void)
 {
     ESP_LOGI(MAIN_TAG, "Initializing sd card");
@@ -180,6 +235,13 @@ void app_main(void)
             ESP_LOGE(MAIN_TAG, "Failed to initialize nvs.");
             return;
         }
+    }
+
+    ESP_LOGI(MAIN_TAG, "Initializing wifi");
+    ret = wifi_init();
+    if (ret) {
+        ESP_LOGE(MAIN_TAG, "wifi init failed, err: %x", ret);
+        return;
     }
 
     ESP_LOGI(MAIN_TAG, "Initializing bluetooth");

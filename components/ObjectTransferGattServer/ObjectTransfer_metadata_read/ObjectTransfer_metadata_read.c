@@ -7,6 +7,8 @@
 #include "esp_err.h"
 #include "esp_log.h"
 
+#include "wifi.h"
+
 #define TAG "READ_EVENT"
 
 static esp_err_t ObjectTransfer_read_name(esp_gatt_if_t gatts_if, esp_ble_gatts_cb_param_t *param, uint16_t *handle_table);
@@ -334,12 +336,30 @@ static esp_err_t ObjectTransfer_read_alarm_action(esp_gatt_if_t gatts_if, esp_bl
 
 static esp_err_t ObjectTransfer_read_wifi_action(esp_gatt_if_t gatts_if, esp_ble_gatts_cb_param_t *param, uint16_t *handle_table)
 {
-    ESP_LOGI(TAG, "Object alarm data READ EVENT");
+    ESP_LOGI(TAG, "Object wifi data READ EVENT");
 
     if(param->read.need_rsp)
     {
         esp_gatt_rsp_t rsp;
         rsp.attr_value.handle = handle_table[OPT_IDX_CHAR_OBJECT_WIFI_ACTION_VAL];
+
+        my_wifi_t* my_wifi = get_current_wifi();
+
+        if( get_wifi_connect_status() )
+        {
+            rsp.attr_value.value[0] = 1;
+        }
+        else
+        {
+            rsp.attr_value.value[0] = 0;
+        }
+
+        rsp.attr_value.value[1] = my_wifi->my_ssid_len;
+        memcpy(&rsp.attr_value.value[2], my_wifi->wifi_config.sta.ssid, my_wifi->my_ssid_len);
+        rsp.attr_value.len = 2 + my_wifi->my_ssid_len;
+
+        rsp.attr_value.offset = 0;
+        rsp.attr_value.auth_req = ESP_GATT_AUTH_REQ_NONE;
 
         esp_err_t err = esp_ble_gatts_send_response(gatts_if, param->read.conn_id, param->read.trans_id, STATUS_OK, &rsp);
         if(err) return err;

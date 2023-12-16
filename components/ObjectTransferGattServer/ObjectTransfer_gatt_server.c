@@ -109,6 +109,7 @@ static const uint16_t character_client_config_uuid  = ESP_GATT_UUID_CHAR_CLIENT_
 static const uint8_t char_prop_read                 = ESP_GATT_CHAR_PROP_BIT_READ;
 static const uint8_t char_prop_read_write           = ESP_GATT_CHAR_PROP_BIT_READ | ESP_GATT_CHAR_PROP_BIT_WRITE;
 static const uint8_t char_prop_write_indicate       = ESP_GATT_CHAR_PROP_BIT_WRITE | ESP_GATT_CHAR_PROP_BIT_INDICATE;
+static const uint8_t char_prop_read_write_indicate  = ESP_GATT_CHAR_PROP_BIT_READ | ESP_GATT_CHAR_PROP_BIT_WRITE | ESP_GATT_CHAR_PROP_BIT_INDICATE;
 
 static const uint8_t OTS_Feature_value[8]      = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x30};
 
@@ -258,11 +259,11 @@ static const esp_gatts_attr_db_t gatt_db[OPT_IDX_NB] =
     /* Object Wifi Action Characteristic Declaration */
     [OPT_IDX_CHAR_OBJECT_WIFI_ACTION]     =
     {{ESP_GATT_AUTO_RSP}, {ESP_UUID_LEN_16, (uint8_t *)&char_declaration_uuid, ESP_GATT_PERM_READ,
-      CHAR_DECLARATION_SIZE, CHAR_DECLARATION_SIZE, (uint8_t *)&char_prop_write_indicate}},
+      CHAR_DECLARATION_SIZE, CHAR_DECLARATION_SIZE, (uint8_t *)&char_prop_read_write_indicate}},
 
     /* Object Wifi Action Characteristic Value */
     [OPT_IDX_CHAR_OBJECT_WIFI_ACTION_VAL] =
-    {{ESP_GATT_RSP_BY_APP}, {ESP_UUID_LEN_128, GATTS_CHAR_WIFI_ACTION, ESP_GATT_PERM_WRITE,
+    {{ESP_GATT_RSP_BY_APP}, {ESP_UUID_LEN_128, GATTS_CHAR_WIFI_ACTION, ESP_GATT_PERM_READ | ESP_GATT_PERM_WRITE,
       GATTS_DEMO_CHAR_VAL_LEN_MAX, 0, NULL}},
 
     /* Object Wifi Action Characteristic Configuration Descriptor */

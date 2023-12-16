@@ -7,10 +7,16 @@
 #include "esp_err.h"
 #include "esp_gatts_api.h"
 #include "esp_log.h"
+#include "esp_wifi.h"
+#include "wifi.h"
 
 #include "stdlib.h"
 
 #define TAG "WRITE_EVENT"
+
+static esp_gatt_if_t gatts_interface;
+uint16_t handle_wifi;
+uint16_t connection_id;
 
 static esp_err_t ObjectTransfer_write_name(esp_gatt_if_t gatts_if, esp_ble_gatts_cb_param_t *param, uint16_t *handle_table);
 static esp_err_t ObjectTransfer_write_properties(esp_gatt_if_t gatts_if, esp_ble_gatts_cb_param_t *param, uint16_t *handle_table);
@@ -1001,6 +1007,12 @@ static esp_err_t ObjectTransfer_write_wifi_CCC(esp_gatt_if_t gatts_if, esp_ble_g
 
 static esp_err_t ObjectTransfer_write_wifi_search(esp_gatt_if_t gatts_if, esp_ble_gatts_cb_param_t *param, uint16_t *handle_table)
 {
+    ESP_LOGI(TAG, "Object Wifi Action Search Action");
+
+    gatts_interface = gatts_if;
+    handle_wifi = handle_table[OPT_IDX_CHAR_OBJECT_WIFI_ACTION_VAL];
+    connection_id = param->write.conn_id;
+
     esp_gatt_rsp_t rsp;
     rsp.handle = handle_table[OPT_IDX_CHAR_OBJECT_WIFI_ACTION_VAL];
     uint8_t status = STATUS_OK;
@@ -1020,24 +1032,55 @@ static esp_err_t ObjectTransfer_write_wifi_search(esp_gatt_if_t gatts_if, esp_bl
 
     if(status != STATUS_OK) return ESP_OK;
 
-
+    start_search_task();
 
     return ESP_OK;
 }
 
 static esp_err_t ObjectTransfer_write_wifi_connect(esp_gatt_if_t gatts_if, esp_ble_gatts_cb_param_t *param, uint16_t *handle_table)
 {
+    ESP_LOGI(TAG, "Object Wifi Action Connect Action");
+
     esp_gatt_rsp_t rsp;
     rsp.handle = handle_table[OPT_IDX_CHAR_OBJECT_WIFI_ACTION_VAL];
     uint8_t status = STATUS_OK;
+    uint8_t offset = 1;
 
-    if(param->write.len != 1)
+    uint8_t *ssid;
+    uint8_t *password;
+
+    if(param->write.len < 3)
     {
         ESP_LOGE(TAG, "INVALID ATTR VAL LENGTH");
         ESP_LOGE(TAG, "LEN: %d", param->write.len);
 
         status = INVALID_ATTR_VAL_LENGTH;
     }
+
+    uint8_t ssid_len = param->write.value[offset];
+    if(param->write.len < 3 + ssid_len)
+    {
+        ESP_LOGE(TAG, "INVALID ATTR VAL LENGTH");
+        ESP_LOGE(TAG, "LEN: %d", param->write.len);
+
+        status = INVALID_ATTR_VAL_LENGTH;
+    }
+    offset++;
+
+    ssid = &param->write.value[offset];
+    offset += ssid_len;
+
+    uint8_t password_len = param->write.value[offset];
+    if(param->write.len < 3 + ssid_len + password_len)
+    {
+        ESP_LOGE(TAG, "INVALID ATTR VAL LENGTH");
+        ESP_LOGE(TAG, "LEN: %d", param->write.len);
+
+        status = INVALID_ATTR_VAL_LENGTH;
+    }
+    offset++;
+
+    password = &param->write.value[offset];
 
     if(param->write.need_rsp)
     {
@@ -1046,8 +1089,37 @@ static esp_err_t ObjectTransfer_write_wifi_connect(esp_gatt_if_t gatts_if, esp_b
 
     if(status != STATUS_OK) return ESP_OK;
 
-    
+    connect_wifi(ssid, ssid_len, password, password_len);
 
     return ESP_OK;
 }
 
+esp_err_t ObjectTransfer_send_found_wifi_ind(wifi_ap_record_t *wifi_record)
+{
+    uint8_t indicate_data[37];
+    indicate_data[0] = 1;
+
+    uint8_t ssid_len = strlen((char*)wifi_record->ssid);
+    indicate_data[1] = ssid_len;
+
+    uint8_t indicate_data_len = 4 + ssid_len;
+    uint8_t *payload_ptr = &indicate_data[2];
+
+    memcpy(payload_ptr, wifi_record->ssid, ssid_len);
+    payload_ptr += ssid_len;
+
+    *payload_ptr = (uint8_t)wifi_record->rssi;
+    payload_ptr++;
+
+    *payload_ptr = (uint8_t)wifi_record->authmode;
+
+
+    esp_err_t ret = esp_ble_gatts_send_indicate(gatts_interface, connection_id, handle_wifi, indicate_data_len, indicate_data, true);
+    return ret;
+}
+
+esp_err_t ObjectTransfer_send_simple_wifi_ind(uint8_t val)
+{
+    esp_err_t ret = esp_ble_gatts_send_indicate(gatts_interface, connection_id, handle_wifi, 1, &val, true);
+    return ret;
+}
