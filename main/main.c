@@ -32,9 +32,13 @@
 #include "esp_vfs_fat.h"
 #include "sdmmc_cmd.h"
 #include "driver/sdmmc_host.h"
+#include "driver/gpio.h"
 
 #include "esp_wifi.h"
 #include "wifi.h"
+
+#include "mk_i2c.h"
+#include "pp_rtc.h"
 
 #define MAIN_TAG    "MAIN"
 #define ESP_APP_ID  0x55
@@ -125,7 +129,7 @@ static esp_err_t bt_init()
 static esp_err_t sd_cad_init()
 {
     esp_vfs_fat_sdmmc_mount_config_t mount_config = {
-        .format_if_mount_failed = true,
+        .format_if_mount_failed = false,
         .max_files = 5,
         .allocation_unit_size = 16 * 1024
     };
@@ -149,7 +153,7 @@ static esp_err_t sd_cad_init()
     ESP_LOGI(MAIN_TAG, "Mounting filesystem");
     esp_err_t ret = esp_vfs_fat_sdmmc_mount(mount_point, &host, &slot_config, &mount_config, &card);
 
-    ret = esp_vfs_fat_sdcard_format(mount_point, card);     //TODO remember to delete this
+    // ret = esp_vfs_fat_sdcard_format(mount_point, card);     //TODO remember to delete this
 
     if (ret != ESP_OK) {
         if (ret == ESP_FAIL) {
@@ -236,6 +240,22 @@ void app_main(void)
             return;
         }
     }
+
+    ret = i2c_init(I2C_MASTER_NUM, GPIO_NUM_18, GPIO_NUM_8, 100);
+    if (ret) {
+        ESP_LOGE(MAIN_TAG, "i2c init failed, err: %x", ret);
+        return;
+    }
+
+    ret = pp_rtc_init();
+    if (ret) {
+        ESP_LOGE(MAIN_TAG, "rtc init failed, err: %x", ret);
+        return;
+    }
+
+
+    
+
 
     ESP_LOGI(MAIN_TAG, "Initializing wifi");
     ret = wifi_init();

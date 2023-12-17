@@ -74,7 +74,9 @@
     "esp_wifi.h": "c",
     "sntp.h": "c",
     "esp_sntp.h": "c",
-    "ip.h": "c"
+    "ip.h": "c",
+    "pp_rtc.h": "c",
+    "mk_i2c.h": "c"
   },
   "idf.flashType": "UART",
   "idf.portWin": "COM5",
