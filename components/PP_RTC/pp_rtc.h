@@ -2,6 +2,8 @@
 #include "freertos/task.h"
 #include "freertos/semphr.h"
 
+#define CENTRAL_EUROPEAN_TIME_ZONE	"CET-1CEST,M3.5.0/2,M10.5.0/3"  // for Poland
+
 esp_err_t pp_rtc_init();
 esp_err_t pp_rtc_set_time(uint8_t seconds, uint8_t minutes, uint8_t hours, uint8_t dayOfWeek, uint8_t dayOfMonth, uint8_t month, uint8_t year);
 esp_err_t pp_rtc_read_time(struct timeval *tv);

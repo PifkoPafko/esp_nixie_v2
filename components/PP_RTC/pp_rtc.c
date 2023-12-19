@@ -48,6 +48,11 @@ esp_err_t pp_rtc_read_time(struct timeval *tv)
 
     if (tv)
     {
+        // time_t rawtime;
+        // struct tm timeinfo;
+        // time(&rawtime);
+        // localtime_r(&timeinfo, &rawtime);
+
         struct tm tm;
 
         tm.tm_year 	= year + 100;
@@ -56,7 +61,8 @@ esp_err_t pp_rtc_read_time(struct timeval *tv)
         tm.tm_hour 	= hours;
         tm.tm_min 	= minutes;
         tm.tm_sec 	= seconds;
-        tm.tm_isdst = 0; // 1 or 0	1-gdy czas ustawiany w czasie LETNIM, 0-gdy czas ustawiany w czasie ZIMOWYM
+        tm.tm_isdst = 0;
+        // tm.tm_isdst = timeinfo.tm_isdst;
 
         time_t t = mktime(&tm);
         tv->tv_sec = t;
@@ -67,6 +73,9 @@ esp_err_t pp_rtc_read_time(struct timeval *tv)
 
 esp_err_t pp_rtc_init()
 {
+    setenv("TZ", CENTRAL_EUROPEAN_TIME_ZONE, 1);
+	tzset();
+    
     uint8_t regVal = 0x1C;
     ESP_ERROR_CHECK(i2c_dev_write_reg(I2C_MASTER_NUM, DS_RTC_ADDR, DS_RTC_CONTROL_REG_ADDR, &regVal, 1));
 

@@ -42,6 +42,10 @@ typedef struct
 uint8_t set_alarm_values(uint8_t *payload, uint16_t payload_len);
 alarm_mode_args_t get_alarm_values();
 alarm_mode_args_t* get_alarm_pointer();
+void set_next_alarm();
+void disable_current_alarm();
+uint64_t get_current_active_alarm_id();
+bool get_alarm_state();
 
 #define ALARM_SINGLE_MODE   0
 #define ALARM_WEEKLY_MODE   1
@@ -73,5 +77,9 @@ alarm_mode_args_t* get_alarm_pointer();
 
 #define ALARM_DESC_LEN_MAX                         40
 #define ALARM_VOLUME_MAX                      100
+
+
+#define ONE_WEEK_IN_SEC     604800
+#define DAYS_TO_SEC(x)     ( (x) * 24ll * 60ll * 60ll )
 
 #endif

@@ -253,9 +253,13 @@ void app_main(void)
         return;
     }
 
+    ret = ObjectManager_init();
+    if (ret) {
+        ESP_LOGE(MAIN_TAG, "Object Manager failed, err: %x", ret);
+        return;
+    }
 
-    
-
+    set_next_alarm();
 
     ESP_LOGI(MAIN_TAG, "Initializing wifi");
     ret = wifi_init();
@@ -268,12 +272,6 @@ void app_main(void)
     ret = bt_init();
     if (ret) {
         ESP_LOGE(MAIN_TAG, "bt init failed, err: %x", ret);
-        return;
-    }
-
-    ret = ObjectManager_init();
-    if (ret) {
-        ESP_LOGE(MAIN_TAG, "Object Manager failed, err: %x", ret);
         return;
     }
 }

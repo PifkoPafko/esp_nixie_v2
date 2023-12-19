@@ -929,6 +929,13 @@ static esp_err_t ObjectTransfer_write_Alarm_Action(esp_gatt_if_t gatts_if, esp_b
         if(ret) return ret;
     }
 
+    if ( get_alarm_state() && alarm.enable == false && get_current_active_alarm_id() == object->id )
+    {
+        disable_current_alarm();
+    }
+
+    set_next_alarm();
+
     return ESP_OK;
 }
 

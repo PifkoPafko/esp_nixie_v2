@@ -150,7 +150,4 @@ static void pp_sntp_init( char * sntp_srv ) {
     else esp_sntp_setservername(0, DEFAULT_NTP_SERVER);
 
     esp_sntp_init();
-
-	setenv("TZ", CENTRAL_EUROPEAN_TIME_ZONE, 1);
-	tzset();
 }

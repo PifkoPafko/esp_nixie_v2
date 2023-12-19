@@ -3,7 +3,6 @@
 #include "esp_wifi.h"
 
 #define DEFAULT_NTP_SERVER			"ntp.certum.pl"
-#define CENTRAL_EUROPEAN_TIME_ZONE	"CET-1CEST,M3.5.0/2,M10.5.0/3"  // for Poland
 
 typedef struct{
     uint8_t my_ssid_len;
