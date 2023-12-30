@@ -256,8 +256,8 @@ esp_err_t i2c_dev_write( uint8_t port_nr, uint8_t slave_addr,
     i2c_master_write(cmd, out_data, out_size, true);
     i2c_master_stop(cmd);
     esp_err_t res = i2c_master_cmd_begin(port_nr, cmd, pdMS_TO_TICKS(I2CDEV_TIMEOUT));
-    if (res != ESP_OK)
-        ESP_LOGE(TAG, "Could not write to device [0x%02x at %d]: %d (%s)", slave_addr, port_nr, res, esp_err_to_name(res));
+    // if (res != ESP_OK)
+    //     ESP_LOGE(TAG, "Could not write to device [0x%02x at %d]: %d (%s)", slave_addr, port_nr, res, esp_err_to_name(res));
     i2c_cmd_link_delete(cmd);
 
     I2C_GIVE_MUTEX;

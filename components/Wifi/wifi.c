@@ -6,6 +6,7 @@
 #include "ObjectTransfer_metadata_write.h"
 
 #include "pp_rtc.h"
+#include "alarm.h"
 #include "esp_sntp.h"
 
 #include <stdio.h>
@@ -136,6 +137,7 @@ void sntp_cb(struct timeval *tv)
     ESP_LOGI(TAG, "New time: %02d:%02d:%02d, %02d.%02d.%04d", timeinfo.tm_hour, timeinfo.tm_min, timeinfo.tm_sec, timeinfo.tm_mday, timeinfo.tm_mon + 1, timeinfo.tm_year + 1900);
 
     pp_rtc_set_time(timeinfo.tm_sec, timeinfo.tm_min, timeinfo.tm_hour, timeinfo.tm_wday + 1, timeinfo.tm_mday, timeinfo.tm_mon + 1, timeinfo.tm_year - 100);
+    set_next_alarm();
 }
 
 static void pp_sntp_init( char * sntp_srv ) {

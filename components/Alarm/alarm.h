@@ -7,6 +7,8 @@
 #include "string.h"
 #include  <stdbool.h>
 
+#include "esp_err.h"
+
 typedef struct
 {
     uint8_t day;
@@ -39,6 +41,7 @@ typedef struct
     uint8_t volume;
 }alarm_mode_args_t;
 
+esp_err_t alarm_init();
 uint8_t set_alarm_values(uint8_t *payload, uint16_t payload_len);
 alarm_mode_args_t get_alarm_values();
 alarm_mode_args_t* get_alarm_pointer();

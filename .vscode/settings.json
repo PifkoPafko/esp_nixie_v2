@@ -76,10 +76,14 @@
     "esp_sntp.h": "c",
     "ip.h": "c",
     "pp_rtc.h": "c",
-    "mk_i2c.h": "c"
+    "mk_i2c.h": "c",
+    "pp_nixie_display.h": "c",
+    "timer_ll.h": "c",
+    "assert.h": "c",
+    "pp_wave_player.h": "c"
   },
   "idf.flashType": "UART",
-  "idf.portWin": "COM5",
+  "idf.portWin": "COM12",
   "idf.adapterTargetName": "esp32s3",
   "idf.openOcdConfigs": [
     "board/esp32s3-bridge.cfg"

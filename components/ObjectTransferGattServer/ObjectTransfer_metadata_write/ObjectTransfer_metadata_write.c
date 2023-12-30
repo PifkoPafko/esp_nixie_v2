@@ -9,6 +9,7 @@
 #include "esp_log.h"
 #include "esp_wifi.h"
 #include "wifi.h"
+#include "alarm.h"
 
 #include "stdlib.h"
 
@@ -432,6 +433,7 @@ static esp_err_t ObjectTransfer_write_OACP_Delete(esp_gatt_if_t gatts_if, esp_bl
     indicate_data_len = 2;
     indicate_data[1] = result;
     esp_ble_gatts_send_indicate(gatts_if, param->write.conn_id, handle_table[OPT_IDX_CHAR_OBJECT_OACP_VAL], indicate_data_len, indicate_data, true);
+    set_next_alarm();
 
     return ESP_OK;
 }
@@ -927,11 +929,6 @@ static esp_err_t ObjectTransfer_write_Alarm_Action(esp_gatt_if_t gatts_if, esp_b
     {
         ret = esp_ble_gatts_send_response(gatts_if, param->write.conn_id, param->write.trans_id, STATUS_OK, &rsp);
         if(ret) return ret;
-    }
-
-    if ( get_alarm_state() && alarm.enable == false && get_current_active_alarm_id() == object->id )
-    {
-        disable_current_alarm();
     }
 
     set_next_alarm();

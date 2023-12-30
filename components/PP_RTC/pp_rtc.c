@@ -5,6 +5,7 @@
 #include <time.h>
 #include "mk_i2c.h"
 #include "pp_rtc.h"
+#include "alarm.h"
 
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
@@ -71,6 +72,20 @@ esp_err_t pp_rtc_read_time(struct timeval *tv)
     return res;
 }
 
+void pp_rtc_main(void* arg)
+{
+    while (true)
+    {
+        struct timeval now;
+        pp_rtc_read_time(&now);
+        settimeofday(&now, NULL);
+        ESP_LOGI(TAG, "Time updated from RTC");
+
+        set_next_alarm();
+        vTaskDelay(3600000 / portTICK_PERIOD_MS);
+    }
+}
+
 esp_err_t pp_rtc_init()
 {
     setenv("TZ", CENTRAL_EUROPEAN_TIME_ZONE, 1);
@@ -79,9 +94,12 @@ esp_err_t pp_rtc_init()
     uint8_t regVal = 0x1C;
     ESP_ERROR_CHECK(i2c_dev_write_reg(I2C_MASTER_NUM, DS_RTC_ADDR, DS_RTC_CONTROL_REG_ADDR, &regVal, 1));
 
-    struct timeval now;
-    pp_rtc_read_time(&now);
-    settimeofday(&now, NULL);
+    BaseType_t res = xTaskCreate(pp_rtc_main, "RTC", 3072, NULL, 2, NULL);
+    if(res != pdPASS)
+    {
+        ESP_LOGE(TAG, "Creating rtc task failed");
+        return res;
+    }
 
     return ESP_OK;
 }

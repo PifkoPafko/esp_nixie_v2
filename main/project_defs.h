@@ -13,5 +13,4 @@
 #define ALARM_FILE_TYPE ".txt"
 #define RINGTONE_FILE_TYPE ".wav"
 
-
 #endif

@@ -4,6 +4,11 @@
 #include "ObjectTransfer_attr_ids.h"
 #include "ObjectTransfer_defs.h"
 #include "ObjectManagerIdList.h"
+#include "pp_wave_player.h"
+
+#include "freertos/FreeRTOS.h"
+#include "freertos/task.h"
+#include "freertos/semphr.h"
 
 #include "esp_err.h"
 #include "esp_log.h"
@@ -11,14 +16,49 @@
 #include <sys/time.h>
 #include <time.h>
 
+#include "driver/gptimer.h"
+
 static const char* TAG = "ALARM";
 
 alarm_mode_args_t alarm;
+
+gptimer_handle_t alarm_timer = NULL;
+
 uint64_t next_alarm_id = 0;
 bool next_alarm_enabled = false;
 time_t next_alarm_interval = 0;
 
 #define ALARM_LOG
+
+static bool IRAM_ATTR alarm_timer_cb(gptimer_handle_t timer, const gptimer_alarm_event_data_t *edata, void *user_data)
+{
+    gptimer_stop(timer);
+    gptimer_set_raw_count(timer, 0);
+    set_play_alarm_flag(true);
+    return false;
+}
+
+esp_err_t alarm_init()
+{
+    gptimer_config_t timer_config = {
+        .clk_src = GPTIMER_CLK_SRC_DEFAULT,
+        .direction = GPTIMER_COUNT_UP,
+        .resolution_hz = 1000000, // 1000000Hz, 1 tick=1us
+    };
+
+    gptimer_new_timer(&timer_config, &alarm_timer);
+
+     gptimer_event_callbacks_t cbs = {
+        .on_alarm = alarm_timer_cb,
+    };
+
+    gptimer_register_event_callbacks(alarm_timer, &cbs, NULL);
+
+    ESP_LOGI(TAG, "Enable alarm timer");
+    gptimer_enable(alarm_timer);
+
+    return ESP_OK;
+}
 
 uint8_t set_alarm_values(uint8_t *payload, uint16_t payload_len)
 {
@@ -342,6 +382,9 @@ uint64_t get_current_active_alarm_id()
 
 void disable_current_alarm()
 {
+    gptimer_stop(alarm_timer);
+    gptimer_set_raw_count(alarm_timer, 0);
+
     next_alarm_enabled = false;
     next_alarm_interval = 0;
     next_alarm_id = 0;
@@ -361,8 +404,8 @@ void set_next_alarm()
 
     if ( object_p == NULL )
     {
-        next_alarm_id = 0;
-        next_alarm_enabled = false;
+        disable_current_alarm();
+        ESP_LOGI(TAG, "No alarm created");
         return;
     }
 
@@ -539,11 +582,26 @@ void set_next_alarm()
         object_p = object_p->next;
     }
 
-    #ifdef ALARM_LOG
     if (next_alarm_enabled)
     {
         ESP_LOGI(TAG, "Next alarm ID: %" PRIx64, next_alarm_id);
-        ESP_LOGI(TAG, "Next alarm interval: %" PRIu64, (uint64_t)next_alarm_interval);
+        ESP_LOGI(TAG, "Next alarm interval: %" PRIu64 "in seconds: %d", (uint64_t)next_alarm_interval, (int)(next_alarm_interval/1000000));
+
+        gptimer_stop(alarm_timer);
+        gptimer_set_raw_count(alarm_timer, 0);
+
+        gptimer_alarm_config_t alarm_config = {
+            .alarm_count = (uint64_t)(next_alarm_interval * 1000000),
+            .reload_count = 0,
+            .flags.auto_reload_on_alarm = false
+        };
+
+        gptimer_set_alarm_action(alarm_timer, &alarm_config);
+        gptimer_start(alarm_timer);
     }
-    #endif
+    else
+    {
+        disable_current_alarm();
+        ESP_LOGI(TAG, "No enabled alarm to be set");
+    }
 }

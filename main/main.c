@@ -22,6 +22,7 @@
 #include "ObjectTransfer_gatt_server.h"
 #include "ObjectManager.h"
 #include "project_defs.h"
+#include "pp_wave_player.h"
 
 #include "esp_bt.h"
 #include "esp_gap_ble_api.h"
@@ -39,6 +40,7 @@
 
 #include "mk_i2c.h"
 #include "pp_rtc.h"
+#include "pp_nixie_display.h"
 
 #define MAIN_TAG    "MAIN"
 #define ESP_APP_ID  0x55
@@ -253,9 +255,27 @@ void app_main(void)
         return;
     }
 
+    ret = pp_nixie_diplay_init();
+    if (ret) {
+        ESP_LOGE(MAIN_TAG, "nixie display failed, err: %x", ret);
+        return;
+    }
+
     ret = ObjectManager_init();
     if (ret) {
         ESP_LOGE(MAIN_TAG, "Object Manager failed, err: %x", ret);
+        return;
+    }
+
+    ret = alarm_init();
+    if (ret) {
+        ESP_LOGE(MAIN_TAG, "Alarm init failed, err: %x", ret);
+        return;
+    }
+
+    ret = pp_wave_player_init();
+    if (ret) {
+        ESP_LOGE(MAIN_TAG, "Wave player init failed, err: %x", ret);
         return;
     }
 
