@@ -83,7 +83,7 @@
     "pp_wave_player.h": "c"
   },
   "idf.flashType": "UART",
-  "idf.portWin": "COM12",
+  "idf.portWin": "COM5",
   "idf.adapterTargetName": "esp32s3",
   "idf.openOcdConfigs": [
     "board/esp32s3-bridge.cfg"

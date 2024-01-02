@@ -43,7 +43,8 @@ static const uint8_t EXPANDER_ADDRESS[6] = { SLAVE_ADDR_0, SLAVE_ADDR_1, SLAVE_A
 
 nixie_tube_state_t nixie_state[16];
 uint8_t prev_i2c_msg[5];
-static bool write_display_flag = false;
+static volatile bool write_display_flag = false;
+static volatile bool anti_poisoning_flag = false;
 
 static void set_nixie_state()
 {
@@ -94,29 +95,97 @@ static bool IRAM_ATTR pp_display_routine_timer_cb(gptimer_handle_t timer, const 
     return false;
 }
 
+static bool IRAM_ATTR anti_poisoning_timer_cb(gptimer_handle_t timer, const gptimer_alarm_event_data_t *edata, void *user_data)
+{
+    anti_poisoning_flag = true;
+    return false;
+}
+
 void pp_nixie_display_main(void* arg)
 {
     uint8_t i2c_msg[5];
+    bool need_change = true;
 
     while(true)
     {
-        if (write_display_flag)
+        if (anti_poisoning_flag)
         {
-            write_display_flag = false;
+            anti_poisoning_flag = false;
+
+            for ( uint8_t digit = 0; digit < 10; digit++ )
+            {
+                for ( uint8_t lamp = 0; lamp < 16; lamp++ )
+                {
+                    nixie_state[lamp].digit_enable = true;
+                    nixie_state[lamp].digit = digit;
+                    nixie_state[lamp].left_comma_enable = false;
+                    nixie_state[lamp].right_comma_enable = false;
+                }
+                
+                for ( uint8_t expander = 0; expander < 6; expander++ )
+                {
+                    memset(i2c_msg, 0, 5);
+                    pp_nixie_display_generate_i2c_msg(expander, i2c_msg);
+                    pca_write_all_reg(I2C_MASTER_NUM, EXPANDER_ADDRESS[expander], OP0_ADDR, i2c_msg);
+                }
+
+                vTaskDelay(100 / portTICK_PERIOD_MS);
+            }
+
+            for ( uint8_t lamp = 0; lamp < 16; lamp++ )
+            {
+                nixie_state[lamp].digit_enable = false;
+                nixie_state[lamp].digit = 0;
+                nixie_state[lamp].left_comma_enable = true;
+                nixie_state[lamp].right_comma_enable = false;
+            }
 
             for ( uint8_t expander = 0; expander < 6; expander++ )
             {
                 memset(i2c_msg, 0, 5);
-                set_nixie_state();
+                pp_nixie_display_generate_i2c_msg(expander, i2c_msg);
+                pca_write_all_reg(I2C_MASTER_NUM, EXPANDER_ADDRESS[expander], OP0_ADDR, i2c_msg);
+            }
 
-                if (pp_nixie_display_generate_i2c_msg(expander, i2c_msg))
+            vTaskDelay(100 / portTICK_PERIOD_MS);
+
+            for ( uint8_t lamp = 0; lamp < 16; lamp++ )
+            {
+                nixie_state[lamp].digit_enable = false;
+                nixie_state[lamp].digit = 0;
+                nixie_state[lamp].left_comma_enable = false;
+                nixie_state[lamp].right_comma_enable = true;
+            }
+
+            for ( uint8_t expander = 0; expander < 6; expander++ )
+            {
+                memset(i2c_msg, 0, 5);
+                pp_nixie_display_generate_i2c_msg(expander, i2c_msg);
+                pca_write_all_reg(I2C_MASTER_NUM, EXPANDER_ADDRESS[expander], OP0_ADDR, i2c_msg);
+            }
+
+            vTaskDelay(200 / portTICK_PERIOD_MS);
+            need_change = true;
+        }
+
+        if (write_display_flag)
+        {
+            write_display_flag = false;
+            set_nixie_state();
+
+            for ( uint8_t expander = 0; expander < 6; expander++ )
+            {
+                memset(i2c_msg, 0, 5);
+
+                if (pp_nixie_display_generate_i2c_msg(expander, i2c_msg) || need_change)
                 {
                     pca_write_all_reg(I2C_MASTER_NUM, EXPANDER_ADDRESS[expander], OP0_ADDR, i2c_msg);
                 }
             }
+            need_change = false;
         }
         
-        vTaskDelay(100 / portTICK_PERIOD_MS);
+        vTaskDelay(200 / portTICK_PERIOD_MS);
     }
 }
 
@@ -169,6 +238,7 @@ esp_err_t pp_nixie_diplay_init()
         return res;
     }
 
+    /* Setting display routine timer */
     gptimer_handle_t gptimer = NULL;
     gptimer_config_t timer_config = {
         .clk_src = GPTIMER_CLK_SRC_DEFAULT,
@@ -187,14 +257,33 @@ esp_err_t pp_nixie_diplay_init()
     ESP_LOGI(TAG, "Enable display routine timer");
     ESP_ERROR_CHECK(gptimer_enable(gptimer));
 
-     gptimer_alarm_config_t alarm_config = {
+    gptimer_alarm_config_t alarm_config = {
         .alarm_count = 1000000, // period = 1s
         .reload_count = 0,
         .flags.auto_reload_on_alarm = true
-     };
+    };
 
     ESP_ERROR_CHECK(gptimer_set_alarm_action(gptimer, &alarm_config));
     ESP_ERROR_CHECK(gptimer_start(gptimer));
+
+    /* Setting anti-posisoning routine timer */
+    gptimer_handle_t anti_poisoing_gptimer = NULL;
+    ESP_ERROR_CHECK(gptimer_new_timer(&timer_config, &anti_poisoing_gptimer));
+    gptimer_event_callbacks_t anti_poisoning_cbs = {
+        .on_alarm = anti_poisoning_timer_cb,
+    };
+    ESP_ERROR_CHECK(gptimer_register_event_callbacks(anti_poisoing_gptimer, &anti_poisoning_cbs, NULL));
+    ESP_LOGI(TAG, "Enable anti-poisoning routine timer");
+    ESP_ERROR_CHECK(gptimer_enable(anti_poisoing_gptimer));
+
+    gptimer_alarm_config_t anti_poisoning_alarm_config = {
+        .alarm_count = 60000000, // period = 1s
+        .reload_count = 0,
+        .flags.auto_reload_on_alarm = true
+    };
+
+    ESP_ERROR_CHECK(gptimer_set_alarm_action(anti_poisoing_gptimer, &anti_poisoning_alarm_config));
+    ESP_ERROR_CHECK(gptimer_start(anti_poisoing_gptimer));
 
     return ESP_OK;
 }
