@@ -1,8 +1,10 @@
 #include <string.h>
 
+#include "project_defs.h"
 #include "mk_i2c.h"
 #include "pp_pca9698.h"
 #include "pp_nixie_display.h"
+#include "pp_wave_player.h"
 #include "esp_log.h"
 
 #include "freertos/FreeRTOS.h"
@@ -118,6 +120,21 @@ void pp_nixie_display_main(void* arg)
     }
 }
 
+void pp_nixie_display_alarm_main(void* arg)
+{
+    uint8_t sw = 0;
+    while (true)
+    {
+        if (get_is_alarm_playing())
+        {
+            gpio_set_level(GPIO_OUTPUT_OE, sw);
+            sw ^= 1;
+        }
+
+        vTaskDelay(500 / portTICK_PERIOD_MS);
+    }
+}
+
 esp_err_t pp_nixie_diplay_init()
 {
     gpio_config_t io_conf = {};
@@ -139,6 +156,13 @@ esp_err_t pp_nixie_diplay_init()
     ESP_ERROR_CHECK(pca_write_all_reg(I2C_MASTER_NUM, SLAVE_ADDR_5, IOC0_ADDR, conf_output_mask));
 
     BaseType_t res = xTaskCreate(pp_nixie_display_main, "NIXIE DISPLAY", 4096, NULL, 1, NULL);
+    if(res != pdPASS)
+    {
+        ESP_LOGE(TAG, "Creating display task failed");
+        return res;
+    }
+
+    res = xTaskCreate(pp_nixie_display_alarm_main, "ALARM BLINK", 4096, NULL, 1, NULL);
     if(res != pdPASS)
     {
         ESP_LOGE(TAG, "Creating display task failed");

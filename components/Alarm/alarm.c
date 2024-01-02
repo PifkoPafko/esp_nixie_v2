@@ -401,10 +401,10 @@ void set_next_alarm()
 
     time(&now);
     localtime_r(&now, &timeinfo);
+    disable_current_alarm();
 
     if ( object_p == NULL )
     {
-        disable_current_alarm();
         ESP_LOGI(TAG, "No alarm created");
         return;
     }
@@ -585,7 +585,7 @@ void set_next_alarm()
     if (next_alarm_enabled)
     {
         ESP_LOGI(TAG, "Next alarm ID: %" PRIx64, next_alarm_id);
-        ESP_LOGI(TAG, "Next alarm interval: %" PRIu64 "in seconds: %d", (uint64_t)next_alarm_interval, (int)(next_alarm_interval/1000000));
+        ESP_LOGI(TAG, "Next alarm interval: %" PRIu64 " sec", (uint64_t)next_alarm_interval);
 
         gptimer_stop(alarm_timer);
         gptimer_set_raw_count(alarm_timer, 0);

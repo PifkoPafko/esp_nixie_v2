@@ -9,16 +9,23 @@
 
 #include "driver/i2s_std.h" // i2s setup
 #include "alarm.h"
+#include "driver/gpio.h"
 
 static const char *TAG = "WAV PLAYER";
 
 i2s_chan_handle_t tx_handle;
 
-bool play_alarm_flag = false;
+volatile bool play_alarm_flag = false;
+volatile bool is_alarm_playing = false;
 
 void set_play_alarm_flag(bool new_val)
 {
   play_alarm_flag = new_val;
+}
+
+bool get_is_alarm_playing()
+{
+  return is_alarm_playing;
 }
 
 static esp_err_t i2s_setup()
@@ -65,24 +72,34 @@ static esp_err_t play_wave()
   size_t bytes_read = 0;
   size_t bytes_written = 0;
 
-  bytes_read = fread(buf, sizeof(int16_t), AUDIO_BUFFER, fh);
-  for (int i=0; i<bytes_read; i++)
+  if (is_alarm_playing)
   {
-      buf[i] = buf[i]>>1;
-  }
-
-  i2s_channel_enable(tx_handle);
-
-  while (bytes_read > 0)
-  {
-    // write the buffer to the i2s
-    i2s_channel_write(tx_handle, buf, bytes_read * sizeof(int16_t), &bytes_written, portMAX_DELAY);
     bytes_read = fread(buf, sizeof(int16_t), AUDIO_BUFFER, fh);
     for (int i=0; i<bytes_read; i++)
     {
         buf[i] = buf[i]>>1;
     }
-    ESP_LOGV(TAG, "Bytes read: %d", bytes_read);
+
+    i2s_channel_enable(tx_handle);
+
+    while (bytes_read > 0)
+    {
+      if (is_alarm_playing)
+      {
+        // write the buffer to the i2s
+        i2s_channel_write(tx_handle, buf, bytes_read * sizeof(int16_t), &bytes_written, portMAX_DELAY);
+        bytes_read = fread(buf, sizeof(int16_t), AUDIO_BUFFER, fh);
+        for (int i=0; i<bytes_read; i++)
+        {
+            buf[i] = buf[i]>>1;
+        }
+        ESP_LOGV(TAG, "Bytes read: %d", bytes_read);
+      }
+      else
+      {
+        break;
+      }
+    }
   }
 
   ESP_LOGI(TAG, "End of ringtone");
@@ -101,9 +118,12 @@ void pp_wav_player_main(void* arg)
     if (play_alarm_flag)
     {
       play_alarm_flag = false;
-      set_next_alarm();
+      is_alarm_playing = true;
       ESP_LOGI(TAG, "Playing wav file");
       ESP_ERROR_CHECK(play_wave(WAV_FILE));
+      is_alarm_playing = false;
+      gpio_set_level(GPIO_OUTPUT_OE, 0);
+      set_next_alarm();
     }
 
     vTaskDelay(1000 / portTICK_PERIOD_MS);

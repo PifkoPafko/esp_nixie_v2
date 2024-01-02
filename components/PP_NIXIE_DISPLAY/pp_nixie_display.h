@@ -2,9 +2,6 @@
 #include "freertos/task.h"
 #include "freertos/semphr.h"
 
-#define GPIO_OUTPUT_OE    GPIO_NUM_3
-#define GPIO_OUTPUT_PIN_SEL  (1ULL<<GPIO_OUTPUT_OE)
-
 extern QueueHandle_t mess_queue_hdl;
 
 #define MESSAGE_QUEUE_LEGNTH 10
