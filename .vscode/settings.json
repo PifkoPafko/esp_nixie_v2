@@ -80,7 +80,9 @@
     "pp_nixie_display.h": "c",
     "timer_ll.h": "c",
     "assert.h": "c",
-    "pp_wave_player.h": "c"
+    "pp_wave_player.h": "c",
+    "complex": "c",
+    "stdint.h": "c"
   },
   "idf.flashType": "UART",
   "idf.portWin": "COM5",

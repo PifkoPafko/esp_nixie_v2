@@ -5,6 +5,8 @@
 #include "esp_bt.h"
 #include "esp_gatt_common_api.h"
 #include "esp_log.h"
+#include "esp_random.h"
+
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 
@@ -13,6 +15,7 @@
 #include "ObjectTransfer_metadata_read.h"
 #include "ObjectTransfer_metadata_write.h"
 #include "ObjectManager.h"
+#include "pp_nixie_display.h"
 
 
 #define GATTS_TAG "GATTS"
@@ -374,6 +377,10 @@ void gap_event_handler(esp_gap_ble_cb_event_t event, esp_ble_gap_cb_param_t *par
             if(param->adv_terminate.status == 0x00) 
             {
                 ESP_LOGI(GATTS_TAG, "ADV successfully ended with a connection being created");
+                uint32_t passkey = esp_random() / 4832 + 100000;    // /4295 to convert uint32 value to 0-999999 value
+                esp_ble_gap_set_security_param(ESP_BLE_SM_SET_STATIC_PASSKEY, &passkey, sizeof(uint32_t));
+                set_display_passkey(passkey);
+                set_ble_pairing_flag(true);
             }
             break;
         }
@@ -446,6 +453,8 @@ void gap_event_handler(esp_gap_ble_cb_event_t event, esp_ble_gap_cb_param_t *par
             {
                 ESP_LOGI(GATTS_TAG, "auth mode = %s",esp_auth_req_to_str(param->ble_security.auth_cmpl.auth_mode));
             }
+
+            set_ble_pairing_flag(false);
             //show_bonded_devices();
             break;
         }

@@ -46,6 +46,23 @@ uint8_t prev_i2c_msg[5];
 static volatile bool write_display_flag = false;
 static volatile bool anti_poisoning_flag = false;
 
+static volatile bool ble_pairing_flag = false;
+static uint32_t current_passkey[6];
+
+void set_display_passkey(uint32_t passkey)
+{
+    for (uint i=0; i<6; i++)
+    {
+        current_passkey[5-i] = passkey % 10;
+        passkey /= 10;
+    }
+}
+
+void set_ble_pairing_flag(bool enable)
+{
+    ble_pairing_flag = enable;
+}
+
 static void set_nixie_state()
 {
     time_t now;
@@ -108,35 +125,21 @@ void pp_nixie_display_main(void* arg)
 
     while(true)
     {
-        if (anti_poisoning_flag)
+        if (ble_pairing_flag)
         {
-            anti_poisoning_flag = false;
-
-            for ( uint8_t digit = 0; digit < 10; digit++ )
+            for ( uint8_t lamp = 0; lamp < 6; lamp++ )
             {
-                for ( uint8_t lamp = 0; lamp < 16; lamp++ )
-                {
-                    nixie_state[lamp].digit_enable = true;
-                    nixie_state[lamp].digit = digit;
-                    nixie_state[lamp].left_comma_enable = false;
-                    nixie_state[lamp].right_comma_enable = false;
-                }
-                
-                for ( uint8_t expander = 0; expander < 6; expander++ )
-                {
-                    memset(i2c_msg, 0, 5);
-                    pp_nixie_display_generate_i2c_msg(expander, i2c_msg);
-                    pca_write_all_reg(I2C_MASTER_NUM, EXPANDER_ADDRESS[expander], OP0_ADDR, i2c_msg);
-                }
-
-                vTaskDelay(100 / portTICK_PERIOD_MS);
+                nixie_state[lamp].digit_enable = true;
+                nixie_state[lamp].digit = current_passkey[lamp];
+                nixie_state[lamp].left_comma_enable = false;
+                nixie_state[lamp].right_comma_enable = false;
             }
 
-            for ( uint8_t lamp = 0; lamp < 16; lamp++ )
+            for ( uint8_t lamp = 6; lamp < 16; lamp++ )
             {
                 nixie_state[lamp].digit_enable = false;
                 nixie_state[lamp].digit = 0;
-                nixie_state[lamp].left_comma_enable = true;
+                nixie_state[lamp].left_comma_enable = false;
                 nixie_state[lamp].right_comma_enable = false;
             }
 
@@ -146,43 +149,86 @@ void pp_nixie_display_main(void* arg)
                 pp_nixie_display_generate_i2c_msg(expander, i2c_msg);
                 pca_write_all_reg(I2C_MASTER_NUM, EXPANDER_ADDRESS[expander], OP0_ADDR, i2c_msg);
             }
-
-            vTaskDelay(100 / portTICK_PERIOD_MS);
-
-            for ( uint8_t lamp = 0; lamp < 16; lamp++ )
-            {
-                nixie_state[lamp].digit_enable = false;
-                nixie_state[lamp].digit = 0;
-                nixie_state[lamp].left_comma_enable = false;
-                nixie_state[lamp].right_comma_enable = true;
-            }
-
-            for ( uint8_t expander = 0; expander < 6; expander++ )
-            {
-                memset(i2c_msg, 0, 5);
-                pp_nixie_display_generate_i2c_msg(expander, i2c_msg);
-                pca_write_all_reg(I2C_MASTER_NUM, EXPANDER_ADDRESS[expander], OP0_ADDR, i2c_msg);
-            }
-
-            vTaskDelay(200 / portTICK_PERIOD_MS);
             need_change = true;
         }
-
-        if (write_display_flag)
+        else
         {
-            write_display_flag = false;
-            set_nixie_state();
-
-            for ( uint8_t expander = 0; expander < 6; expander++ )
+            if (anti_poisoning_flag)
             {
-                memset(i2c_msg, 0, 5);
+                anti_poisoning_flag = false;
 
-                if (pp_nixie_display_generate_i2c_msg(expander, i2c_msg) || need_change)
+                for ( uint8_t digit = 0; digit < 10; digit++ )
                 {
+                    for ( uint8_t lamp = 0; lamp < 16; lamp++ )
+                    {
+                        nixie_state[lamp].digit_enable = true;
+                        nixie_state[lamp].digit = digit;
+                        nixie_state[lamp].left_comma_enable = false;
+                        nixie_state[lamp].right_comma_enable = false;
+                    }
+                    
+                    for ( uint8_t expander = 0; expander < 6; expander++ )
+                    {
+                        memset(i2c_msg, 0, 5);
+                        pp_nixie_display_generate_i2c_msg(expander, i2c_msg);
+                        pca_write_all_reg(I2C_MASTER_NUM, EXPANDER_ADDRESS[expander], OP0_ADDR, i2c_msg);
+                    }
+
+                    vTaskDelay(100 / portTICK_PERIOD_MS);
+                }
+
+                for ( uint8_t lamp = 0; lamp < 16; lamp++ )
+                {
+                    nixie_state[lamp].digit_enable = false;
+                    nixie_state[lamp].digit = 0;
+                    nixie_state[lamp].left_comma_enable = true;
+                    nixie_state[lamp].right_comma_enable = false;
+                }
+
+                for ( uint8_t expander = 0; expander < 6; expander++ )
+                {
+                    memset(i2c_msg, 0, 5);
+                    pp_nixie_display_generate_i2c_msg(expander, i2c_msg);
                     pca_write_all_reg(I2C_MASTER_NUM, EXPANDER_ADDRESS[expander], OP0_ADDR, i2c_msg);
                 }
+
+                vTaskDelay(100 / portTICK_PERIOD_MS);
+
+                for ( uint8_t lamp = 0; lamp < 16; lamp++ )
+                {
+                    nixie_state[lamp].digit_enable = false;
+                    nixie_state[lamp].digit = 0;
+                    nixie_state[lamp].left_comma_enable = false;
+                    nixie_state[lamp].right_comma_enable = true;
+                }
+
+                for ( uint8_t expander = 0; expander < 6; expander++ )
+                {
+                    memset(i2c_msg, 0, 5);
+                    pp_nixie_display_generate_i2c_msg(expander, i2c_msg);
+                    pca_write_all_reg(I2C_MASTER_NUM, EXPANDER_ADDRESS[expander], OP0_ADDR, i2c_msg);
+                }
+
+                vTaskDelay(200 / portTICK_PERIOD_MS);
+                need_change = true;
             }
-            need_change = false;
+
+            if (write_display_flag)
+            {
+                write_display_flag = false;
+                set_nixie_state();
+
+                for ( uint8_t expander = 0; expander < 6; expander++ )
+                {
+                    memset(i2c_msg, 0, 5);
+
+                    if (pp_nixie_display_generate_i2c_msg(expander, i2c_msg) || need_change)
+                    {
+                        pca_write_all_reg(I2C_MASTER_NUM, EXPANDER_ADDRESS[expander], OP0_ADDR, i2c_msg);
+                    }
+                }
+                need_change = false;
+            }
         }
         
         vTaskDelay(200 / portTICK_PERIOD_MS);
