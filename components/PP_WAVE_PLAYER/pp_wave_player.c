@@ -20,12 +20,24 @@ volatile bool is_alarm_playing = false;
 
 void set_play_alarm_flag(bool new_val)
 {
-  play_alarm_flag = new_val;
+  if (is_alarm_playing)
+  {
+    is_alarm_playing = false;
+  }
+  else
+  {
+    play_alarm_flag = new_val;
+  }
 }
 
 bool get_is_alarm_playing()
 {
   return is_alarm_playing;
+}
+
+void set_is_alarm_playing(bool new_val)
+{
+  is_alarm_playing = new_val;
 }
 
 static esp_err_t i2s_setup()
@@ -64,20 +76,20 @@ static esp_err_t play_wave()
     return ESP_ERR_INVALID_ARG;
   }
 
-  // skip the header...
-  fseek(fh, 44, SEEK_SET);
-
   // create a writer buffer
   int16_t *buf = calloc(AUDIO_BUFFER, sizeof(int16_t));
   size_t bytes_read = 0;
   size_t bytes_written = 0;
 
-  if (is_alarm_playing)
+  while (is_alarm_playing)
   {
+    // skip the header...
+    fseek(fh, 44, SEEK_SET);
+
     bytes_read = fread(buf, sizeof(int16_t), AUDIO_BUFFER, fh);
     for (int i=0; i<bytes_read; i++)
     {
-        buf[i] = buf[i]>>1;
+        buf[i] = buf[i]>>0;
     }
 
     i2s_channel_enable(tx_handle);
@@ -91,7 +103,7 @@ static esp_err_t play_wave()
         bytes_read = fread(buf, sizeof(int16_t), AUDIO_BUFFER, fh);
         for (int i=0; i<bytes_read; i++)
         {
-            buf[i] = buf[i]>>1;
+            buf[i] = buf[i]>>0;
         }
         ESP_LOGV(TAG, "Bytes read: %d", bytes_read);
       }
@@ -120,6 +132,7 @@ void pp_wav_player_main(void* arg)
       play_alarm_flag = false;
       is_alarm_playing = true;
       ESP_LOGI(TAG, "Playing wav file");
+      set_timer_for_playing_alarm();
       ESP_ERROR_CHECK(play_wave(WAV_FILE));
       is_alarm_playing = false;
       gpio_set_level(GPIO_OUTPUT_OE, 0);

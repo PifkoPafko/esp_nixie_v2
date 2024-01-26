@@ -49,6 +49,7 @@ void set_next_alarm();
 void disable_current_alarm();
 uint64_t get_current_active_alarm_id();
 bool get_alarm_state();
+void set_timer_for_playing_alarm();
 
 #define ALARM_SINGLE_MODE   0
 #define ALARM_WEEKLY_MODE   1

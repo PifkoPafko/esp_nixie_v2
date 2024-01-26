@@ -390,6 +390,19 @@ void disable_current_alarm()
     next_alarm_id = 0;
 }
 
+void set_timer_for_playing_alarm()
+{
+    disable_current_alarm();
+    gptimer_alarm_config_t alarm_config = {
+        .alarm_count = 600000000,
+        .reload_count = 0,
+        .flags.auto_reload_on_alarm = false
+    };
+
+    gptimer_set_alarm_action(alarm_timer, &alarm_config);
+    gptimer_start(alarm_timer);
+}
+
 void set_next_alarm()
 {
     alarm_mode_args_t next_alarm;

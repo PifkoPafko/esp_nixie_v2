@@ -317,6 +317,7 @@ static void button_main(void* arg)
                     {
                         // ESP_LOGI(MAIN_TAG, "WAIT_ENABLE_CONTACT_VIBRATION -> WAIT_DISABLE_CONTACT_VIBRATION");
                         ESP_LOGI(MAIN_TAG, "SHORT PRESS");
+                        set_is_alarm_playing(false);
                         button_sm[button_id].state = WAIT_DISABLE_CONTACT_VIBRATION;
                     }
                 }
@@ -332,6 +333,7 @@ static void button_main(void* arg)
 
                     // ESP_LOGI(MAIN_TAG, "WAIT_LONG_PRESS -> WAIT_DISABLE_CONTACT_VIBRATION");
                     ESP_LOGI(MAIN_TAG, "SHORT PRESS");
+                    set_is_alarm_playing(false);
                     button_sm[button_id].state = WAIT_DISABLE_CONTACT_VIBRATION;
                 }
                 else
