@@ -653,15 +653,11 @@ static void button_functions(button_action_t action_handler)
         {
             if (action_handler.action == SHORT_PRESS)
             {
-                if (get_is_alarm_playing())
-                {
-                    set_is_alarm_playing(false);
-                    ESP_LOGI(MAIN_TAG, "ALARM DISABLED");
+                ESP_LOGI(MAIN_TAG, "ALARM DISABLED");
 
-                    ESP_LOGI(MAIN_TAG, "ALARM RING MODE -> DEFAULT MODE");
-                    device_mode = DEFAULT_MODE;
-                    break;
-                }  
+                ESP_LOGI(MAIN_TAG, "ALARM RING MODE -> DEFAULT MODE");
+                device_mode = DEFAULT_MODE;
+                break;
             }
             break;
         }

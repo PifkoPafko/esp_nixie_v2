@@ -34,7 +34,17 @@ static bool IRAM_ATTR alarm_timer_cb(gptimer_handle_t timer, const gptimer_alarm
 {
     gptimer_stop(timer);
     gptimer_set_raw_count(timer, 0);
-    set_play_alarm_flag(true);
+
+    if (get_device_mode() == ALARM_RING_MODE)
+    {
+        set_device_mode(DEFAULT_MODE);
+    }
+    else
+    {
+        set_device_mode(ALARM_RING_MODE);
+        set_play_alarm_flag(true);
+    }
+    
     return false;
 }
 

@@ -16,28 +16,10 @@ static const char *TAG = "WAV PLAYER";
 i2s_chan_handle_t tx_handle;
 
 volatile bool play_alarm_flag = false;
-volatile bool is_alarm_playing = false;
 
 void set_play_alarm_flag(bool new_val)
 {
-  if (is_alarm_playing)
-  {
-    is_alarm_playing = false;
-  }
-  else
-  {
-    play_alarm_flag = new_val;
-  }
-}
-
-bool get_is_alarm_playing()
-{
-  return is_alarm_playing;
-}
-
-void set_is_alarm_playing(bool new_val)
-{
-  is_alarm_playing = new_val;
+  play_alarm_flag = new_val;
 }
 
 static esp_err_t i2s_setup()
@@ -81,7 +63,7 @@ static esp_err_t play_wave()
   size_t bytes_read = 0;
   size_t bytes_written = 0;
 
-  while (is_alarm_playing)
+  while (get_device_mode() == ALARM_RING_MODE)
   {
     // skip the header...
     fseek(fh, 44, SEEK_SET);
@@ -96,7 +78,7 @@ static esp_err_t play_wave()
 
     while (bytes_read > 0)
     {
-      if (is_alarm_playing)
+      if (get_device_mode() == ALARM_RING_MODE)
       {
         // write the buffer to the i2s
         i2s_channel_write(tx_handle, buf, bytes_read * sizeof(int16_t), &bytes_written, portMAX_DELAY);
@@ -130,12 +112,9 @@ void pp_wav_player_main(void* arg)
     if (play_alarm_flag)
     {
       play_alarm_flag = false;
-      is_alarm_playing = true;
       ESP_LOGI(TAG, "Playing wav file");
       set_timer_for_playing_alarm();
       ESP_ERROR_CHECK(play_wave(WAV_FILE));
-      is_alarm_playing = false;
-      gpio_set_level(GPIO_OUTPUT_OE, 0);
       set_next_alarm();
     }
 

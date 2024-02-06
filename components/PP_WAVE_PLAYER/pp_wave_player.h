@@ -7,5 +7,3 @@
 
 esp_err_t pp_wave_player_init();
 void set_play_alarm_flag(bool new_val);
-bool get_is_alarm_playing();
-void set_is_alarm_playing(bool new_val);

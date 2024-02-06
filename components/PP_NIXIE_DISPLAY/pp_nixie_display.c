@@ -289,7 +289,7 @@ void pp_nixie_display_main(void* arg)
                         {
                             break;
                         }
-                        
+
                         for ( uint8_t lamp = 0; lamp < 16; lamp++ )
                         {
                             nixie_state[lamp].digit_enable = false;
@@ -316,24 +316,32 @@ void pp_nixie_display_main(void* arg)
 
             case ALARM_RING_MODE:
             {
+                static bool alarm_blink_switch = true;
+                set_nixie_state();
+
+                if (alarm_blink_switch)
+                {
+                    for ( uint8_t lamp = 0; lamp < 16; lamp++ )
+                    {
+                        nixie_state[lamp].digit_enable = false;
+                        nixie_state[lamp].left_comma_enable = false;
+                        nixie_state[lamp].right_comma_enable = false;
+                    }
+                }
+
+                alarm_blink_switch = !alarm_blink_switch;
+
+                for ( uint8_t expander = 0; expander < 6; expander++ )
+                {
+                    memset(i2c_msg, 0, 5);
+                    pp_nixie_display_generate_i2c_msg(expander, i2c_msg);
+                    pca_write_all_reg(I2C_MASTER_NUM, EXPANDER_ADDRESS[expander], OP0_ADDR, i2c_msg);
+                }
+                
+                vTaskDelay(pdMS_TO_TICKS(500));
                 break;
             }
         }
-    }
-}
-
-void pp_nixie_display_alarm_main(void* arg)
-{
-    uint8_t sw = 0;
-    while (true)
-    {
-        if (get_is_alarm_playing())
-        {
-            gpio_set_level(GPIO_OUTPUT_OE, sw);
-            sw ^= 1;
-        }
-
-        vTaskDelay(500 / portTICK_PERIOD_MS);
     }
 }
 
@@ -358,13 +366,6 @@ esp_err_t pp_nixie_diplay_init()
     ESP_ERROR_CHECK(pca_write_all_reg(I2C_MASTER_NUM, SLAVE_ADDR_5, IOC0_ADDR, conf_output_mask));
 
     BaseType_t res = xTaskCreate(pp_nixie_display_main, "NIXIE DISPLAY", 4096, NULL, 1, NULL);
-    if(res != pdPASS)
-    {
-        ESP_LOGE(TAG, "Creating display task failed");
-        return res;
-    }
-
-    res = xTaskCreate(pp_nixie_display_alarm_main, "ALARM BLINK", 4096, NULL, 1, NULL);
     if(res != pdPASS)
     {
         ESP_LOGE(TAG, "Creating display task failed");
