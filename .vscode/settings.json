@@ -82,7 +82,10 @@
     "assert.h": "c",
     "pp_wave_player.h": "c",
     "complex": "c",
-    "stdint.h": "c"
+    "stdint.h": "c",
+    "inttypes.h": "c",
+    "stdbool.h": "c",
+    "time.h": "c"
   },
   "idf.flashType": "UART",
   "idf.portWin": "COM5",

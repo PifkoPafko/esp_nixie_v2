@@ -44,20 +44,44 @@ typedef struct
 {
     gpio_state_t state;
     bool last_enable;
-    int64_t stamp;
 }gpio_sm_t;
-
-typedef enum {
-    EDGE,
-    ALARM
-}button_queue_msg_mode_t;
 
 typedef struct
 {
-    button_queue_msg_mode_t mode;
+    bool enable;
     uint32_t gpio_num;
 }button_queue_msg_t;
 
+typedef enum {
+    SHORT_PRESS,
+    HOLDING_SHORT,
+    LONG_PRESS,
+}action_mode_t;
 
+typedef struct
+{
+    uint8_t button;
+    action_mode_t action;
+}button_action_t;
+
+typedef enum {
+    WAIT_FOR_LEFT,
+    WAIT_FOR_CENTER,
+    WAIT_FOR_LEFT_LONG,
+    WAIT_FOR_CENTER_LONG,
+    PAIRING
+}pairing_sm_t;
+
+typedef enum {
+    DEFAULT_MODE,
+    TIME_CHANGE_MODE,
+    ALARM_SET_MODE,
+    ALARM_DELETE_MODE,
+    PAIRING_MODE,
+    ALARM_RING_MODE
+}device_mode_t;
+
+void set_device_mode(device_mode_t mode);
+device_mode_t get_device_mode();
 
 #endif

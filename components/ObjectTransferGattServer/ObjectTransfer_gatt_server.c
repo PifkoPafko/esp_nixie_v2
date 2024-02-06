@@ -50,7 +50,7 @@ esp_ble_gap_ext_adv_params_t ext_adv_params = {
     .interval_min = 0x20,
     .interval_max = 0x20,
     .channel_map = ADV_CHNL_ALL,
-    .filter_policy = ADV_FILTER_ALLOW_SCAN_ANY_CON_ANY,
+    .filter_policy = ADV_FILTER_ALLOW_SCAN_WLST_CON_ANY,
     .primary_phy = ESP_BLE_GAP_PHY_1M,
     .max_skip = 0,
     .secondary_phy = ESP_BLE_GAP_PHY_2M,
@@ -380,7 +380,6 @@ void gap_event_handler(esp_gap_ble_cb_event_t event, esp_ble_gap_cb_param_t *par
                 uint32_t passkey = esp_random() / 4832 + 100000;    // /4295 to convert uint32 value to 0-999999 value
                 esp_ble_gap_set_security_param(ESP_BLE_SM_SET_STATIC_PASSKEY, &passkey, sizeof(uint32_t));
                 set_display_passkey(passkey);
-                set_ble_pairing_flag(true);
             }
             break;
         }
@@ -408,16 +407,18 @@ void gap_event_handler(esp_gap_ble_cb_event_t event, esp_ble_gap_cb_param_t *par
             ESP_LOGI(GATTS_TAG, "ESP_GAP_BLE_LOCAL_ER_EVT");
             break;
         }
-        case ESP_GAP_BLE_NC_REQ_EVT:
-        {
-            /* The app will receive this evt when the IO has DisplayYesNO capability and the peer device IO also has DisplayYesNo capability.
-            show the passkey number to the user to confirm it with the number displayed by peer device. */
-            esp_ble_confirm_reply(param->ble_security.ble_req.bd_addr, true);
-            ESP_LOGI(GATTS_TAG, "ESP_GAP_BLE_NC_REQ_EVT, the passkey Notify number:%" PRIu32, param->ble_security.key_notif.passkey);
-            break;
-        }
+        // case ESP_GAP_BLE_NC_REQ_EVT:
+        // {
+        //     ESP_LOGI(GATTS_TAG, "ESP_GAP_BLE_NC_REQ_EVT");
+        //     /* The app will receive this evt when the IO has DisplayYesNO capability and the peer device IO also has DisplayYesNo capability.
+        //     show the passkey number to the user to confirm it with the number displayed by peer device. */
+        //     esp_ble_confirm_reply(param->ble_security.ble_req.bd_addr, true);
+        //     ESP_LOGI(GATTS_TAG, "ESP_GAP_BLE_NC_REQ_EVT, the passkey Notify number:%" PRIu32, param->ble_security.key_notif.passkey);
+        //     break;
+        // }
         case ESP_GAP_BLE_SEC_REQ_EVT:
         {
+            ESP_LOGI(GATTS_TAG, "ESP_GAP_BLE_NC_REQ_EVT");
             /* send the positive(true) security response to the peer device to accept the security request.
             If not accept the security request, should send the security response with negative(false) accept value*/
             esp_ble_gap_security_rsp(param->ble_security.ble_req.bd_addr, true);
@@ -425,18 +426,28 @@ void gap_event_handler(esp_gap_ble_cb_event_t event, esp_ble_gap_cb_param_t *par
         } 
         case ESP_GAP_BLE_PASSKEY_NOTIF_EVT:  ///the app will receive this evt when the IO  has Output capability and the peer device IO has Input capability.
         {
-            ///show the passkey number to the user to input it in the peer device.
-            ESP_LOGI(GATTS_TAG, "The passkey Notify number:%06" PRIu32, param->ble_security.key_notif.passkey);
+            if (get_device_mode() == PAIRING_MODE)
+            {
+                set_insert_passkey_flag(true);
+                ESP_LOGI(GATTS_TAG, "The passkey Notify number: %06" PRIu32, param->ble_security.key_notif.passkey);
+            }
+            else
+            {
+                esp_ble_gap_disconnect(param->ble_security.key_notif.bd_addr);
+            }
+            
             break;
         }
         case ESP_GAP_BLE_KEY_EVT:
         {
+            ESP_LOGI(GATTS_TAG, "ESP_GAP_BLE_KEY_EVT");
             //shows the ble key info share with peer device to the user.
             ESP_LOGI(GATTS_TAG, "key type = %s", esp_key_type_to_str(param->ble_security.ble_key.key_type));
             break;
         }  
         case ESP_GAP_BLE_AUTH_CMPL_EVT: 
         {
+            ESP_LOGI(GATTS_TAG, "ESP_GAP_BLE_AUTH_CMPL_EVT");
             esp_bd_addr_t bd_addr;
             memcpy(bd_addr, param->ble_security.auth_cmpl.bd_addr, sizeof(esp_bd_addr_t));
             ESP_LOGI(GATTS_TAG, "remote BD_ADDR: %08x%04x",\
@@ -454,8 +465,12 @@ void gap_event_handler(esp_gap_ble_cb_event_t event, esp_ble_gap_cb_param_t *par
                 ESP_LOGI(GATTS_TAG, "auth mode = %s",esp_auth_req_to_str(param->ble_security.auth_cmpl.auth_mode));
             }
 
-            set_ble_pairing_flag(false);
-            //show_bonded_devices();
+            if (param->ble_security.auth_cmpl.success && get_device_mode() == PAIRING_MODE)
+            {
+                set_insert_passkey_flag(false);
+                set_device_mode(DEFAULT_MODE);
+            }
+            
             break;
         }
         case ESP_GAP_BLE_REMOVE_BOND_DEV_COMPLETE_EVT: 

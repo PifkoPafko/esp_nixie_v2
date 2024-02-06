@@ -15,6 +15,8 @@
 * data.
 *
 ****************************************************************************/
+#include "freertos/FreeRTOS.h"
+#include "freertos/timers.h"
 
 #include <inttypes.h>
 #include "esp_log.h"
@@ -47,6 +49,8 @@
 
 #define MAIN_TAG    "MAIN"
 #define ESP_APP_ID  0x55
+
+static void button_functions(button_action_t action_handler);
 
 static esp_err_t bt_init()
 {
@@ -228,35 +232,143 @@ static esp_err_t wifi_init()
 
 static QueueHandle_t gpio_evt_queue = NULL;
 gpio_sm_t button_sm[3];
+TimerHandle_t btn_timer_h[3];
+pairing_sm_t pairing_sm = WAIT_FOR_LEFT;
+device_mode_t device_mode = DEFAULT_MODE;
 
 static void IRAM_ATTR button_isr_handler(void* arg)
 {
     button_queue_msg_t msg;
-    msg.mode = EDGE;
+    msg.enable = gpio_get_level((uint32_t) arg);;
     msg.gpio_num = (uint32_t) arg;
     
     xQueueSendFromISR(gpio_evt_queue, &msg, NULL);
 }
 
+static void btn_timer_cb( TimerHandle_t xTimer )
+{
+    uint8_t button_id = 0xff;
+
+    if (xTimer == btn_timer_h[0])
+    {
+        button_id = BUTTON_LEFT;
+    }
+    else if (xTimer == btn_timer_h[1])
+    {
+        button_id = BUTTON_CENTER;
+    }
+    else if (xTimer == btn_timer_h[2])
+    {
+        button_id = BUTTON_RIGHT;
+    }
+    else 
+    {
+        return;
+    }
+
+    bool action_happened = false;
+    button_action_t action_handler;
+
+    switch (button_sm[button_id].state)
+    {
+        case WAIT_ENABLE_CONTACT_VIBRATION:
+        {
+            if (button_sm[button_id].last_enable == false)
+            {   
+                if (xTimerChangePeriod(btn_timer_h[button_id], pdMS_TO_TICKS(3000), 1) == pdFAIL)
+                {
+                    ESP_LOGV(MAIN_TAG, "BTN %d WAIT_ENABLE_CONTACT_VIBRATION -> IDLE", button_id);
+                    button_sm[button_id].state = IDLE;
+                    return;
+                }
+
+                ESP_LOGV(MAIN_TAG, "BTN %d WAIT_ENABLE_CONTACT_VIBRATION -> WAIT_LONG_PRESS", button_id);
+                button_sm[button_id].state = WAIT_LONG_PRESS;
+
+                action_happened = true;
+                action_handler.button = button_id;
+                action_handler.action = HOLDING_SHORT;
+            }
+            else
+            {
+                action_happened = true;
+                action_handler.button = button_id;
+                action_handler.action = SHORT_PRESS;
+
+                if (xTimerChangePeriod(btn_timer_h[button_id], pdMS_TO_TICKS(100), 1) == pdFAIL)
+                {
+                    ESP_LOGV(MAIN_TAG, "BTN %d WAIT_ENABLE_CONTACT_VIBRATION -> IDLE", button_id);
+                    button_sm[button_id].state = IDLE;
+                    return;
+                }
+
+                ESP_LOGV(MAIN_TAG, "BTN %d WAIT_ENABLE_CONTACT_VIBRATION -> WAIT_DISABLE_CONTACT_VIBRATION", button_id);
+                button_sm[button_id].state = WAIT_DISABLE_CONTACT_VIBRATION;
+            }
+            break;
+        }
+
+        case WAIT_LONG_PRESS:
+        {
+            if (button_sm[button_id].last_enable == true)
+            {
+                action_happened = true;
+                action_handler.button = button_id;
+                action_handler.action = SHORT_PRESS;
+
+                if (xTimerChangePeriod(btn_timer_h[button_id], pdMS_TO_TICKS(100), 1) == pdFAIL)
+                {
+                    ESP_LOGV(MAIN_TAG, "BTN %d WAIT_LONG_PRESS -> IDLE", button_id);
+                    button_sm[button_id].state = IDLE;
+                    break;
+                }
+
+                ESP_LOGV(MAIN_TAG, "BTN %d WAIT_LONG_PRESS -> WAIT_DISABLE_CONTACT_VIBRATION", button_id);
+                button_sm[button_id].state = WAIT_DISABLE_CONTACT_VIBRATION;
+            }
+            else
+            {
+                action_happened = true;
+                action_handler.button = button_id;
+                action_handler.action = LONG_PRESS;
+
+                ESP_LOGV(MAIN_TAG, "BTN %d WAIT_LONG_PRESS -> WAIT_DISABLE", button_id);
+                button_sm[button_id].state = WAIT_DISABLE;
+            }
+
+            break;
+        }
+
+        case WAIT_DISABLE_CONTACT_VIBRATION:
+        {
+            ESP_LOGV(MAIN_TAG, "BTN %d WAIT_DISABLE_CONTACT_VIBRATION -> IDLE", button_id);
+            button_sm[button_id].state = IDLE; 
+            break;
+        }
+
+        default:
+            break;
+    }
+
+    if (action_happened)
+    {
+        button_functions(action_handler);
+    }
+}
+
 static void button_main(void* arg)
 {
     button_queue_msg_t msg;
-    struct timeval tv_now;
-    int64_t next_stamp;
-    bool got_from_queue = false;
+    uint8_t button_id;
+
+    button_action_t action_handler;
 
     while(true) 
     {
-        if(xQueueReceive(gpio_evt_queue, &msg, 1)) 
+        if (xQueueReceive(gpio_evt_queue, &msg, portMAX_DELAY) != pdTRUE)
         {
-            got_from_queue = true;
+            continue;
         }
-        else
-        {
-            got_from_queue = false;
-        }
-
-        uint8_t button_id = 0xff;
         
         switch (msg.gpio_num)
         {
@@ -271,118 +383,299 @@ static void button_main(void* arg)
             case GPIO_INPUT_IO_2:
                 button_id = BUTTON_RIGHT;
                 break;
+
+            default:
+                continue;
         }
 
-        if (button_id >= 3)
-        {
-            continue;
-        }
-
-        if (got_from_queue)
-        {
-            button_sm[button_id].last_enable = !gpio_get_level(msg.gpio_num);
-        }
+        button_sm[button_id].last_enable = msg.enable;
+        bool action_happened = false;
 
         switch (button_sm[button_id].state)
         {
             case IDLE:
             {
-                if (got_from_queue && msg.mode == EDGE && button_sm[button_id].last_enable)
+                if (button_sm[button_id].last_enable == false)
                 {
-                    // ESP_LOGI(MAIN_TAG, "IDLE -> WAIT_ENABLE_CONTACT_VIBRATION");
-                    button_sm[button_id].state = WAIT_ENABLE_CONTACT_VIBRATION;
-
-                    gettimeofday(&tv_now, NULL);
-                    button_sm[button_id].stamp = (int64_t)tv_now.tv_sec * 1000000L + (int64_t)tv_now.tv_usec;
-                }
-                break;
-            }
-
-            case WAIT_ENABLE_CONTACT_VIBRATION:
-            {
-                gettimeofday(&tv_now, NULL);
-                next_stamp = (int64_t)tv_now.tv_sec * 1000000L + (int64_t)tv_now.tv_usec;
-
-                if (next_stamp - button_sm[button_id].stamp >= 100000)
-                {
-                    gettimeofday(&tv_now, NULL);
-                    button_sm[button_id].stamp = (int64_t)tv_now.tv_sec * 1000000L + (int64_t)tv_now.tv_usec;
-
-                    if (button_sm[button_id].last_enable)
+                    if (xTimerChangePeriod(btn_timer_h[button_id], pdMS_TO_TICKS(100), 1) == pdFAIL)
                     {
-                        // ESP_LOGI(MAIN_TAG, "WAIT_ENABLE_CONTACT_VIBRATION -> WAIT_LONG_PRESS");
-                        button_sm[button_id].state = WAIT_LONG_PRESS;
+                        return;
                     }
-                    else
-                    {
-                        // ESP_LOGI(MAIN_TAG, "WAIT_ENABLE_CONTACT_VIBRATION -> WAIT_DISABLE_CONTACT_VIBRATION");
-                        ESP_LOGI(MAIN_TAG, "SHORT PRESS");
-                        set_is_alarm_playing(false);
-                        button_sm[button_id].state = WAIT_DISABLE_CONTACT_VIBRATION;
-                    }
+
+                    ESP_LOGV(MAIN_TAG, "BTN %d IDLE -> WAIT_ENABLE_CONTACT_VIBRATION", button_id);
+                    button_sm[button_id].state = WAIT_ENABLE_CONTACT_VIBRATION;  
                 }
                 break;
             }
 
             case WAIT_LONG_PRESS:
             {
-                if (got_from_queue && msg.mode == EDGE && !button_sm[button_id].last_enable)
+                if (button_sm[button_id].last_enable == true)
                 {
-                    gettimeofday(&tv_now, NULL);
-                    button_sm[button_id].stamp = (int64_t)tv_now.tv_sec * 1000000L + (int64_t)tv_now.tv_usec;
+                    action_happened = true;
+                    action_handler.button = button_id;
+                    action_handler.action = SHORT_PRESS;
 
-                    // ESP_LOGI(MAIN_TAG, "WAIT_LONG_PRESS -> WAIT_DISABLE_CONTACT_VIBRATION");
-                    ESP_LOGI(MAIN_TAG, "SHORT PRESS");
-                    set_is_alarm_playing(false);
+                    if (xTimerChangePeriod(btn_timer_h[button_id], pdMS_TO_TICKS(100), 1) == pdFAIL)
+                    {
+                        ESP_LOGV(MAIN_TAG, "BTN %d WAIT_LONG_PRESS -> IDLE", button_id);
+                        button_sm[button_id].state = IDLE;
+                        break;
+                    }
+
+                    ESP_LOGV(MAIN_TAG, "BTN %d WAIT_LONG_PRESS -> WAIT_DISABLE_CONTACT_VIBRATION", button_id);
                     button_sm[button_id].state = WAIT_DISABLE_CONTACT_VIBRATION;
                 }
-                else
-                {
-                    gettimeofday(&tv_now, NULL);
-                    next_stamp = (int64_t)tv_now.tv_sec * 1000000L + (int64_t)tv_now.tv_usec;
-
-                    if (next_stamp - button_sm[button_id].stamp >= 3000000)
-                    {
-                        ESP_LOGI(MAIN_TAG, "LONG PRESS");
-                        gettimeofday(&tv_now, NULL);
-                        button_sm[button_id].stamp = (int64_t)tv_now.tv_sec * 1000000L + (int64_t)tv_now.tv_usec;
-
-                        // ESP_LOGI(MAIN_TAG, "WAIT_LONG_PRESS -> WAIT_DISABLE");
-                        button_sm[button_id].state = WAIT_DISABLE;
-                    }
-                }
-
                 break;
             }
 
             case WAIT_DISABLE:
             {
-                if (got_from_queue && msg.mode == EDGE && !button_sm[button_id].last_enable)
+                if (button_sm[button_id].last_enable == true)
                 {
-                    gettimeofday(&tv_now, NULL);
-                    button_sm[button_id].stamp = (int64_t)tv_now.tv_sec * 1000000L + (int64_t)tv_now.tv_usec;
+                    if (xTimerChangePeriod(btn_timer_h[button_id], pdMS_TO_TICKS(100), 1) == pdFAIL)
+                    {
+                        ESP_LOGV(MAIN_TAG, "BTN %d WAIT_DISABLE -> IDLE", button_id);
+                        button_sm[button_id].state = IDLE;
+                        break;
+                    }
 
-                    // ESP_LOGI(MAIN_TAG, "WAIT_DISABLE -> WAIT_DISABLE_CONTACT_VIBRATION");
+                    ESP_LOGV(MAIN_TAG, "BTN %d WAIT_DISABLE -> WAIT_DISABLE_CONTACT_VIBRATION", button_id);
                     button_sm[button_id].state = WAIT_DISABLE_CONTACT_VIBRATION;
                 }
-
                 break;
             }
 
-            case WAIT_DISABLE_CONTACT_VIBRATION:
-            {
-                gettimeofday(&tv_now, NULL);
-                next_stamp = (int64_t)tv_now.tv_sec * 1000000L + (int64_t)tv_now.tv_usec;
+            default:
+            break;
+        }
 
-                if (next_stamp - button_sm[button_id].stamp >= 100000)
-                {
-                    button_sm[button_id].state = IDLE;
-                    // ESP_LOGI(MAIN_TAG, "WAIT_DISABLE_CONTACT_VIBRATION -> IDLE");
-                }
-                break;
-            }
+        if (action_happened)
+        {
+            button_functions(action_handler);
         }
     }
+}
+
+static void button_functions(button_action_t action_handler)
+{
+    switch (device_mode)
+    {
+        case DEFAULT_MODE:
+        {
+            switch (pairing_sm)
+            {
+                case WAIT_FOR_LEFT:
+                {
+                    if (action_handler.button == BUTTON_LEFT && action_handler.action == HOLDING_SHORT)
+                    {
+                        pairing_sm = WAIT_FOR_CENTER;
+                    }
+                    else
+                    {
+                        pairing_sm = WAIT_FOR_LEFT;
+                    }
+                    break;
+                }
+
+                case WAIT_FOR_CENTER:
+                {
+                    if (action_handler.button == BUTTON_CENTER && action_handler.action == HOLDING_SHORT)
+                    {
+                        pairing_sm = WAIT_FOR_LEFT_LONG;
+                    }
+                    else
+                    {
+                        pairing_sm = WAIT_FOR_LEFT;
+                    }
+                    break;
+                }
+
+                case WAIT_FOR_LEFT_LONG:
+                {
+                    if (action_handler.button == BUTTON_LEFT && action_handler.action == LONG_PRESS)
+                    {
+                        pairing_sm = WAIT_FOR_CENTER_LONG;
+                    }
+                    else
+                    {
+                        pairing_sm = WAIT_FOR_LEFT;
+                    }
+                    break;
+                }
+
+                case WAIT_FOR_CENTER_LONG:
+                {
+                    if (action_handler.button == BUTTON_CENTER && action_handler.action == LONG_PRESS)
+                    {
+                        ESP_LOGI(MAIN_TAG, "DEFAULT MODE -> PAIRING MODE");
+                        pairing_sm = PAIRING;
+
+                        device_mode = PAIRING_MODE;
+                    }
+                    else
+                    {
+                        pairing_sm = WAIT_FOR_LEFT;
+                    }
+                    break;
+                }
+
+                default:
+                    break;
+            }
+
+            if (action_handler.button == BUTTON_LEFT && action_handler.action == LONG_PRESS && pairing_sm == WAIT_FOR_LEFT)
+            {
+                ESP_LOGI(MAIN_TAG, "DEFAULT MODE -> TIME CHANGE MODE");
+                device_mode = TIME_CHANGE_MODE;
+            }
+
+            if (action_handler.button == BUTTON_CENTER && action_handler.action == LONG_PRESS && pairing_sm != PAIRING)
+            {
+                ESP_LOGI(MAIN_TAG, "DEFAULT MODE -> ALARM SET MODE");
+                device_mode = ALARM_SET_MODE;
+            }
+
+            if (action_handler.button == BUTTON_RIGHT && action_handler.action == LONG_PRESS)
+            {
+                ESP_LOGI(MAIN_TAG, "DEFAULT MODE -> ALARM DELETE MODE");
+                device_mode = ALARM_DELETE_MODE;
+            }
+
+            if (pairing_sm == PAIRING)
+            {
+                pairing_sm = WAIT_FOR_LEFT;
+            }
+            break;
+        }
+
+        case TIME_CHANGE_MODE:
+        {
+            if (action_handler.action == SHORT_PRESS)
+            {
+                switch (action_handler.button)
+                {
+                    case BUTTON_LEFT:
+                    {
+                        break;
+                    }
+
+                    case BUTTON_CENTER:
+                    {
+                        break;
+                    }
+
+                    case BUTTON_RIGHT:
+                    {
+                        ESP_LOGI(MAIN_TAG, "TIME CHANGE MODE -> DEFAULT MODE");
+                        device_mode = DEFAULT_MODE;
+                        break;
+                    }
+
+                    default:
+                        break;
+                }
+            }
+            break;
+        }
+
+        case ALARM_SET_MODE:
+        {
+            if (action_handler.action == SHORT_PRESS)
+            {
+                switch (action_handler.button)
+                {
+                    case BUTTON_LEFT:
+                    {
+                        break;
+                    }
+
+                    case BUTTON_CENTER:
+                    {
+                        break;
+                    }
+
+                    case BUTTON_RIGHT:
+                    {
+                        ESP_LOGI(MAIN_TAG, "ALARM SET MODE -> DEFAULT MODE");
+                        device_mode = DEFAULT_MODE;
+                        break;
+                    }
+
+                    default:
+                        break;
+                }
+            }
+            break;
+        }
+
+        case ALARM_DELETE_MODE:
+        {
+            if (action_handler.action == SHORT_PRESS)
+            {
+                switch (action_handler.button)
+                {
+                    case BUTTON_LEFT:
+                    {
+                        break;
+                    }
+
+                    case BUTTON_CENTER:
+                    {
+                        break;
+                    }
+
+                    case BUTTON_RIGHT:
+                    {
+                        ESP_LOGI(MAIN_TAG, "ALARM DELETE -> DEFAULT MODE");
+                        device_mode = DEFAULT_MODE;
+                        break;
+                    }
+
+                    default:
+                        break;
+                }
+            }
+            break;
+        }
+
+        case PAIRING_MODE:
+        {
+            if (action_handler.action == SHORT_PRESS)
+            {
+                ESP_LOGI(MAIN_TAG, "PAIRING MODE -> DEFAULT MODE");
+                device_mode = DEFAULT_MODE;
+            }  
+            break;
+        }
+
+        case ALARM_RING_MODE:
+        {
+            if (action_handler.action == SHORT_PRESS)
+            {
+                if (get_is_alarm_playing())
+                {
+                    set_is_alarm_playing(false);
+                    ESP_LOGI(MAIN_TAG, "ALARM DISABLED");
+
+                    ESP_LOGI(MAIN_TAG, "ALARM RING MODE -> DEFAULT MODE");
+                    device_mode = DEFAULT_MODE;
+                    break;
+                }  
+            }
+            break;
+        }
+    }
+}
+
+void set_device_mode(device_mode_t mode)
+{
+    device_mode = mode;
+}
+
+device_mode_t get_device_mode()
+{
+    return device_mode;
 }
 
 static esp_err_t button_init()
@@ -415,6 +708,13 @@ static esp_err_t button_init()
 
     gpio_install_isr_service(ESP_INTR_FLAG_DEFAULT);
     gpio_isr_handler_add(GPIO_INPUT_IO_0, button_isr_handler, (void*) GPIO_INPUT_IO_0);
+    gpio_isr_handler_add(GPIO_INPUT_IO_1, button_isr_handler, (void*) GPIO_INPUT_IO_1);
+    gpio_isr_handler_add(GPIO_INPUT_IO_2, button_isr_handler, (void*) GPIO_INPUT_IO_2);
+
+    btn_timer_h[0] = xTimerCreate(NULL, pdMS_TO_TICKS(100), pdFALSE, NULL, btn_timer_cb);
+    btn_timer_h[1] = xTimerCreate(NULL, pdMS_TO_TICKS(100), pdFALSE, NULL, btn_timer_cb);
+    btn_timer_h[2] = xTimerCreate(NULL, pdMS_TO_TICKS(100), pdFALSE, NULL, btn_timer_cb);
+    
     return ESP_OK;
 }
 
