@@ -2,7 +2,13 @@
 #include "esp_event.h"
 #include "esp_wifi.h"
 
-#define DEFAULT_NTP_SERVER			"ntp.certum.pl"
+
+#define DEFAULT_NTP_SERVER_0			"0.pl.pool.ntp.org"
+#define DEFAULT_NTP_SERVER_1			"1.pl.pool.ntp.org"
+#define DEFAULT_NTP_SERVER_2			"2.pl.pool.ntp.org"
+#define DEFAULT_NTP_SERVER_3			"3.pl.pool.ntp.org"
+#define DEFAULT_NTP_SERVER_4			"ntp1.tp.pl"
+#define DEFAULT_NTP_SERVER_5			"ntp.certum.pl"
 
 typedef struct{
     uint8_t my_ssid_len;

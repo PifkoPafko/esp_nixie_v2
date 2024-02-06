@@ -245,6 +245,9 @@ static void IRAM_ATTR button_isr_handler(void* arg)
     xQueueSendFromISR(gpio_evt_queue, &msg, NULL);
 }
 
+time_change_sm_t time_change_sm = IDLE_TIME_CHANGE;
+nixie_time_t nixie_time;
+
 static void btn_timer_cb( TimerHandle_t xTimer )
 {
     uint8_t button_id = 0xff;
@@ -528,18 +531,19 @@ static void button_functions(button_action_t action_handler)
             {
                 ESP_LOGI(MAIN_TAG, "DEFAULT MODE -> TIME CHANGE MODE");
                 device_mode = TIME_CHANGE_MODE;
+                time_change_mode(action_handler, true);
             }
 
             if (action_handler.button == BUTTON_CENTER && action_handler.action == LONG_PRESS && pairing_sm != PAIRING)
             {
-                ESP_LOGI(MAIN_TAG, "DEFAULT MODE -> ALARM SET MODE");
-                device_mode = ALARM_SET_MODE;
+                ESP_LOGI(MAIN_TAG, "DEFAULT MODE -> ALARM ADD MODE");
+                device_mode = ALARM_ADD_MODE;
             }
 
             if (action_handler.button == BUTTON_RIGHT && action_handler.action == LONG_PRESS)
             {
-                ESP_LOGI(MAIN_TAG, "DEFAULT MODE -> ALARM DELETE MODE");
-                device_mode = ALARM_DELETE_MODE;
+                ESP_LOGI(MAIN_TAG, "DEFAULT MODE -> ALARM CHANGE MODE");
+                device_mode = ALARM_CHANGE_MODE;
             }
 
             if (pairing_sm == PAIRING)
@@ -551,35 +555,11 @@ static void button_functions(button_action_t action_handler)
 
         case TIME_CHANGE_MODE:
         {
-            if (action_handler.action == SHORT_PRESS)
-            {
-                switch (action_handler.button)
-                {
-                    case BUTTON_LEFT:
-                    {
-                        break;
-                    }
-
-                    case BUTTON_CENTER:
-                    {
-                        break;
-                    }
-
-                    case BUTTON_RIGHT:
-                    {
-                        ESP_LOGI(MAIN_TAG, "TIME CHANGE MODE -> DEFAULT MODE");
-                        device_mode = DEFAULT_MODE;
-                        break;
-                    }
-
-                    default:
-                        break;
-                }
-            }
+            time_change_mode(action_handler, false);
             break;
         }
 
-        case ALARM_SET_MODE:
+        case ALARM_ADD_MODE:
         {
             if (action_handler.action == SHORT_PRESS)
             {
@@ -597,7 +577,7 @@ static void button_functions(button_action_t action_handler)
 
                     case BUTTON_RIGHT:
                     {
-                        ESP_LOGI(MAIN_TAG, "ALARM SET MODE -> DEFAULT MODE");
+                        ESP_LOGI(MAIN_TAG, "ALARM ADD MODE -> DEFAULT MODE");
                         device_mode = DEFAULT_MODE;
                         break;
                     }
@@ -609,7 +589,7 @@ static void button_functions(button_action_t action_handler)
             break;
         }
 
-        case ALARM_DELETE_MODE:
+        case ALARM_CHANGE_MODE:
         {
             if (action_handler.action == SHORT_PRESS)
             {
@@ -617,6 +597,7 @@ static void button_functions(button_action_t action_handler)
                 {
                     case BUTTON_LEFT:
                     {
+
                         break;
                     }
 
@@ -627,7 +608,7 @@ static void button_functions(button_action_t action_handler)
 
                     case BUTTON_RIGHT:
                     {
-                        ESP_LOGI(MAIN_TAG, "ALARM DELETE -> DEFAULT MODE");
+                        ESP_LOGI(MAIN_TAG, "ALARM_CHANGE_MODE -> DEFAULT MODE");
                         device_mode = DEFAULT_MODE;
                         break;
                     }
@@ -672,6 +653,393 @@ void set_device_mode(device_mode_t mode)
 device_mode_t get_device_mode()
 {
     return device_mode;
+}
+
+void time_change_mode(button_action_t action_handler, bool start)
+{
+    if (action_handler.action == SHORT_PRESS && action_handler.button == BUTTON_RIGHT)
+    {
+        ESP_LOGI(MAIN_TAG, "TIME CHANGE MODE -> DEFAULT MODE");
+        time_change_sm = IDLE_TIME_CHANGE;
+        device_mode = DEFAULT_MODE;
+    }
+
+    switch(time_change_sm)
+    {
+        case IDLE_TIME_CHANGE:
+        {
+            if (start)
+            {
+                time_t now;
+                time(&now);
+                struct tm timeinfo;
+                localtime_r(&now, &timeinfo);
+
+                nixie_time.hour_first = timeinfo.tm_hour / 10;
+                nixie_time.hour_second = timeinfo.tm_hour % 10;
+                nixie_time.minute_first = timeinfo.tm_min / 10;
+                nixie_time.minute_second = timeinfo.tm_min % 10;
+                nixie_time.second_first = timeinfo.tm_sec / 10;
+                nixie_time.second_second = timeinfo.tm_sec % 10;
+                nixie_time.day_first = timeinfo.tm_mday / 10;
+                nixie_time.day_second = timeinfo.tm_mday % 10;
+                nixie_time.month_first = (timeinfo.tm_mon + 1) / 10;
+                nixie_time.month_second = (timeinfo.tm_mon + 1) % 10;
+                nixie_time.year_first = (timeinfo.tm_year - 100) / 10;
+                nixie_time.year_second = (timeinfo.tm_year - 100) % 10;
+
+                ESP_LOGI(MAIN_TAG, "TIME_CHANGE: IDLE_TIME_CHANGE -> SET_HOUR_FIRST");
+                time_change_sm = SET_HOUR_FIRST;
+            }    
+            break;
+        }
+
+        case SET_HOUR_FIRST:
+        {
+            if (action_handler.action == SHORT_PRESS)
+            {
+                switch (action_handler.button)
+                {
+                    case BUTTON_LEFT:
+                    {
+                        nixie_time.hour_first++;
+                        if (nixie_time.hour_first > 2) nixie_time.hour_first = 0;
+                        ESP_LOGI(MAIN_TAG, "TIME_CHANGE: SET_HOUR_FIRST ++");
+                        break;
+                    }
+
+                    case BUTTON_CENTER:
+                    {
+                        ESP_LOGI(MAIN_TAG, "TIME_CHANGE: SET_HOUR_FIRST -> SET_HOUR_SECOND");
+                        time_change_sm = SET_HOUR_SECOND;
+                        break;
+                    }
+
+                    default:
+                        break;
+                }
+            }
+            break;
+        }
+
+        case SET_HOUR_SECOND:
+        {
+            if (action_handler.action == SHORT_PRESS)
+            {
+                switch (action_handler.button)
+                {
+                    case BUTTON_LEFT:
+                    {
+                        nixie_time.hour_second++;
+                        if ( (nixie_time.hour_first < 2 && nixie_time.hour_second > 9) || (nixie_time.hour_first == 2 && nixie_time.hour_second > 3) )
+                        {
+                            nixie_time.hour_second = 0;
+                        }
+                        ESP_LOGI(MAIN_TAG, "TIME_CHANGE: SET_HOUR_SECOND ++");
+                        break;
+                    }
+
+                    case BUTTON_CENTER:
+                    {
+                        ESP_LOGI(MAIN_TAG, "TIME_CHANGE: SET_HOUR_SECOND -> SET_MINUTE_FIRST");
+                        time_change_sm = SET_MINUTE_FIRST;
+                        break;
+                    }
+
+                    default:
+                        break;
+                }
+            }
+            break;
+        }
+
+        case SET_MINUTE_FIRST:
+        {
+            if (action_handler.action == SHORT_PRESS)
+            {
+                switch (action_handler.button)
+                {
+                    case BUTTON_LEFT:
+                    {
+                        nixie_time.minute_first++;
+                        if (nixie_time.minute_first > 5) nixie_time.minute_first = 0;
+                        ESP_LOGI(MAIN_TAG, "TIME_CHANGE: SET_MINUTE_FIRST ++");
+                        break;
+                    }
+
+                    case BUTTON_CENTER:
+                    {
+                        ESP_LOGI(MAIN_TAG, "TIME_CHANGE: SET_MINUTE_FIRST -> SET_MINUTE_SECOND");
+                        time_change_sm = SET_MINUTE_SECOND;
+                        break;
+                    }
+
+                    default:
+                        break;
+                }
+            }
+            break;
+        }
+        
+        case SET_MINUTE_SECOND:
+        {
+            if (action_handler.action == SHORT_PRESS)
+            {
+                switch (action_handler.button)
+                {
+                    case BUTTON_LEFT:
+                    {
+                        nixie_time.minute_second++;
+                        if (nixie_time.minute_second > 9) nixie_time.minute_second = 0;
+                        break;
+                    }
+
+                    case BUTTON_CENTER:
+                    {
+                        time_change_sm = SET_SECOND_FIRST;
+                        break;
+                    }
+
+                    default:
+                        break;
+                }
+            }
+            break;
+        }
+
+        case SET_SECOND_FIRST:
+        {
+            if (action_handler.action == SHORT_PRESS)
+            {
+                switch (action_handler.button)
+                {
+                    case BUTTON_LEFT:
+                    {
+                        nixie_time.second_first++;
+                        if (nixie_time.second_first > 5) nixie_time.second_first = 0;
+                        break;
+                    }
+
+                    case BUTTON_CENTER:
+                    {
+                        time_change_sm = SET_SECOND_SECOND;
+                        break;
+                    }
+
+                    default:
+                        break;
+                }
+            }
+            break;
+        }
+        
+        case SET_SECOND_SECOND:
+        {
+            if (action_handler.action == SHORT_PRESS)
+            {
+                switch (action_handler.button)
+                {
+                    case BUTTON_LEFT:
+                    {
+                        nixie_time.second_second++;
+                        if (nixie_time.second_second > 9) nixie_time.second_second = 0;
+                        break;
+                    }
+
+                    case BUTTON_CENTER:
+                    {
+                        time_change_sm = SET_DAY_FIRST;
+                        break;
+                    }
+
+                    default:
+                        break;
+                }
+            }
+            break;
+        }
+
+        case SET_DAY_FIRST:
+        {
+            if (action_handler.action == SHORT_PRESS)
+            {
+                switch (action_handler.button)
+                {
+                    case BUTTON_LEFT:
+                    {
+                        nixie_time.day_first++;
+                        if (nixie_time.day_first > 3) nixie_time.day_first = 0;
+                        break;
+                    }
+
+                    case BUTTON_CENTER:
+                    {
+                        time_change_sm = SET_DAY_SECOND;
+                        break;
+                    }
+
+                    default:
+                        break;
+                }
+            }
+            break;
+        }
+
+        case SET_DAY_SECOND:
+        {
+            if (action_handler.action == SHORT_PRESS)
+            {
+                switch (action_handler.button)
+                {
+                    case BUTTON_LEFT:
+                    {
+                        nixie_time.day_second++;
+
+                        if ( (nixie_time.day_first > 2 && nixie_time.day_second > 1) || (nixie_time.day_first < 2 && nixie_time.day_second > 9) )
+                        {
+                            nixie_time.day_second = 0;
+                        }
+                        break;
+                    }
+
+                    case BUTTON_CENTER:
+                    {
+                        time_change_sm = SET_MONTH_FIRST;
+                        break;
+                    }
+
+                    default:
+                        break;
+                }
+            }
+            break;
+        }
+
+        case SET_MONTH_FIRST:
+        {
+            if (action_handler.action == SHORT_PRESS)
+            {
+                switch (action_handler.button)
+                {
+                    case BUTTON_LEFT:
+                    {
+                        nixie_time.month_first++;
+                        if (nixie_time.month_first > 1) nixie_time.month_first = 0;
+                        break;
+                    }
+
+                    case BUTTON_CENTER:
+                    {
+                        time_change_sm = SET_MONTH_SECOND;
+                        break;
+                    }
+
+                    default:
+                        break;
+                }
+            }
+            break;
+        }
+
+        case SET_MONTH_SECOND:
+        {
+            if (action_handler.action == SHORT_PRESS)
+            {
+                switch (action_handler.button)
+                {
+                    case BUTTON_LEFT:
+                    {
+                        nixie_time.month_second++;
+                        if ( (nixie_time.month_first > 0 && nixie_time.month_second > 2) || (nixie_time.month_first == 0 && nixie_time.month_second > 9) )
+                        {
+                            nixie_time.month_second = 0;
+                        }
+                        break;
+                    }
+
+                    case BUTTON_CENTER:
+                    {
+                        time_change_sm = SET_YEAR_FIRST;
+                        break;
+                    }
+
+                    default:
+                        break;
+                }
+            }
+            break;
+        }
+
+        case SET_YEAR_FIRST:
+        {
+            if (action_handler.action == SHORT_PRESS)
+            {
+                switch (action_handler.button)
+                {
+                    case BUTTON_LEFT:
+                    {
+                        nixie_time.year_first++;
+                        if (nixie_time.year_first > 9) nixie_time.year_first = 0;
+                        break;
+                    }
+
+                    case BUTTON_CENTER:
+                    {
+                        time_change_sm = SET_YEAR_SECOND;
+                        break;
+                    }
+
+                    default:
+                        break;
+                }
+            }
+            break;
+        }
+
+        case SET_YEAR_SECOND:
+        {
+            if (action_handler.action == SHORT_PRESS)
+            {
+                switch (action_handler.button)
+                {
+                    case BUTTON_LEFT:
+                    {
+                        nixie_time.year_second++;
+                        if (nixie_time.year_second > 9) nixie_time.year_second = 0;
+                        break;
+                    }
+
+                    case BUTTON_CENTER:
+                    {
+                        time_change_sm = IDLE_TIME_CHANGE;
+                        device_mode = DEFAULT_MODE;
+
+                        struct tm tm;
+                        tm.tm_year 	= nixie_time.year_first * 10 + nixie_time.year_second + 100;
+                        tm.tm_mon 	= nixie_time.month_first * 10 + nixie_time.month_second - 1;
+                        tm.tm_mday 	= nixie_time.day_first * 10 + nixie_time.day_second;
+                        tm.tm_hour 	= nixie_time.hour_first * 10 + nixie_time.hour_second;
+                        tm.tm_min 	= nixie_time.minute_first * 10 + nixie_time.minute_second;
+                        tm.tm_sec 	= nixie_time.second_first * 10 + nixie_time.second_second;
+                        tm.tm_isdst = 0;
+
+                        time_t t = mktime(&tm);
+
+                        struct timeval tv;
+                        tv.tv_sec = t;
+                        settimeofday(&tv, NULL);
+
+                        pp_rtc_set_time( tm.tm_sec, tm.tm_min, tm.tm_hour, 1, tm.tm_mday, tm.tm_mon + 1, tm.tm_year - 100 );
+                        break;
+                    }
+
+                    default:
+                        break;
+                }
+            }
+            break;
+        }    
+    }
 }
 
 static esp_err_t button_init()

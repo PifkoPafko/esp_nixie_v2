@@ -10,6 +10,7 @@
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include "freertos/semphr.h"
+#include "freertos/timers.h"
 
 #include "driver/gpio.h"
 #include "driver/gptimer.h"
@@ -45,6 +46,17 @@ nixie_tube_state_t nixie_state[16];
 uint8_t prev_i2c_msg[5];
 static volatile bool write_display_flag = false;
 static volatile bool anti_poisoning_flag = false;
+
+/* Time Change declarationts */
+TimerHandle_t blink_timer_h;
+static const uint8_t BLINK_LAMP_MASK[13] = { 0, 0, 1, 2, 3, 4, 5, 7, 8, 9, 10, 11, 12 };
+static bool time_change_blink_switch = true;
+
+static void blink_timer_cb( TimerHandle_t xTimer )
+{
+    time_change_blink_switch = !time_change_blink_switch;
+}
+/* */
 
 static uint32_t current_passkey[6];
 
@@ -195,12 +207,10 @@ void pp_nixie_display_main(void* arg)
                     for ( uint8_t expander = 0; expander < 6; expander++ )
                     {
                         memset(i2c_msg, 0, 5);
-
-                        if (pp_nixie_display_generate_i2c_msg(expander, i2c_msg))
-                        {
-                            pca_write_all_reg(I2C_MASTER_NUM, EXPANDER_ADDRESS[expander], OP0_ADDR, i2c_msg);
-                        }
+                        pp_nixie_display_generate_i2c_msg(expander, i2c_msg);
+                        pca_write_all_reg(I2C_MASTER_NUM, EXPANDER_ADDRESS[expander], OP0_ADDR, i2c_msg);
                     }
+                    
                     vTaskDelay(pdMS_TO_TICKS(10));
                 }
                 else
@@ -212,15 +222,66 @@ void pp_nixie_display_main(void* arg)
 
             case TIME_CHANGE_MODE:
             {
+                for (uint8_t i=0; i<16; i++)
+                {
+                    nixie_state[i].left_comma_enable = false;
+                    nixie_state[i].right_comma_enable = false;
+                }
+
+                for (uint8_t i=0; i<6; i++)
+                {
+                    nixie_state[i].digit_enable = true;
+                }
+
+                for (uint8_t i=7; i<13; i++)
+                {
+                    nixie_state[i].digit_enable = true;
+                }
+
+                nixie_state[0].digit = nixie_time.hour_first;
+                nixie_state[1].digit = nixie_time.hour_second;
+                nixie_state[1].right_comma_enable = true;
+                nixie_state[2].digit = nixie_time.minute_first;
+                nixie_state[3].digit = nixie_time.minute_second;
+                nixie_state[3].right_comma_enable = true;
+                nixie_state[4].digit = nixie_time.second_first;
+                nixie_state[5].digit = nixie_time.second_second;
+
+                nixie_state[7].digit = nixie_time.day_first;
+                nixie_state[8].digit = nixie_time.day_second;
+                nixie_state[8].right_comma_enable = true;
+                nixie_state[9].digit = nixie_time.month_first;
+                nixie_state[10].digit = nixie_time.month_second;
+                nixie_state[10].right_comma_enable = true;
+                nixie_state[11].digit = nixie_time.year_first;
+                nixie_state[12].digit = nixie_time.year_second;
+
+                if (time_change_blink_switch)
+                {
+                    for ( uint8_t lamp = 0; lamp < 16; lamp++ )
+                    {
+                        nixie_state[BLINK_LAMP_MASK[time_change_sm]].digit_enable = false;
+                    }
+                }
+
+                for ( uint8_t expander = 0; expander < 6; expander++ )
+                {
+                    memset(i2c_msg, 0, 5);
+                    pp_nixie_display_generate_i2c_msg(expander, i2c_msg);
+                    pca_write_all_reg(I2C_MASTER_NUM, EXPANDER_ADDRESS[expander], OP0_ADDR, i2c_msg);
+                }
+
+                vTaskDelay(pdMS_TO_TICKS(30));
+
                 break;
             }
 
-            case ALARM_SET_MODE:
+            case ALARM_ADD_MODE:
             {
                 break;
             }
 
-            case ALARM_DELETE_MODE:
+            case ALARM_CHANGE_MODE:
             {
                 break;
             }
@@ -411,13 +472,16 @@ esp_err_t pp_nixie_diplay_init()
     ESP_ERROR_CHECK(gptimer_enable(anti_poisoing_gptimer));
 
     gptimer_alarm_config_t anti_poisoning_alarm_config = {
-        .alarm_count = 60000000, // period = 1s
+        .alarm_count = 30000000, // period = 1s
         .reload_count = 0,
         .flags.auto_reload_on_alarm = true
     };
 
     ESP_ERROR_CHECK(gptimer_set_alarm_action(anti_poisoing_gptimer, &anti_poisoning_alarm_config));
     ESP_ERROR_CHECK(gptimer_start(anti_poisoing_gptimer));
+
+    blink_timer_h = xTimerCreate(NULL, pdMS_TO_TICKS(500), pdTRUE, NULL, blink_timer_cb);
+    xTimerStart(blink_timer_h, 1);
 
     return ESP_OK;
 }

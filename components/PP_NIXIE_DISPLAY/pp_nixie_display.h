@@ -1,6 +1,7 @@
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include "freertos/semphr.h"
+#include "project_defs.h"
 
 extern QueueHandle_t mess_queue_hdl;
 
@@ -18,6 +19,9 @@ typedef struct display_mess
 {
     nixie_tube_state_t nixie[16];
 }display_mess_t;
+
+extern time_change_sm_t time_change_sm;
+extern nixie_time_t nixie_time;
 
 esp_err_t pp_nixie_diplay_init();
 bool pp_nixie_display_generate_i2c_msg(uint8_t expander_id, uint8_t *msg);

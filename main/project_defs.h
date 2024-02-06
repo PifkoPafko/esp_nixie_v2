@@ -75,13 +75,47 @@ typedef enum {
 typedef enum {
     DEFAULT_MODE,
     TIME_CHANGE_MODE,
-    ALARM_SET_MODE,
-    ALARM_DELETE_MODE,
+    ALARM_ADD_MODE,
+    ALARM_CHANGE_MODE,
     PAIRING_MODE,
     ALARM_RING_MODE
 }device_mode_t;
 
+typedef enum {
+    IDLE_TIME_CHANGE,
+    SET_HOUR_FIRST,
+    SET_HOUR_SECOND,
+    SET_MINUTE_FIRST,
+    SET_MINUTE_SECOND,
+    SET_SECOND_FIRST,
+    SET_SECOND_SECOND,
+    SET_DAY_FIRST,
+    SET_DAY_SECOND,
+    SET_MONTH_FIRST,
+    SET_MONTH_SECOND,
+    SET_YEAR_FIRST,
+    SET_YEAR_SECOND
+}time_change_sm_t;
+
+typedef struct {
+    uint8_t hour_first;
+    uint8_t hour_second;
+    uint8_t minute_first;
+    uint8_t minute_second;
+    uint8_t second_first;
+    uint8_t second_second;
+    uint8_t day_first;
+    uint8_t day_second;
+    uint8_t month_first;
+    uint8_t month_second;
+    uint8_t year_first;
+    uint8_t year_second;
+} nixie_time_t;
+
 void set_device_mode(device_mode_t mode);
 device_mode_t get_device_mode();
+void time_change_mode(button_action_t action_handler, bool start);
+
+
 
 #endif

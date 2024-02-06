@@ -149,7 +149,15 @@ static void pp_sntp_init( char * sntp_srv ) {
     esp_sntp_set_time_sync_notification_cb(sntp_cb);
 
     if( sntp_srv ) esp_sntp_setservername(0, sntp_srv);
-    else esp_sntp_setservername(0, DEFAULT_NTP_SERVER);
+    else 
+    {
+        esp_sntp_setservername(0, DEFAULT_NTP_SERVER_0);
+        esp_sntp_setservername(1, DEFAULT_NTP_SERVER_1);
+        esp_sntp_setservername(2, DEFAULT_NTP_SERVER_2);
+        esp_sntp_setservername(3, DEFAULT_NTP_SERVER_3);
+        esp_sntp_setservername(4, DEFAULT_NTP_SERVER_4);
+        esp_sntp_setservername(5, DEFAULT_NTP_SERVER_5);
+    }
 
     esp_sntp_init();
 }

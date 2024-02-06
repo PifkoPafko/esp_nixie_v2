@@ -85,7 +85,8 @@
     "stdint.h": "c",
     "inttypes.h": "c",
     "stdbool.h": "c",
-    "time.h": "c"
+    "time.h": "c",
+    "pp_pca9698.h": "c"
   },
   "idf.flashType": "UART",
   "idf.portWin": "COM5",
