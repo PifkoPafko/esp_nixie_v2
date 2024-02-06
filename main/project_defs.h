@@ -1,6 +1,12 @@
 #ifndef __PROJECT_DEFS_H__
 #define __PROJECT_DEFS_H__
 
+#include <stdbool.h>
+#include <stdint.h>
+#include <sys/time.h>
+#include <time.h>
+#include "driver/gpio.h"
+
 #define MOUNT_POINT "/sdcard"
 #define FILE_LIST_NAME MOUNT_POINT "/file_id_list.txt"
 #define ALARMS_PATH MOUNT_POINT "/alarms"
@@ -13,8 +19,11 @@
 #define ALARM_FILE_TYPE ".txt"
 #define RINGTONE_FILE_TYPE ".wav"
 
-#define GPIO_OUTPUT_OE    GPIO_NUM_3
-#define GPIO_OUTPUT_PIN_SEL  (1ULL<<GPIO_OUTPUT_OE)
+#define GPIO_OUTPUT_OE          GPIO_NUM_3
+#define GPIO_OUTPUT_RED         GPIO_NUM_47
+#define GPIO_OUTPUT_BLUE        GPIO_NUM_21
+#define GPIO_OUTPUT_GREEN       GPIO_NUM_48
+#define GPIO_OUTPUT_PIN_SEL     ((1ULL<<GPIO_OUTPUT_OE) | (1ULL<<GPIO_OUTPUT_RED) | (1ULL<<GPIO_OUTPUT_BLUE) | (1ULL<<GPIO_OUTPUT_GREEN))
 
 #define GPIO_INPUT_IO_0     GPIO_NUM_12
 #define GPIO_INPUT_IO_1     GPIO_NUM_13
@@ -26,11 +35,6 @@
 #define BUTTON_RIGHT     2
 
 #define ESP_INTR_FLAG_DEFAULT ESP_INTR_FLAG_EDGE
-
-#include <stdbool.h>
-#include <stdint.h>
-#include <sys/time.h>
-#include <time.h>
 
 typedef enum {
     IDLE,

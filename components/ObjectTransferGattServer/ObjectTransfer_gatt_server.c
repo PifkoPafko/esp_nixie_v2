@@ -561,12 +561,14 @@ void gatts_profile_event_handler(esp_gatts_cb_event_t event, esp_gatt_if_t gatts
         {
             ESP_LOGD(GATTS_TAG, "ESP_GATTS_CONNECT_EVT, conn_id = %d", param->connect.conn_id);
             esp_ble_set_encryption(param->connect.remote_bda, ESP_BLE_SEC_ENCRYPT_MITM);
+            gpio_set_level(GPIO_OUTPUT_BLUE, 1);
             break;
         }
         case ESP_GATTS_DISCONNECT_EVT:
         {
             ESP_LOGD(GATTS_TAG, "ESP_GATTS_DISCONNECT_EVT, reason = 0x%x", param->disconnect.reason);
             esp_ble_gap_ext_adv_start(NUM_EXT_ADV_SET, &ext_adv[0]);
+            gpio_set_level(GPIO_OUTPUT_BLUE, 0);
             break;
         }
         case ESP_GATTS_CREAT_ATTR_TAB_EVT:

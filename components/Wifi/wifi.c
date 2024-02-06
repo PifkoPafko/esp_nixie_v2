@@ -8,6 +8,7 @@
 #include "pp_rtc.h"
 #include "alarm.h"
 #include "esp_sntp.h"
+#include "driver/gpio.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -33,12 +34,14 @@ void wifi_event_handler(void* arg, esp_event_base_t event_base,
 {
     if (event_base == WIFI_EVENT && event_id == WIFI_EVENT_STA_DISCONNECTED) 
     {
+        gpio_set_level(GPIO_OUTPUT_GREEN, 0);
         isConnected = false;
         ObjectTransfer_send_simple_wifi_ind(3);
         ESP_LOGI(TAG,"connect to the AP fail");
     } 
     else if (event_base == IP_EVENT && event_id == IP_EVENT_STA_GOT_IP) 
     {
+        gpio_set_level(GPIO_OUTPUT_GREEN, 1);
         isConnected = true;
         ip_event_got_ip_t* event = (ip_event_got_ip_t*) event_data;
         ESP_LOGI(TAG, "got ip:" IPSTR, IP2STR(&event->ip_info.ip));
