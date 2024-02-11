@@ -51,6 +51,7 @@
 #define ESP_APP_ID  0x55
 
 static void button_functions(button_action_t action_handler);
+static void set_alarm_digits(alarm_mode_args_t alarm);
 
 static esp_err_t bt_init()
 {
@@ -549,8 +550,44 @@ static void button_functions(button_action_t action_handler)
 
             if (action_handler.button == BUTTON_RIGHT && action_handler.action == LONG_PRESS)
             {
-                ESP_LOGI(MAIN_TAG, "DEFAULT MODE -> ALARM CHANGE MODE");
-                device_mode = ALARM_CHANGE_MODE;
+                olcp_op_code_result_t result;
+                ObjectManager_first_object(&result);
+
+                if (result == OLCP_RES_SUCCESS)
+                {
+                    object_t* cur_obj = ObjectManager_get_object();
+                    bool result_flag = true;
+
+                    while (cur_obj->set_custom_object == false)
+                    {
+                        ObjectManager_next_object(&result);
+                        if (result == OLCP_RES_SUCCESS)
+                        {
+                            cur_obj = ObjectManager_get_object();
+                        }
+                        else
+                        {
+                            result_flag = false;
+                            break;
+                        }
+                    }
+
+                    if (result_flag)
+                    {
+                        ESP_LOGI(MAIN_TAG, "DEFAULT MODE -> ALARM_DELETE_MODE");
+                        device_mode = ALARM_DELETE_MODE;
+                        alarm_mode_args_t alarm_display = get_alarm_values();
+                        set_alarm_digits(alarm_display);
+                    }
+                    else
+                    {
+                        ESP_LOGI(MAIN_TAG, "NO ALARMS");
+                    }
+                }
+                else
+                {
+                    ESP_LOGI(MAIN_TAG, "NO FILES");
+                }
             }
 
             if (pairing_sm == PAIRING)
@@ -572,34 +609,9 @@ static void button_functions(button_action_t action_handler)
             break;
         }
 
-        case ALARM_CHANGE_MODE:
+        case ALARM_DELETE_MODE:
         {
-            if (action_handler.action == SHORT_PRESS)
-            {
-                switch (action_handler.button)
-                {
-                    case BUTTON_LEFT:
-                    {
-
-                        break;
-                    }
-
-                    case BUTTON_CENTER:
-                    {
-                        break;
-                    }
-
-                    case BUTTON_RIGHT:
-                    {
-                        ESP_LOGI(MAIN_TAG, "ALARM_CHANGE_MODE -> DEFAULT MODE");
-                        device_mode = DEFAULT_MODE;
-                        break;
-                    }
-
-                    default:
-                        break;
-                }
-            }
+            alarm_delete_mode(action_handler);
             break;
         }
 
@@ -1831,6 +1843,144 @@ void alarm_add_mode(button_action_t action_handler, bool start)
             break;
         }    
     }
+}
+
+void alarm_delete_mode(button_action_t action_handler)
+{
+    if (action_handler.action == SHORT_PRESS)
+    {
+        switch (action_handler.button)
+        {
+            case BUTTON_LEFT:
+            {
+                object_t *cur_obj;
+                olcp_op_code_result_t result;
+                bool result_flag = true;
+
+                do
+                {
+                    ObjectManager_next_object(&result);
+                    if (result == OLCP_RES_SUCCESS)
+                    {
+                        cur_obj = ObjectManager_get_object();
+                    }
+                    else
+                    {
+                        result_flag = false;
+                        break;
+                    }
+                } while (cur_obj->set_custom_object == false);
+
+                if (result_flag)
+                {
+                    alarm_mode_args_t alarm_display = get_alarm_values();
+                    set_alarm_digits(alarm_display);
+                }
+                break;
+            }
+
+            case BUTTON_CENTER:
+            {
+                object_t *cur_obj;
+                olcp_op_code_result_t result;
+                bool result_flag = true;
+
+                do
+                {
+                    ObjectManager_previous_object(&result);
+                    if (result == OLCP_RES_SUCCESS)
+                    {
+                        cur_obj = ObjectManager_get_object();
+                    }
+                    else
+                    {
+                        result_flag = false;
+                        break;
+                    }
+                } while (cur_obj->set_custom_object == false);
+
+                if (result_flag)
+                {
+                    alarm_mode_args_t alarm_display = get_alarm_values();
+                    set_alarm_digits(alarm_display);
+                }
+                break;
+            }
+
+            case BUTTON_RIGHT:
+            {
+                ESP_LOGI(MAIN_TAG, "ALARM_DELETE_MODE -> DEFAULT MODE");
+                device_mode = DEFAULT_MODE;
+                break;
+            }
+                
+            default:
+                break;
+        }
+    }
+    else if (action_handler.action == LONG_PRESS && action_handler.button == BUTTON_RIGHT)
+    {
+        oacp_op_code_result_t result;
+        ObjectManager_delete_object(&result);
+        set_next_alarm();
+        ESP_LOGI(MAIN_TAG, "ALARM DELETED");
+        ESP_LOGI(MAIN_TAG, "ALARM_DELETE_MODE -> DEFAULT MODE");
+        device_mode = DEFAULT_MODE;
+    }  
+}
+
+static void set_alarm_digits(alarm_mode_args_t alarm)
+{
+    alatm_add_digits.mode = alarm.mode;
+
+    alatm_add_digits.time.hour_first = alarm.hour / 10;
+    alatm_add_digits.time.hour_second = alarm.hour % 10;
+    alatm_add_digits.time.minute_first = alarm.minute / 10;
+    alatm_add_digits.time.minute_second = alarm.minute % 10;
+
+    switch (alatm_add_digits.mode)
+    {
+        case ALARM_SINGLE_MODE:
+        {
+            alatm_add_digits.time.day_first = alarm.args.single_alarm_args.day / 10;
+            alatm_add_digits.time.day_second = alarm.args.single_alarm_args.day % 10;
+            alatm_add_digits.time.month_first = alarm.args.single_alarm_args.month / 10;
+            alatm_add_digits.time.month_second = alarm.args.single_alarm_args.month % 10;
+            alatm_add_digits.time.year_first = alarm.args.single_alarm_args.year / 10;
+            alatm_add_digits.time.year_second = alarm.args.single_alarm_args.year % 10;
+            break;
+        }
+
+        case ALARM_WEEKLY_MODE:
+        {
+            alatm_add_digits.monday = (alarm.args.days && (1 << 0)) ? 1 : 0;
+            alatm_add_digits.tuesday = (alarm.args.days && (1 << 1)) ? 1 : 0;
+            alatm_add_digits.wednesday = (alarm.args.days && (1 << 2)) ? 1 : 0;
+            alatm_add_digits.thursday = (alarm.args.days && (1 << 3)) ? 1 : 0;
+            alatm_add_digits.friday = (alarm.args.days && (1 << 4)) ? 1 : 0;
+            alatm_add_digits.saturday = (alarm.args.days && (1 << 5)) ? 1 : 0;
+            alatm_add_digits.sunday = (alarm.args.days && (1 << 6)) ? 1 : 0;
+            break;
+        }
+
+        case ALARM_MONTHLY_MODE:
+        {
+            alatm_add_digits.time.day_first = alarm.args.day / 10;
+            alatm_add_digits.time.day_second = alarm.args.day / 10;
+            break;
+        }
+
+        case ALARM_YEARLY_MODE:
+        {
+            alatm_add_digits.time.day_first = alarm.args.yearly_alarm_args.day / 10;
+            alatm_add_digits.time.day_second = alarm.args.yearly_alarm_args.day % 10;
+            alatm_add_digits.time.month_first = alarm.args.yearly_alarm_args.month / 10;
+            alatm_add_digits.time.month_second = alarm.args.yearly_alarm_args.month % 10;
+            break;
+        }
+    }
+
+    alatm_add_digits.volume = alarm.volume / 11;
 }
 
 static esp_err_t button_init()

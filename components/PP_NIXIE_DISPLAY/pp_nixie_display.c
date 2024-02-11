@@ -393,8 +393,105 @@ void pp_nixie_display_main(void* arg)
                 break;
             }
 
-            case ALARM_CHANGE_MODE:
+            case ALARM_DELETE_MODE:
             {
+                for (uint8_t i=0; i<16; i++)
+                {
+                    nixie_state[i].left_comma_enable = false;
+                    nixie_state[i].right_comma_enable = false;
+                }
+                
+                nixie_state[3].right_comma_enable = true;
+
+                for (uint8_t i=0; i<16; i++)
+                {
+                    nixie_state[i].digit_enable = false;
+                }
+
+                nixie_state[0].digit_enable = true;
+                nixie_state[1].digit_enable = false;
+                nixie_state[2].digit_enable = true;
+                nixie_state[3].digit_enable = true;
+                nixie_state[4].digit_enable = true;
+                nixie_state[5].digit_enable = true;
+                nixie_state[6].digit_enable = false;
+                nixie_state[7].digit_enable = true;
+                nixie_state[8].digit_enable = true;
+                nixie_state[14].digit_enable = false;
+                nixie_state[15].digit_enable = true;
+
+                nixie_state[0].digit = alatm_add_digits.mode;
+                nixie_state[2].digit = alatm_add_digits.time.hour_first;
+                nixie_state[3].digit = alatm_add_digits.time.hour_second;
+                nixie_state[4].digit = alatm_add_digits.time.minute_first;
+                nixie_state[5].digit = alatm_add_digits.time.minute_second;
+                nixie_state[15].digit = alatm_add_digits.volume;
+
+                switch(alatm_add_digits.mode)
+                {
+                    case ALARM_SINGLE_MODE:
+                        nixie_state[9].digit_enable = true;
+                        nixie_state[10].digit_enable = true;
+                        nixie_state[11].digit_enable = true;
+                        nixie_state[12].digit_enable = true;
+
+                        nixie_state[8].right_comma_enable = true;
+                        nixie_state[10].right_comma_enable = true;
+
+                        nixie_state[7].digit = alatm_add_digits.time.day_first;
+                        nixie_state[8].digit = alatm_add_digits.time.day_second;
+                        nixie_state[9].digit = alatm_add_digits.time.month_first;
+                        nixie_state[10].digit = alatm_add_digits.time.month_second;
+                        nixie_state[11].digit = alatm_add_digits.time.year_first;
+                        nixie_state[12].digit = alatm_add_digits.time.year_second;
+                        break;
+
+                    case ALARM_WEEKLY_MODE:
+                        nixie_state[9].digit_enable = true;
+                        nixie_state[10].digit_enable = true;
+                        nixie_state[11].digit_enable = true;
+                        nixie_state[12].digit_enable = true;
+                        nixie_state[13].digit_enable = true;
+
+                        nixie_state[7].digit = alatm_add_digits.monday;
+                        nixie_state[8].digit = alatm_add_digits.tuesday;
+                        nixie_state[9].digit = alatm_add_digits.wednesday;
+                        nixie_state[10].digit = alatm_add_digits.thursday;
+                        nixie_state[11].digit = alatm_add_digits.friday;
+                        nixie_state[12].digit = alatm_add_digits.saturday;
+                        nixie_state[13].digit = alatm_add_digits.sunday;
+                        break;
+
+                    case ALARM_MONTHLY_MODE:
+                        nixie_state[7].digit = alatm_add_digits.time.day_first;
+                        nixie_state[8].digit = alatm_add_digits.time.day_second;
+                        break;
+
+                    case ALARM_YEARLY_MODE:
+                        nixie_state[9].digit_enable = true;
+                        nixie_state[10].digit_enable = true;
+
+                        nixie_state[8].right_comma_enable = true;
+
+                        nixie_state[7].digit = alatm_add_digits.time.day_first;
+                        nixie_state[8].digit = alatm_add_digits.time.day_second;
+                        nixie_state[9].digit = alatm_add_digits.time.month_first;
+                        nixie_state[10].digit = alatm_add_digits.time.month_second;
+                        break;
+
+                    default:
+                        break;
+                }
+
+                for ( uint8_t expander = 0; expander < 6; expander++ )
+                {
+                    memset(i2c_msg, 0, 5);
+                    pp_nixie_display_generate_i2c_msg(expander, i2c_msg);
+                    pca_write_all_reg(I2C_MASTER_NUM, EXPANDER_ADDRESS[expander], OP0_ADDR, i2c_msg);
+                }
+
+                vTaskDelay(pdMS_TO_TICKS(30));
+
                 break;
             }
 

@@ -80,7 +80,7 @@ typedef enum {
     DEFAULT_MODE,
     TIME_CHANGE_MODE,
     ALARM_ADD_MODE,
-    ALARM_CHANGE_MODE,
+    ALARM_DELETE_MODE,
     PAIRING_MODE,
     ALARM_RING_MODE
 }device_mode_t;
@@ -162,7 +162,6 @@ void set_device_mode(device_mode_t mode);
 device_mode_t get_device_mode();
 void time_change_mode(button_action_t action_handler, bool start);
 void alarm_add_mode(button_action_t action_handler, bool start);
-
-
+void alarm_delete_mode(button_action_t action_handler);
 
 #endif
