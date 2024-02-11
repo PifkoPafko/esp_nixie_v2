@@ -5,6 +5,7 @@
 #include "pp_pca9698.h"
 #include "pp_nixie_display.h"
 #include "pp_wave_player.h"
+#include "alarm.h"
 #include "esp_log.h"
 
 #include "freertos/FreeRTOS.h"
@@ -47,9 +48,15 @@ uint8_t prev_i2c_msg[5];
 static volatile bool write_display_flag = false;
 static volatile bool anti_poisoning_flag = false;
 
-/* Time Change declarationts */
+/* Display modes change declarationts */
 TimerHandle_t blink_timer_h;
 static const uint8_t BLINK_LAMP_MASK[13] = { 0, 0, 1, 2, 3, 4, 5, 7, 8, 9, 10, 11, 12 };
+
+static const uint8_t BLINK_SINGLE_LAMP_MASK[26]     = { 0,  0,  2,  3,  4,  5,  7,  8,  9,  10, 11, 12, 0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  15};
+static const uint8_t BLINK_WEEKLY_LAMP_MASK[26]     = { 0,  0,  2,  3,  4,  5,  0,  0,  0,  0,  0,  0,  7,  8,  9,  10, 11, 12, 13, 0,  0,  0,  0,  0,  0,  15};
+static const uint8_t BLINK_MONTHLY_LAMP_MASK[26]    = { 0,  0,  2,  3,  4,  5,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  7,  8,  0,  0,  0,  0,  15};
+static const uint8_t BLINK_YEARLY_LAMP_MASK[26]     = { 0,  0,  2,  3,  4,  5,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  7,  8,  9,  10, 15};
+
 static bool time_change_blink_switch = true;
 
 static void blink_timer_cb( TimerHandle_t xTimer )
@@ -90,15 +97,15 @@ static void set_nixie_state()
         nixie_state[i].right_comma_enable = false;
     }
 
-    for (uint8_t i=0; i<6; i++)
+    for (uint8_t i=0; i<16; i++)
     {
         nixie_state[i].digit_enable = true;
     }
 
-    for (uint8_t i=7; i<13; i++)
-    {
-        nixie_state[i].digit_enable = true;
-    }
+    nixie_state[6].digit_enable = false;
+    nixie_state[13].digit_enable = false;
+    nixie_state[14].digit_enable = false;
+    nixie_state[15].digit_enable = false;
 
     nixie_state[0].digit = timeinfo.tm_hour / 10;
     nixie_state[1].digit = timeinfo.tm_hour % 10;
@@ -258,10 +265,7 @@ void pp_nixie_display_main(void* arg)
 
                 if (time_change_blink_switch)
                 {
-                    for ( uint8_t lamp = 0; lamp < 16; lamp++ )
-                    {
-                        nixie_state[BLINK_LAMP_MASK[time_change_sm]].digit_enable = false;
-                    }
+                    nixie_state[BLINK_LAMP_MASK[time_change_sm]].digit_enable = false;
                 }
 
                 for ( uint8_t expander = 0; expander < 6; expander++ )
@@ -278,6 +282,114 @@ void pp_nixie_display_main(void* arg)
 
             case ALARM_ADD_MODE:
             {
+                for (uint8_t i=0; i<16; i++)
+                {
+                    nixie_state[i].left_comma_enable = false;
+                    nixie_state[i].right_comma_enable = false;
+                }
+                
+                nixie_state[3].right_comma_enable = true;
+
+                for (uint8_t i=0; i<16; i++)
+                {
+                    nixie_state[i].digit_enable = false;
+                }
+
+                nixie_state[0].digit_enable = true;
+                nixie_state[1].digit_enable = false;
+                nixie_state[2].digit_enable = true;
+                nixie_state[3].digit_enable = true;
+                nixie_state[4].digit_enable = true;
+                nixie_state[5].digit_enable = true;
+                nixie_state[6].digit_enable = false;
+                nixie_state[7].digit_enable = true;
+                nixie_state[8].digit_enable = true;
+                nixie_state[14].digit_enable = false;
+                nixie_state[15].digit_enable = true;
+
+                nixie_state[0].digit = alatm_add_digits.mode;
+                nixie_state[2].digit = alatm_add_digits.time.hour_first;
+                nixie_state[3].digit = alatm_add_digits.time.hour_second;
+                nixie_state[4].digit = alatm_add_digits.time.minute_first;
+                nixie_state[5].digit = alatm_add_digits.time.minute_second;
+                nixie_state[15].digit = alatm_add_digits.volume;
+
+                const uint8_t *blink_mask_p = BLINK_SINGLE_LAMP_MASK;
+
+                switch(alatm_add_digits.mode)
+                {
+                    case ALARM_SINGLE_MODE:
+                        nixie_state[9].digit_enable = true;
+                        nixie_state[10].digit_enable = true;
+                        nixie_state[11].digit_enable = true;
+                        nixie_state[12].digit_enable = true;
+
+                        nixie_state[8].right_comma_enable = true;
+                        nixie_state[10].right_comma_enable = true;
+
+                        nixie_state[7].digit = alatm_add_digits.time.day_first;
+                        nixie_state[8].digit = alatm_add_digits.time.day_second;
+                        nixie_state[9].digit = alatm_add_digits.time.month_first;
+                        nixie_state[10].digit = alatm_add_digits.time.month_second;
+                        nixie_state[11].digit = alatm_add_digits.time.year_first;
+                        nixie_state[12].digit = alatm_add_digits.time.year_second;
+                        blink_mask_p = BLINK_SINGLE_LAMP_MASK;
+                        break;
+
+                    case ALARM_WEEKLY_MODE:
+                        nixie_state[9].digit_enable = true;
+                        nixie_state[10].digit_enable = true;
+                        nixie_state[11].digit_enable = true;
+                        nixie_state[12].digit_enable = true;
+                        nixie_state[13].digit_enable = true;
+
+                        nixie_state[7].digit = alatm_add_digits.monday;
+                        nixie_state[8].digit = alatm_add_digits.tuesday;
+                        nixie_state[9].digit = alatm_add_digits.wednesday;
+                        nixie_state[10].digit = alatm_add_digits.thursday;
+                        nixie_state[11].digit = alatm_add_digits.friday;
+                        nixie_state[12].digit = alatm_add_digits.saturday;
+                        nixie_state[13].digit = alatm_add_digits.sunday;
+                        blink_mask_p = BLINK_WEEKLY_LAMP_MASK;
+                        break;
+
+                    case ALARM_MONTHLY_MODE:
+                        nixie_state[7].digit = alatm_add_digits.time.day_first;
+                        nixie_state[8].digit = alatm_add_digits.time.day_second;
+                        blink_mask_p = BLINK_MONTHLY_LAMP_MASK;
+                        break;
+
+                    case ALARM_YEARLY_MODE:
+                        nixie_state[9].digit_enable = true;
+                        nixie_state[10].digit_enable = true;
+
+                        nixie_state[8].right_comma_enable = true;
+
+                        nixie_state[7].digit = alatm_add_digits.time.day_first;
+                        nixie_state[8].digit = alatm_add_digits.time.day_second;
+                        nixie_state[9].digit = alatm_add_digits.time.month_first;
+                        nixie_state[10].digit = alatm_add_digits.time.month_second;
+                        blink_mask_p = BLINK_YEARLY_LAMP_MASK;
+                        break;
+
+                    default:
+                        break;
+                }
+
+                if (time_change_blink_switch)
+                {
+                    nixie_state[blink_mask_p[alarm_add_sm]].digit_enable = false;
+                }
+
+                for ( uint8_t expander = 0; expander < 6; expander++ )
+                {
+                    memset(i2c_msg, 0, 5);
+                    pp_nixie_display_generate_i2c_msg(expander, i2c_msg);
+                    pca_write_all_reg(I2C_MASTER_NUM, EXPANDER_ADDRESS[expander], OP0_ADDR, i2c_msg);
+                }
+
+                vTaskDelay(pdMS_TO_TICKS(30));
+
                 break;
             }
 
@@ -463,7 +575,7 @@ esp_err_t pp_nixie_diplay_init()
     ESP_ERROR_CHECK(gptimer_enable(anti_poisoing_gptimer));
 
     gptimer_alarm_config_t anti_poisoning_alarm_config = {
-        .alarm_count = 30000000, // period = 1s
+        .alarm_count = 60000000, // period = 1s
         .reload_count = 0,
         .flags.auto_reload_on_alarm = true
     };

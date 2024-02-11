@@ -101,6 +101,35 @@ typedef enum {
     SET_YEAR_SECOND
 }time_change_sm_t;
 
+typedef enum {
+    IDLE_ALARM_ADD,
+    SET_MODE,
+    SET_ALARM_HOUR_FIRST,
+    SET_ALARM_HOUR_SECOND,
+    SET_ALARM_MINUTE_FIRST,
+    SET_ALARM_MINUTE_SECOND,
+    SET_SINGLE_DAY_FIRST,
+    SET_SINGLE_DAY_SECOND,
+    SET_SINGLE_MONTH_FIRST,
+    SET_SINGLE_MONTH_SECOND,
+    SET_SINGLE_YEAR_FIRST,
+    SET_SINGLE_YEAR_SECOND,
+    SET_WEEKLY_MONDAY,
+    SET_WEEKLY_TUESDAY,
+    SET_WEEKLY_WEDNESDAY,
+    SET_WEEKLY_THURSDAY,
+    SET_WEEKLY_FRIDAY,
+    SET_WEEKLY_SATURDAY,
+    SET_WEEKLY_SUNDAY,
+    SET_MONTHLY_DAY_FIRST,
+    SET_MONTHLY_DAY_SECOND,
+    SET_YEARLY_DAY_FIRST,
+    SET_YEARLY_DAY_SECOND,
+    SET_YEARLY_MONTH_FIRST,
+    SET_YEARLY_MONTH_SECOND,
+    SET_VOLUME
+}alarm_add_sm_t;
+
 typedef struct {
     uint8_t hour_first;
     uint8_t hour_second;
@@ -116,9 +145,23 @@ typedef struct {
     uint8_t year_second;
 } nixie_time_t;
 
+typedef struct {
+    uint8_t mode;
+    nixie_time_t time;
+    uint8_t monday;
+    uint8_t tuesday;
+    uint8_t wednesday;
+    uint8_t thursday;
+    uint8_t friday;
+    uint8_t saturday;
+    uint8_t sunday;
+    uint8_t volume;
+} alarm_add_digits_t;
+
 void set_device_mode(device_mode_t mode);
 device_mode_t get_device_mode();
 void time_change_mode(button_action_t action_handler, bool start);
+void alarm_add_mode(button_action_t action_handler, bool start);
 
 
 

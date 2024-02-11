@@ -404,7 +404,7 @@ void set_timer_for_playing_alarm()
 {
     disable_current_alarm();
     gptimer_alarm_config_t alarm_config = {
-        .alarm_count = 600000000,
+        .alarm_count = 300000000,
         .reload_count = 0,
         .flags.auto_reload_on_alarm = false
     };

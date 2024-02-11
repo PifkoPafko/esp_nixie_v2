@@ -23,6 +23,9 @@ typedef struct display_mess
 extern time_change_sm_t time_change_sm;
 extern nixie_time_t nixie_time;
 
+extern alarm_add_sm_t alarm_add_sm;
+extern alarm_add_digits_t alatm_add_digits;
+
 esp_err_t pp_nixie_diplay_init();
 bool pp_nixie_display_generate_i2c_msg(uint8_t expander_id, uint8_t *msg);
 void set_display_passkey(uint32_t passkey);
