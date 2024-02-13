@@ -1009,7 +1009,7 @@ void time_change_mode(button_action_t action_handler, bool start)
                         tm.tm_hour 	= nixie_time.hour_first * 10 + nixie_time.hour_second;
                         tm.tm_min 	= nixie_time.minute_first * 10 + nixie_time.minute_second;
                         tm.tm_sec 	= nixie_time.second_first * 10 + nixie_time.second_second;
-                        tm.tm_isdst = 0;
+                        tm.tm_isdst = -1;
 
                         time_t t = mktime(&tm);
 

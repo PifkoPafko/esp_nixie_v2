@@ -62,8 +62,7 @@ esp_err_t pp_rtc_read_time(struct timeval *tv)
         tm.tm_hour 	= hours;
         tm.tm_min 	= minutes;
         tm.tm_sec 	= seconds;
-        tm.tm_isdst = 0;
-        // tm.tm_isdst = timeinfo.tm_isdst;
+        tm.tm_isdst = -1;
 
         time_t t = mktime(&tm);
         tv->tv_sec = t;
