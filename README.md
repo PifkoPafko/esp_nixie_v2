@@ -3,7 +3,7 @@
 
 # Remotely synchronized 16-NIXIE clock with Wi-Fi and Bluetooth LE
 
-This is ESP-IDF project for ESP32-S3 which drives device named NIXIE Clock.
+This is ESP-IDF project for ESP32-S3 which drives device named NIXIE Clock. The files are trasferred between mobile device and NIXIE clock via Bluetooth LE and written variation of official [Object Transfer Profile](https://www.bluetooth.com/specifications/specs/object-transfer-profile-1-0/) from Blueooth SIG.
 
 ## Features
 
