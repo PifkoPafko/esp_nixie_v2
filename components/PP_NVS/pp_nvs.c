@@ -20,7 +20,7 @@
  *
  * @return
  */
-void nvs_init(void)
+void pp_nvs_init(void)
 {
     ESP_LOGI(NVS_TAG, "Initializing nvs");
     esp_err_t ret = nvs_flash_init();

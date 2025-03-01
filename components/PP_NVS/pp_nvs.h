@@ -27,6 +27,6 @@
  *
  * @return
  */
-void nvs_init(void);
+void pp_nvs_init(void);
 
 #endif

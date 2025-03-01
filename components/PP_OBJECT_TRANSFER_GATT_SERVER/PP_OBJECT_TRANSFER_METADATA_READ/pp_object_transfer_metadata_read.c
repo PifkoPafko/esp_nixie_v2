@@ -1,47 +1,47 @@
-#include "ObjectTransfer_metadata_read.h"
-#include "ObjectTransfer_attr_ids.h"
-#include "ObjectManager.h"
-#include "ObjectTransfer_defs.h"
-#include "FilterOrder.h"
+#include "pp_object_transfer_metadata_read.h"
+#include "pp_object_transfer_attr_ids.h"
+#include "pp_object_manager.h"
+#include "pp_object_transfer_defs.h"
+#include "pp_filter_order.h"
 #include "esp_gatts_api.h"
 #include "esp_err.h"
 #include "esp_log.h"
 
-#include "wifi.h"
+#include "pp_wifi.h"
 
 #define TAG "READ_EVENT"
 
-static esp_err_t ObjectTransfer_read_name(esp_gatt_if_t gatts_if, esp_ble_gatts_cb_param_t *param, uint16_t *handle_table);
-static esp_err_t ObjectTransfer_read_type(esp_gatt_if_t gatts_if, esp_ble_gatts_cb_param_t *param, uint16_t *handle_table);
-static esp_err_t ObjectTransfer_read_size(esp_gatt_if_t gatts_if, esp_ble_gatts_cb_param_t *param, uint16_t *handle_table);
-static esp_err_t ObjectTransfer_read_id(esp_gatt_if_t gatts_if, esp_ble_gatts_cb_param_t *param, uint16_t *handle_table);
-static esp_err_t ObjectTransfer_read_properties(esp_gatt_if_t gatts_if, esp_ble_gatts_cb_param_t *param, uint16_t *handle_table);
-static esp_err_t ObjectTransfer_read_list_filter(esp_gatt_if_t gatts_if, esp_ble_gatts_cb_param_t *param, uint16_t *handle_table);
-static esp_err_t ObjectTransfer_read_alarm_action(esp_gatt_if_t gatts_if, esp_ble_gatts_cb_param_t *param, uint16_t *handle_table);
-static esp_err_t ObjectTransfer_read_wifi_action(esp_gatt_if_t gatts_if, esp_ble_gatts_cb_param_t *param, uint16_t *handle_table);
+static esp_err_t pp_object_transfer_read_name(esp_gatt_if_t gatts_if, esp_ble_gatts_cb_param_t *param, uint16_t *handle_table);
+static esp_err_t pp_object_transfer_read_type(esp_gatt_if_t gatts_if, esp_ble_gatts_cb_param_t *param, uint16_t *handle_table);
+static esp_err_t pp_object_transfer_read_size(esp_gatt_if_t gatts_if, esp_ble_gatts_cb_param_t *param, uint16_t *handle_table);
+static esp_err_t pp_object_transfer_read_id(esp_gatt_if_t gatts_if, esp_ble_gatts_cb_param_t *param, uint16_t *handle_table);
+static esp_err_t pp_object_transfer_read_properties(esp_gatt_if_t gatts_if, esp_ble_gatts_cb_param_t *param, uint16_t *handle_table);
+static esp_err_t pp_object_transfer_read_list_filter(esp_gatt_if_t gatts_if, esp_ble_gatts_cb_param_t *param, uint16_t *handle_table);
+static esp_err_t pp_object_transfer_read_alarm_action(esp_gatt_if_t gatts_if, esp_ble_gatts_cb_param_t *param, uint16_t *handle_table);
+static esp_err_t pp_object_transfer_read_wifi_action(esp_gatt_if_t gatts_if, esp_ble_gatts_cb_param_t *param, uint16_t *handle_table);
 
 
-esp_err_t ObjectTranfer_metadata_read_event(esp_gatt_if_t gatts_if, esp_ble_gatts_cb_param_t *param, uint16_t *handle_table)
+esp_err_t pp_object_transfer_metadata_read_event(esp_gatt_if_t gatts_if, esp_ble_gatts_cb_param_t *param, uint16_t *handle_table)
 {
-    if(param->read.handle == handle_table[OPT_IDX_CHAR_OBJECT_NAME_VAL]) ObjectTransfer_read_name(gatts_if, param, handle_table);
-    else if(param->read.handle == handle_table[OPT_IDX_CHAR_OBJECT_TYPE_VAL]) ObjectTransfer_read_type(gatts_if, param, handle_table);
-    else if(param->read.handle == handle_table[OPT_IDX_CHAR_OBJECT_SIZE_VAL]) ObjectTransfer_read_size(gatts_if, param, handle_table);
-    else if(param->read.handle == handle_table[OPT_IDX_CHAR_OBJECT_ID_VAL]) ObjectTransfer_read_id(gatts_if, param, handle_table);
-    else if(param->read.handle == handle_table[OPT_IDX_CHAR_OBJECT_PROPERTIES_VAL]) ObjectTransfer_read_properties(gatts_if, param, handle_table);
-    else if(param->read.handle == handle_table[OPT_IDX_CHAR_OBJECT_LIST_FILTER_VAL]) ObjectTransfer_read_list_filter(gatts_if, param, handle_table);
-    else if(param->read.handle == handle_table[OPT_IDX_CHAR_OBJECT_ALARM_ACTION_VAL]) ObjectTransfer_read_alarm_action(gatts_if, param, handle_table);
-    else if(param->read.handle == handle_table[OPT_IDX_CHAR_OBJECT_WIFI_ACTION_VAL]) ObjectTransfer_read_wifi_action(gatts_if, param, handle_table);
+    if(param->read.handle == handle_table[OPT_IDX_CHAR_OBJECT_NAME_VAL]) pp_object_transfer_read_name(gatts_if, param, handle_table);
+    else if(param->read.handle == handle_table[OPT_IDX_CHAR_OBJECT_TYPE_VAL]) pp_object_transfer_read_type(gatts_if, param, handle_table);
+    else if(param->read.handle == handle_table[OPT_IDX_CHAR_OBJECT_SIZE_VAL]) pp_object_transfer_read_size(gatts_if, param, handle_table);
+    else if(param->read.handle == handle_table[OPT_IDX_CHAR_OBJECT_ID_VAL]) pp_object_transfer_read_id(gatts_if, param, handle_table);
+    else if(param->read.handle == handle_table[OPT_IDX_CHAR_OBJECT_PROPERTIES_VAL]) pp_object_transfer_read_properties(gatts_if, param, handle_table);
+    else if(param->read.handle == handle_table[OPT_IDX_CHAR_OBJECT_LIST_FILTER_VAL]) pp_object_transfer_read_list_filter(gatts_if, param, handle_table);
+    else if(param->read.handle == handle_table[OPT_IDX_CHAR_OBJECT_ALARM_ACTION_VAL]) pp_object_transfer_read_alarm_action(gatts_if, param, handle_table);
+    else if(param->read.handle == handle_table[OPT_IDX_CHAR_OBJECT_WIFI_ACTION_VAL]) pp_object_transfer_read_wifi_action(gatts_if, param, handle_table);
 
     return ESP_OK;
 }                           /*!< Gatt server callback param of ESP_GATTS_READ_EVT */
 
-static esp_err_t ObjectTransfer_read_name(esp_gatt_if_t gatts_if, esp_ble_gatts_cb_param_t *param, uint16_t *handle_table)
+static esp_err_t pp_object_transfer_read_name(esp_gatt_if_t gatts_if, esp_ble_gatts_cb_param_t *param, uint16_t *handle_table)
 {
     ESP_LOGI(TAG, "Object Name READ EVENT");
 
     if(param->read.need_rsp)
     {
-        object_t* object = ObjectManager_get_object();
+        object_t* object = pp_object_manager_get_object();
         if(object == NULL)
         {
             ESP_LOGI(TAG, "Object not selected");
@@ -65,13 +65,13 @@ static esp_err_t ObjectTransfer_read_name(esp_gatt_if_t gatts_if, esp_ble_gatts_
     return ESP_OK;
 }
 
-static esp_err_t ObjectTransfer_read_type(esp_gatt_if_t gatts_if, esp_ble_gatts_cb_param_t *param, uint16_t *handle_table)
+static esp_err_t pp_object_transfer_read_type(esp_gatt_if_t gatts_if, esp_ble_gatts_cb_param_t *param, uint16_t *handle_table)
 {
     ESP_LOGI(TAG, "Object Type READ EVENT");
 
     if(param->read.need_rsp)
     {
-        object_t *object = ObjectManager_get_object();
+        object_t *object = pp_object_manager_get_object();
         if(object == NULL)
         {
             ESP_LOGI(TAG, "Object not selected");
@@ -95,13 +95,13 @@ static esp_err_t ObjectTransfer_read_type(esp_gatt_if_t gatts_if, esp_ble_gatts_
     return ESP_OK;
 }
 
-static esp_err_t ObjectTransfer_read_size(esp_gatt_if_t gatts_if, esp_ble_gatts_cb_param_t *param, uint16_t *handle_table)
+static esp_err_t pp_object_transfer_read_size(esp_gatt_if_t gatts_if, esp_ble_gatts_cb_param_t *param, uint16_t *handle_table)
 {
     ESP_LOGI(TAG, "Object Size READ EVENT");
 
     if(param->read.need_rsp)
     {
-        object_t *object = ObjectManager_get_object();
+        object_t *object = pp_object_manager_get_object();
         if(object == NULL)
         {
             ESP_LOGI(TAG, "Object not selected");
@@ -128,13 +128,13 @@ static esp_err_t ObjectTransfer_read_size(esp_gatt_if_t gatts_if, esp_ble_gatts_
     return ESP_OK;
 }
 
-static esp_err_t ObjectTransfer_read_id(esp_gatt_if_t gatts_if, esp_ble_gatts_cb_param_t *param, uint16_t *handle_table)
+static esp_err_t pp_object_transfer_read_id(esp_gatt_if_t gatts_if, esp_ble_gatts_cb_param_t *param, uint16_t *handle_table)
 {
     ESP_LOGD(TAG, "Object ID READ EVENT");
 
     if(param->read.need_rsp)
     {
-        object_t* object = ObjectManager_get_object();
+        object_t* object = pp_object_manager_get_object();
         if(object == NULL)
         {
             ESP_LOGI(TAG, "Object not selected");
@@ -160,14 +160,14 @@ static esp_err_t ObjectTransfer_read_id(esp_gatt_if_t gatts_if, esp_ble_gatts_cb
     return ESP_OK;
 }
 
-static esp_err_t ObjectTransfer_read_list_filter(esp_gatt_if_t gatts_if, esp_ble_gatts_cb_param_t *param, uint16_t *handle_table)
+static esp_err_t pp_object_transfer_read_list_filter(esp_gatt_if_t gatts_if, esp_ble_gatts_cb_param_t *param, uint16_t *handle_table)
 {
     ESP_LOGD(TAG, "Object List Filter READ EVENT");
 
     if(param->read.need_rsp)
     {
         esp_gatt_rsp_t rsp;
-        ListFilter_t *filter = FilterOrder_get_filter();
+        ListFilter_t *filter = pp_filter_order_get_filter();
         rsp.attr_value.value[0] = filter->type;
         memcpy(&rsp.attr_value.value[1], filter->parameter, filter->par_length);
         rsp.attr_value.handle = handle_table[OPT_IDX_CHAR_OBJECT_ID_VAL];
@@ -182,13 +182,13 @@ static esp_err_t ObjectTransfer_read_list_filter(esp_gatt_if_t gatts_if, esp_ble
     return ESP_OK;
 }
 
-static esp_err_t ObjectTransfer_read_properties(esp_gatt_if_t gatts_if, esp_ble_gatts_cb_param_t *param, uint16_t *handle_table)
+static esp_err_t pp_object_transfer_read_properties(esp_gatt_if_t gatts_if, esp_ble_gatts_cb_param_t *param, uint16_t *handle_table)
 {
     ESP_LOGI(TAG, "Object Properties READ EVENT");
 
     if(param->read.need_rsp)
     {
-        object_t* object = ObjectManager_get_object();
+        object_t* object = pp_object_manager_get_object();
 
         if(object == NULL)
         {
@@ -212,13 +212,13 @@ static esp_err_t ObjectTransfer_read_properties(esp_gatt_if_t gatts_if, esp_ble_
     return ESP_OK;
 }
 
-static esp_err_t ObjectTransfer_read_alarm_action(esp_gatt_if_t gatts_if, esp_ble_gatts_cb_param_t *param, uint16_t *handle_table)
+static esp_err_t pp_object_transfer_read_alarm_action(esp_gatt_if_t gatts_if, esp_ble_gatts_cb_param_t *param, uint16_t *handle_table)
 {
     ESP_LOGI(TAG, "Object alarm data READ EVENT");
 
     if(param->read.need_rsp)
     {
-        object_t* object = ObjectManager_get_object();
+        object_t* object = pp_object_manager_get_object();
         if(object == NULL)
         {
             ESP_LOGI(TAG, "Object not selected");
@@ -228,7 +228,7 @@ static esp_err_t ObjectTransfer_read_alarm_action(esp_gatt_if_t gatts_if, esp_bl
             return ESP_OK;
         }
 
-        if(ObjectManager_check_type(object->type.uuid.uuid128) != ALARM_TYPE)
+        if(pp_object_manager_check_type(object->type.uuid.uuid128) != ALARM_TYPE)
         {
             ESP_LOGI(TAG, "Wrong type - required: Alarm");
             esp_gatt_rsp_t rsp_error;
@@ -246,10 +246,10 @@ static esp_err_t ObjectTransfer_read_alarm_action(esp_gatt_if_t gatts_if, esp_bl
             return ESP_OK;
         }
 
-        ObjectManager_printf_alarm_info();
+        pp_object_manager_printf_alarm_info();
 
         esp_gatt_rsp_t rsp;
-        alarm_mode_args_t alarm = get_alarm_values();
+        alarm_mode_args_t alarm = pp_get_alarm_values();
         uint8_t *payload = rsp.attr_value.value;
 
         memcpy(payload, &alarm.mode, ALARM_FIELD_SIZE);
@@ -334,7 +334,7 @@ static esp_err_t ObjectTransfer_read_alarm_action(esp_gatt_if_t gatts_if, esp_bl
     return ESP_OK;
 }
 
-static esp_err_t ObjectTransfer_read_wifi_action(esp_gatt_if_t gatts_if, esp_ble_gatts_cb_param_t *param, uint16_t *handle_table)
+static esp_err_t pp_object_transfer_read_wifi_action(esp_gatt_if_t gatts_if, esp_ble_gatts_cb_param_t *param, uint16_t *handle_table)
 {
     ESP_LOGI(TAG, "Object wifi data READ EVENT");
 
@@ -343,9 +343,9 @@ static esp_err_t ObjectTransfer_read_wifi_action(esp_gatt_if_t gatts_if, esp_ble
         esp_gatt_rsp_t rsp;
         rsp.attr_value.handle = handle_table[OPT_IDX_CHAR_OBJECT_WIFI_ACTION_VAL];
 
-        my_wifi_t* my_wifi = get_current_wifi();
+        my_wifi_t* my_wifi = pp_get_current_wifi();
 
-        if( get_wifi_connect_status() )
+        if(pp_get_wifi_connect_status())
         {
             rsp.attr_value.value[0] = 1;
         }

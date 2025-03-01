@@ -16,9 +16,9 @@ typedef struct{
     wifi_config_t wifi_config;
 } my_wifi_t;
 
-esp_err_t start_search_task();
-void wifi_event_handler(void* arg, esp_event_base_t event_base, int32_t event_id, void* event_data);
-esp_err_t connect_wifi(const uint8_t *ssid, const uint8_t ssid_len, const uint8_t *password, const uint8_t pass_len);
-void wifi_sta_init();
-bool get_wifi_connect_status();
-my_wifi_t* get_current_wifi();
+esp_err_t pp_start_search_task();
+void pp_wifi_event_handler(void* arg, esp_event_base_t event_base, int32_t event_id, void* event_data);
+esp_err_t pp_connect_wifi(const uint8_t *ssid, const uint8_t ssid_len, const uint8_t *password, const uint8_t pass_len);
+void pp_wifi_sta_init();
+bool pp_get_wifi_connect_status();
+my_wifi_t* pp_get_current_wifi();

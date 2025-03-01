@@ -10,11 +10,11 @@
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 
-#include "ObjectTransfer_gatt_server.h"
-#include "ObjectTransfer_attr_ids.h"
-#include "ObjectTransfer_metadata_read.h"
-#include "ObjectTransfer_metadata_write.h"
-#include "ObjectManager.h"
+#include "pp_object_transfer_gatt_server.h"
+#include "pp_object_transfer_attr_ids.h"
+#include "pp_object_transfer_metadata_read.h"
+#include "pp_object_transfer_metadata_write.h"
+#include "pp_object_manager.h"
 #include "pp_nixie_display.h"
 
 
@@ -379,7 +379,7 @@ void gap_event_handler(esp_gap_ble_cb_event_t event, esp_ble_gap_cb_param_t *par
                 ESP_LOGI(GATTS_TAG, "ADV successfully ended with a connection being created");
                 uint32_t passkey = esp_random() / 4832 + 100000;    // /4295 to convert uint32 value to 0-999999 value
                 esp_ble_gap_set_security_param(ESP_BLE_SM_SET_STATIC_PASSKEY, &passkey, sizeof(uint32_t));
-                set_display_passkey(passkey);
+                pp_set_display_passkey(passkey);
             }
             break;
         }
@@ -426,9 +426,9 @@ void gap_event_handler(esp_gap_ble_cb_event_t event, esp_ble_gap_cb_param_t *par
         } 
         case ESP_GAP_BLE_PASSKEY_NOTIF_EVT:  ///the app will receive this evt when the IO  has Output capability and the peer device IO has Input capability.
         {
-            if (get_device_mode() == PAIRING_MODE)
+            if (pp_get_device_mode() == PAIRING_MODE)
             {
-                set_insert_passkey_flag(true);
+                pp_set_insert_passkey_flag(true);
                 ESP_LOGI(GATTS_TAG, "The passkey Notify number: %06" PRIu32, param->ble_security.key_notif.passkey);
             }
             else
@@ -465,10 +465,10 @@ void gap_event_handler(esp_gap_ble_cb_event_t event, esp_ble_gap_cb_param_t *par
                 ESP_LOGI(GATTS_TAG, "auth mode = %s",esp_auth_req_to_str(param->ble_security.auth_cmpl.auth_mode));
             }
 
-            if (param->ble_security.auth_cmpl.success && get_device_mode() == PAIRING_MODE)
+            if (param->ble_security.auth_cmpl.success && pp_get_device_mode() == PAIRING_MODE)
             {
-                set_insert_passkey_flag(false);
-                set_device_mode(DEFAULT_MODE);
+                pp_set_insert_passkey_flag(false);
+                pp_set_device_mode(DEFAULT_MODE);
             }
             
             break;
@@ -527,13 +527,13 @@ void gatts_profile_event_handler(esp_gatts_cb_event_t event, esp_gatt_if_t gatts
         case ESP_GATTS_READ_EVT:
         {
             ESP_LOGD(GATTS_TAG, "ESP_GATTS_READ_EVT");
-            ObjectTranfer_metadata_read_event(gatts_if, param, OPT_handle_table);
+            pp_object_transfer_metadata_read_event(gatts_if, param, OPT_handle_table);
        	    break;
         }
         case ESP_GATTS_WRITE_EVT:
         {
             ESP_LOGD(GATTS_TAG, "ESP_GATTS_WRITE_EVT");
-            ObjectTranfer_metadata_write_event(gatts_if, param, OPT_handle_table);
+            pp_object_transfer_metadata_write_event(gatts_if, param, OPT_handle_table);
       	    break;
         }
         case ESP_GATTS_EXEC_WRITE_EVT:

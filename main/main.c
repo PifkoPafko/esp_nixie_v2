@@ -27,14 +27,14 @@
 #include "esp_log.h"
 #include "esp_wifi.h"
 
-#include "ObjectTransfer_gatt_server.h"
-#include "ObjectManager.h"
+#include "pp_object_transfer_gatt_server.h"
+#include "pp_object_manager.h"
 #include "project_defs.h"
 #include "pp_wave_player.h"
 #include "pp_gpio.h"
 #include "pp_sd_card.h"
 #include "pp_nvs.h"
-#include "wifi.h"
+#include "pp_wifi.h"
 #include "pp_i2c.h"
 #include "pp_rtc.h"
 #include "pp_nixie_display.h"
@@ -42,10 +42,10 @@
 #define MAIN_TAG    "MAIN"
 #define ESP_APP_ID  0x55
 
-static void button_functions(button_action_t action_handler);
-static void set_alarm_digits(alarm_mode_args_t alarm);
+static void pp_button_functions(button_action_t action_handler);
+static void pp_set_alarm_digits(alarm_mode_args_t alarm);
 
-static esp_err_t bt_init()
+static esp_err_t pp_bt_init()
 {
     ESP_ERROR_CHECK(esp_bt_controller_mem_release(ESP_BT_MODE_CLASSIC_BT));
 
@@ -129,7 +129,7 @@ static esp_err_t bt_init()
     return ESP_OK;
 }
 
-static esp_err_t wifi_init()
+static esp_err_t pp_wifi_init()
 {
     esp_err_t ret = esp_netif_init();
     if (ret){
@@ -167,16 +167,16 @@ static esp_err_t wifi_init()
 
     ESP_ERROR_CHECK(esp_event_handler_instance_register(WIFI_EVENT,
                                                         ESP_EVENT_ANY_ID,
-                                                        &wifi_event_handler,
+                                                        &pp_wifi_event_handler,
                                                         NULL,
                                                         &instance_any_id));
     ESP_ERROR_CHECK(esp_event_handler_instance_register(IP_EVENT,
                                                         IP_EVENT_STA_GOT_IP,
-                                                        &wifi_event_handler,
+                                                        &pp_wifi_event_handler,
                                                         NULL,
                                                         &instance_got_ip));
 
-    wifi_sta_init();
+    pp_wifi_sta_init();
 
     return ESP_OK;
 }
@@ -187,7 +187,7 @@ TimerHandle_t btn_timer_h[3];
 pairing_sm_t pairing_sm = WAIT_FOR_LEFT;
 device_mode_t device_mode = DEFAULT_MODE;
 
-static void IRAM_ATTR button_isr_handler(void* arg)
+static void IRAM_ATTR pp_button_isr_handler(void* arg)
 {
     button_queue_msg_t msg;
     msg.enable = gpio_get_level((uint32_t) arg);;
@@ -205,7 +205,7 @@ alarm_add_digits_t alatm_add_digits;
 struct tm alarm_add_timeinfo;
 extern uint8_t alarm_type_uuid[ESP_UUID_LEN_128];
 
-static void btn_timer_cb( TimerHandle_t xTimer )
+static void pp_btn_timer_cb( TimerHandle_t xTimer )
 {
     uint8_t button_id = 0xff;
 
@@ -312,11 +312,11 @@ static void btn_timer_cb( TimerHandle_t xTimer )
 
     if (action_happened)
     {
-        button_functions(action_handler);
+        pp_button_functions(action_handler);
     }
 }
 
-static void button_main(void* arg)
+static void pp_button_main(void* arg)
 {
     button_queue_msg_t msg;
     uint8_t button_id;
@@ -412,12 +412,12 @@ static void button_main(void* arg)
 
         if (action_happened)
         {
-            button_functions(action_handler);
+            pp_button_functions(action_handler);
         }
     }
 }
 
-static void button_functions(button_action_t action_handler)
+static void pp_button_functions(button_action_t action_handler)
 {
     switch (device_mode)
     {
@@ -488,32 +488,32 @@ static void button_functions(button_action_t action_handler)
             {
                 ESP_LOGI(MAIN_TAG, "DEFAULT MODE -> TIME CHANGE MODE");
                 device_mode = TIME_CHANGE_MODE;
-                time_change_mode(action_handler, true);
+                pp_time_change_mode(action_handler, true);
             }
 
             if (action_handler.button == BUTTON_CENTER && action_handler.action == LONG_PRESS && pairing_sm != PAIRING)
             {
                 ESP_LOGI(MAIN_TAG, "DEFAULT MODE -> ALARM ADD MODE");
                 device_mode = ALARM_ADD_MODE;
-                alarm_add_mode(action_handler, true);
+                pp_alarm_add_mode(action_handler, true);
             }
 
             if (action_handler.button == BUTTON_RIGHT && action_handler.action == LONG_PRESS)
             {
                 olcp_op_code_result_t result;
-                ObjectManager_first_object(&result);
+                pp_object_manager_first_object(&result);
 
                 if (result == OLCP_RES_SUCCESS)
                 {
-                    object_t* cur_obj = ObjectManager_get_object();
+                    object_t* cur_obj = pp_object_manager_get_object();
                     bool result_flag = true;
 
                     while (cur_obj->set_custom_object == false)
                     {
-                        ObjectManager_next_object(&result);
+                        pp_object_manager_next_object(&result);
                         if (result == OLCP_RES_SUCCESS)
                         {
-                            cur_obj = ObjectManager_get_object();
+                            cur_obj = pp_object_manager_get_object();
                         }
                         else
                         {
@@ -526,8 +526,8 @@ static void button_functions(button_action_t action_handler)
                     {
                         ESP_LOGI(MAIN_TAG, "DEFAULT MODE -> ALARM_DELETE_MODE");
                         device_mode = ALARM_DELETE_MODE;
-                        alarm_mode_args_t alarm_display = get_alarm_values();
-                        set_alarm_digits(alarm_display);
+                        alarm_mode_args_t alarm_display = pp_get_alarm_values();
+                        pp_set_alarm_digits(alarm_display);
                     }
                     else
                     {
@@ -549,19 +549,19 @@ static void button_functions(button_action_t action_handler)
 
         case TIME_CHANGE_MODE:
         {
-            time_change_mode(action_handler, false);
+            pp_time_change_mode(action_handler, false);
             break;
         }
 
         case ALARM_ADD_MODE:
         {
-            alarm_add_mode(action_handler, false);
+            pp_alarm_add_mode(action_handler, false);
             break;
         }
 
         case ALARM_DELETE_MODE:
         {
-            alarm_delete_mode(action_handler);
+            pp_alarm_delete_mode(action_handler);
             break;
         }
 
@@ -590,17 +590,17 @@ static void button_functions(button_action_t action_handler)
     }
 }
 
-void set_device_mode(device_mode_t mode)
+void pp_set_device_mode(device_mode_t mode)
 {
     device_mode = mode;
 }
 
-device_mode_t get_device_mode()
+device_mode_t pp_get_device_mode()
 {
     return device_mode;
 }
 
-void time_change_mode(button_action_t action_handler, bool start)
+void pp_time_change_mode(button_action_t action_handler, bool start)
 {
     if (action_handler.action == SHORT_PRESS && action_handler.button == BUTTON_RIGHT)
     {
@@ -952,22 +952,23 @@ void time_change_mode(button_action_t action_handler, bool start)
                         time_change_sm = IDLE_TIME_CHANGE;
                         device_mode = DEFAULT_MODE;
 
-                        struct tm tm;
-                        tm.tm_year 	= nixie_time.year_first * 10 + nixie_time.year_second + 100;
-                        tm.tm_mon 	= nixie_time.month_first * 10 + nixie_time.month_second - 1;
-                        tm.tm_mday 	= nixie_time.day_first * 10 + nixie_time.day_second;
-                        tm.tm_hour 	= nixie_time.hour_first * 10 + nixie_time.hour_second;
-                        tm.tm_min 	= nixie_time.minute_first * 10 + nixie_time.minute_second;
-                        tm.tm_sec 	= nixie_time.second_first * 10 + nixie_time.second_second;
-                        tm.tm_isdst = -1;
+                        struct tm timeinfo;
+                        timeinfo.tm_sec = nixie_time.second_first * 10 + nixie_time.second_second;
+                        timeinfo.tm_min = nixie_time.minute_first * 10 + nixie_time.minute_second;
+                        timeinfo.tm_hour = nixie_time.hour_first * 10 + nixie_time.hour_second;
+                        timeinfo.tm_mday = nixie_time.day_first * 10 + nixie_time.day_second;
+                        timeinfo.tm_mon = nixie_time.month_first * 10 + nixie_time.month_second - 1;
+                        timeinfo.tm_year = nixie_time.year_first * 10 + nixie_time.year_second + 100;
+                        timeinfo.tm_isdst = -1;
 
-                        time_t t = mktime(&tm);
-
+                        time_t t = mktime(&timeinfo);
                         struct timeval tv;
                         tv.tv_sec = t;
                         settimeofday(&tv, NULL);
-
-                        pp_rtc_set_time( tm.tm_sec, tm.tm_min, tm.tm_hour, 1, tm.tm_mday, tm.tm_mon + 1, tm.tm_year - 100 );
+                        
+                        timeinfo.tm_wday = 0;
+                        timeinfo.tm_yday = 0;
+                        pp_rtc_set_time(&timeinfo);
                         break;
                     }
 
@@ -980,7 +981,7 @@ void time_change_mode(button_action_t action_handler, bool start)
     }
 }
 
-void alarm_add_mode(button_action_t action_handler, bool start)
+void pp_alarm_add_mode(button_action_t action_handler, bool start)
 {
     if (action_handler.action == SHORT_PRESS && action_handler.button == BUTTON_RIGHT)
     {
@@ -1766,21 +1767,21 @@ void alarm_add_mode(button_action_t action_handler, bool start)
                         oacp_op_code_result_t result;
                         memcpy(type.uuid.uuid128, alarm_type_uuid, ESP_UUID_LEN_128);
 
-                        esp_err_t ret = ObjectManager_create_object(0, type, &result);
+                        esp_err_t ret = pp_object_manager_create_object(0, type, &result);
                         if (ret) 
                         {
                             ESP_LOGI(MAIN_TAG, "ObjectManager_create_object: %x", ret);
                             break;
                         }
 
-                        ret = ObjectManager_change_alarm_data_in_file(alarm_add);
+                        ret = pp_object_manager_change_alarm_data_in_file(alarm_add);
                         if (ret) 
                         {
                             ESP_LOGI(MAIN_TAG, "ObjectManager_change_alarm_data_in_file: %x", ret);
                             break;
                         }
 
-                        set_next_alarm();
+                        pp_set_next_alarm();
                         ESP_LOGI(MAIN_TAG, "ALARM_ADD_MODE -> DEFAULT MODE");
                         
                         break;
@@ -1795,7 +1796,7 @@ void alarm_add_mode(button_action_t action_handler, bool start)
     }
 }
 
-void alarm_delete_mode(button_action_t action_handler)
+void pp_alarm_delete_mode(button_action_t action_handler)
 {
     if (action_handler.action == SHORT_PRESS)
     {
@@ -1809,10 +1810,10 @@ void alarm_delete_mode(button_action_t action_handler)
 
                 do
                 {
-                    ObjectManager_next_object(&result);
+                    pp_object_manager_next_object(&result);
                     if (result == OLCP_RES_SUCCESS)
                     {
-                        cur_obj = ObjectManager_get_object();
+                        cur_obj = pp_object_manager_get_object();
                     }
                     else
                     {
@@ -1823,8 +1824,8 @@ void alarm_delete_mode(button_action_t action_handler)
 
                 if (result_flag)
                 {
-                    alarm_mode_args_t alarm_display = get_alarm_values();
-                    set_alarm_digits(alarm_display);
+                    alarm_mode_args_t alarm_display = pp_get_alarm_values();
+                    pp_set_alarm_digits(alarm_display);
                 }
                 break;
             }
@@ -1837,10 +1838,10 @@ void alarm_delete_mode(button_action_t action_handler)
 
                 do
                 {
-                    ObjectManager_previous_object(&result);
+                    pp_object_manager_previous_object(&result);
                     if (result == OLCP_RES_SUCCESS)
                     {
-                        cur_obj = ObjectManager_get_object();
+                        cur_obj = pp_object_manager_get_object();
                     }
                     else
                     {
@@ -1851,8 +1852,8 @@ void alarm_delete_mode(button_action_t action_handler)
 
                 if (result_flag)
                 {
-                    alarm_mode_args_t alarm_display = get_alarm_values();
-                    set_alarm_digits(alarm_display);
+                    alarm_mode_args_t alarm_display = pp_get_alarm_values();
+                    pp_set_alarm_digits(alarm_display);
                 }
                 break;
             }
@@ -1871,15 +1872,15 @@ void alarm_delete_mode(button_action_t action_handler)
     else if (action_handler.action == LONG_PRESS && action_handler.button == BUTTON_RIGHT)
     {
         oacp_op_code_result_t result;
-        ObjectManager_delete_object(&result);
-        set_next_alarm();
+        pp_object_manager_delete_object(&result);
+        pp_set_next_alarm();
         ESP_LOGI(MAIN_TAG, "ALARM DELETED");
         ESP_LOGI(MAIN_TAG, "ALARM_DELETE_MODE -> DEFAULT MODE");
         device_mode = DEFAULT_MODE;
     }  
 }
 
-static void set_alarm_digits(alarm_mode_args_t alarm)
+static void pp_set_alarm_digits(alarm_mode_args_t alarm)
 {
     alatm_add_digits.mode = alarm.mode;
 
@@ -1933,7 +1934,7 @@ static void set_alarm_digits(alarm_mode_args_t alarm)
     alatm_add_digits.volume = alarm.volume / 11;
 }
 
-static esp_err_t button_init()
+static esp_err_t pp_button_init()
 {
     /* BUTTONS GPIO CONFIG */
 
@@ -1959,16 +1960,16 @@ static esp_err_t button_init()
     //create a queue to handle gpio event from isr
     gpio_evt_queue = xQueueCreate(20, sizeof(button_queue_msg_t));
     //start gpio task
-    xTaskCreate(button_main, "BUTTON_MAIN", 3072, NULL, 1, NULL);
+    xTaskCreate(pp_button_main, "BUTTON_MAIN", 3072, NULL, 1, NULL);
 
     gpio_install_isr_service(ESP_INTR_FLAG_DEFAULT);
-    gpio_isr_handler_add(GPIO_INPUT_IO_0, button_isr_handler, (void*) GPIO_INPUT_IO_0);
-    gpio_isr_handler_add(GPIO_INPUT_IO_1, button_isr_handler, (void*) GPIO_INPUT_IO_1);
-    gpio_isr_handler_add(GPIO_INPUT_IO_2, button_isr_handler, (void*) GPIO_INPUT_IO_2);
+    gpio_isr_handler_add(GPIO_INPUT_IO_0, pp_button_isr_handler, (void*) GPIO_INPUT_IO_0);
+    gpio_isr_handler_add(GPIO_INPUT_IO_1, pp_button_isr_handler, (void*) GPIO_INPUT_IO_1);
+    gpio_isr_handler_add(GPIO_INPUT_IO_2, pp_button_isr_handler, (void*) GPIO_INPUT_IO_2);
 
-    btn_timer_h[0] = xTimerCreate(NULL, pdMS_TO_TICKS(100), pdFALSE, NULL, btn_timer_cb);
-    btn_timer_h[1] = xTimerCreate(NULL, pdMS_TO_TICKS(100), pdFALSE, NULL, btn_timer_cb);
-    btn_timer_h[2] = xTimerCreate(NULL, pdMS_TO_TICKS(100), pdFALSE, NULL, btn_timer_cb);
+    btn_timer_h[0] = xTimerCreate(NULL, pdMS_TO_TICKS(100), pdFALSE, NULL, pp_btn_timer_cb);
+    btn_timer_h[1] = xTimerCreate(NULL, pdMS_TO_TICKS(100), pdFALSE, NULL, pp_btn_timer_cb);
+    btn_timer_h[2] = xTimerCreate(NULL, pdMS_TO_TICKS(100), pdFALSE, NULL, pp_btn_timer_cb);
     
     return ESP_OK;
 }
@@ -1976,30 +1977,25 @@ static esp_err_t button_init()
 void app_main(void)
 {
     // INITS
-    gpio_init();
-    sd_card_init();
-    nvs_init();
-    i2c_init();
+    pp_gpio_init();
+    pp_sd_card_init();
+    pp_nvs_init();
+    pp_i2c_init();
+    pp_rtc_init();
 
-    esp_err_t ret = pp_rtc_init();
-    if (ret) {
-        ESP_LOGE(MAIN_TAG, "rtc init failed, err: %x", ret);
-        return;
-    }
-
-    ret = pp_nixie_diplay_init();
+    esp_err_t ret = pp_nixie_diplay_init();
     if (ret) {
         ESP_LOGE(MAIN_TAG, "nixie display failed, err: %x", ret);
         return;
     }
 
-    ret = ObjectManager_init();
+    ret = pp_object_manager_init();
     if (ret) {
         ESP_LOGE(MAIN_TAG, "Object Manager failed, err: %x", ret);
         return;
     }
 
-    ret = alarm_init();
+    ret = pp_alarm_init();
     if (ret) {
         ESP_LOGE(MAIN_TAG, "Alarm init failed, err: %x", ret);
         return;
@@ -2011,27 +2007,25 @@ void app_main(void)
         return;
     }
 
-    set_next_alarm();
+    pp_set_next_alarm();
 
-    ret = button_init();
+    ret = pp_button_init();
     if (ret) {
         ESP_LOGE(MAIN_TAG, "Button init failed, err: %x", ret);
         return;
     }
 
     ESP_LOGI(MAIN_TAG, "Initializing wifi");
-    ret = wifi_init();
+    ret = pp_wifi_init();
     if (ret) {
         ESP_LOGE(MAIN_TAG, "wifi init failed, err: %x", ret);
         return;
     }
 
     ESP_LOGI(MAIN_TAG, "Initializing bluetooth");
-    ret = bt_init();
+    ret = pp_bt_init();
     if (ret) {
         ESP_LOGE(MAIN_TAG, "bt init failed, err: %x", ret);
         return;
     }
-
-
 }

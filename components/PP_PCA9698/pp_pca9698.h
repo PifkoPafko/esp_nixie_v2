@@ -7,5 +7,5 @@
 #define ENABLE_AUTO_INCREMEMT_BIT_MASK(x) ((x) | 0x80)
 #define DISABLE_AUTO_INCREMEMT_BIT_MASK(x) ((x) & 0x7F)
 
-void pca_write_reg(slave_addr_t slave_addr, reg_addr_t reg, uint8_t arg);
-void pca_write_all_reg(slave_addr_t slave_addr, reg_addr_t reg, const uint8_t* arg);
+void pp_pca_write_reg(slave_addr_t slave_addr, reg_addr_t reg, uint8_t arg);
+void pp_pca_write_all_reg(slave_addr_t slave_addr, reg_addr_t reg, const uint8_t* arg);

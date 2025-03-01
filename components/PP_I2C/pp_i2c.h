@@ -36,52 +36,52 @@
 
 /* Functions */
 
-/** @brief i2c_init: Initializes I2C
+/** @brief pp_i2c_init: Initializes I2C
  *
  * @return
  */
-void i2c_init(void);
+void pp_i2c_init(void);
 
-/** @brief i2c_check_dev: Checks respond of target device
+/** @brief pp_i2c_check_dev: Checks respond of target device
  *
  * @param[in]   slave_addr  (uint8_t) Address of the target slave device
  * @return
  */
-void i2c_check_dev(uint8_t slave_addr);
+void pp_i2c_check_dev(uint8_t slave_addr);
 
-/** @brief i2c_write_byte_to_dev: Writes 1 byte to target device
+/** @brief pp_i2c_write_byte_to_dev: Writes 1 byte to target device
  *
  * @param[in]   slave_addr  (uint8_t) Address of the target slave device
  * @param[in]   byte        (uint8_t) Data to write
  * @return
  */
-void i2c_write_byte_to_dev(uint8_t slave_addr, uint8_t byte);
+void pp_i2c_write_byte_to_dev(uint8_t slave_addr, uint8_t byte);
 
-/** @brief i2c_write_word_to_dev: Writes 1 word to target device
+/** @brief pp_i2c_write_word_to_dev: Writes 1 word to target device
  *
  * @param[in]   slave_addr  (uint8_t) Address of the target slave device
  * @param[in]   word        (uint16_t) Data to write 
  * @return
  */
-void i2c_write_word_to_dev(uint8_t slave_addr, uint16_t word);
+void pp_i2c_write_word_to_dev(uint8_t slave_addr, uint16_t word);
 
-/** @brief i2c_read_byte_from_dev: Reads 1 byte from target device
+/** @brief pp_i2c_read_byte_from_dev: Reads 1 byte from target device
  *
  * @param[in]   slave_addr  (uint8_t) Address of the target slave device
  * @param[out]  byte        (uint8_t*) Pointer to memory where the data will be stored
  * @return
  */
-void i2c_read_byte_from_dev(uint8_t slave_addr, uint8_t *byte);
+void pp_i2c_read_byte_from_dev(uint8_t slave_addr, uint8_t *byte);
 
-/** @brief i2c_read_word_from_dev: Reads 1 word from target device
+/** @brief pp_i2c_read_word_from_dev: Reads 1 word from target device
  *
  * @param[in]   slave_addr  (uint8_t) Address of the target slave device
  * @param[out]  word        (uint16_t*) Pointer to memory where the data will be stored
  * @return
  */
-void i2c_read_word_from_dev(uint8_t slave_addr, uint16_t *word);
+void pp_i2c_read_word_from_dev(uint8_t slave_addr, uint16_t *word);
 
-/** @brief i2c_dev_read: Reads data from target device
+/** @brief pp_i2c_dev_read: Reads data from target device
  *
  * @param[in]   slave_addr  (uint8_t) Address of the target slave device
  * @param[in]   out_data    (const void*) Pointer to output data
@@ -90,9 +90,9 @@ void i2c_read_word_from_dev(uint8_t slave_addr, uint16_t *word);
  * @param[in]   in_size     (size_t) Maximum size of read data
  * @return
  */
-void i2c_dev_read(uint8_t slave_addr, const void *out_data, size_t out_size, void *in_data, size_t in_size);
+void pp_i2c_dev_read(uint8_t slave_addr, const void *out_data, size_t out_size, void *in_data, size_t in_size);
 
-/** @brief i2c_dev_write: Writes data to target device
+/** @brief pp_i2c_dev_write: Writes data to target device
  *
  * @param[in]   slave_addr   (uint8_t) Address of the target slave device
  * @param[in]   out_reg      (const uint8_t*) Pointer to output register
@@ -101,9 +101,9 @@ void i2c_dev_read(uint8_t slave_addr, const void *out_data, size_t out_size, voi
  * @param[in]   out_size     (size_t) Size of output data
  * @return
  */
-void i2c_dev_write(uint8_t slave_addr, const uint8_t *out_reg, size_t out_reg_size, const uint8_t *out_data, size_t out_size);
+void pp_i2c_dev_write(uint8_t slave_addr, const uint8_t *out_reg, size_t out_reg_size, const uint8_t *out_data, size_t out_size);
 
-/** @brief i2c_dev_read_reg: Reads register from target device
+/** @brief pp_i2c_dev_read_reg: Reads register from target device
  *
  * @param[in]   slave_addr  (uint8_t) Address of the target slave device
  * @param[in]   reg         (uint8_t) Target device register to read
@@ -111,9 +111,9 @@ void i2c_dev_write(uint8_t slave_addr, const uint8_t *out_reg, size_t out_reg_si
  * @param[in]   in_size     (size_t) Maximum size of read data
  * @return
  */
-void i2c_dev_read_reg(uint8_t slave_addr, uint8_t reg, void *in_data, size_t in_size);
+void pp_i2c_dev_read_reg(uint8_t slave_addr, uint8_t reg, void *in_data, size_t in_size);
 
-/** @brief i2c_dev_write_reg: Writes register from target device
+/** @brief pp_i2c_dev_write_reg: Writes register from target device
  *
  * @param[in]   slave_addr  (uint8_t) Address of the target slave device
  * @param[in]   reg         (uint8_t) Target device register to write
@@ -121,6 +121,6 @@ void i2c_dev_read_reg(uint8_t slave_addr, uint8_t reg, void *in_data, size_t in_
  * @param[in]   in_size     (size_t) Size of write data
  * @return
  */
-void i2c_dev_write_reg(uint8_t slave_addr, uint8_t reg, const void *out_data, size_t out_size);
+void pp_i2c_dev_write_reg(uint8_t slave_addr, uint8_t reg, const void *out_data, size_t out_size);
 
 #endif

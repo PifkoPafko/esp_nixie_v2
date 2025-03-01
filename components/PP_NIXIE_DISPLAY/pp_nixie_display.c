@@ -5,7 +5,7 @@
 #include "pp_pca9698.h"
 #include "pp_nixie_display.h"
 #include "pp_wave_player.h"
-#include "alarm.h"
+#include "pp_alarm.h"
 #include "esp_log.h"
 
 #include "freertos/FreeRTOS.h"
@@ -59,7 +59,7 @@ static const uint8_t BLINK_YEARLY_LAMP_MASK[26]     = { 0,  0,  2,  3,  4,  5,  
 
 static bool time_change_blink_switch = true;
 
-static void blink_timer_cb( TimerHandle_t xTimer )
+static void pp_blink_timer_cb( TimerHandle_t xTimer )
 {
     time_change_blink_switch = !time_change_blink_switch;
 }
@@ -69,12 +69,12 @@ static uint32_t current_passkey[6];
 
 bool wait_insert_passkey_flag = false;
 
-void set_insert_passkey_flag(bool enable)
+void pp_set_insert_passkey_flag(bool enable)
 {
     wait_insert_passkey_flag = enable;
 }
 
-void set_display_passkey(uint32_t passkey)
+void pp_set_display_passkey(uint32_t passkey)
 {
     for (uint i=0; i<6; i++)
     {
@@ -83,7 +83,7 @@ void set_display_passkey(uint32_t passkey)
     }
 }
 
-static void set_nixie_state()
+static void pp_set_nixie_state()
 {
     time_t now;
     struct tm timeinfo;
@@ -132,7 +132,7 @@ static bool IRAM_ATTR pp_display_routine_timer_cb(gptimer_handle_t timer, const 
     return false;
 }
 
-static bool IRAM_ATTR anti_poisoning_timer_cb(gptimer_handle_t timer, const gptimer_alarm_event_data_t *edata, void *user_data)
+static bool IRAM_ATTR pp_anti_poisoning_timer_cb(gptimer_handle_t timer, const gptimer_alarm_event_data_t *edata, void *user_data)
 {
     anti_poisoning_flag = true;
     return false;
@@ -144,7 +144,7 @@ void pp_nixie_display_main(void* arg)
 
     while(true)
     {
-        switch(get_device_mode())
+        switch(pp_get_device_mode())
         {
             case DEFAULT_MODE:
             {
@@ -166,7 +166,7 @@ void pp_nixie_display_main(void* arg)
                         {
                             memset(i2c_msg, 0, 5);
                             pp_nixie_display_generate_i2c_msg(expander, i2c_msg);
-                            pca_write_all_reg(EXPANDER_ADDRESS[expander], OP0_ADDR, i2c_msg);
+                            pp_pca_write_all_reg(EXPANDER_ADDRESS[expander], OP0_ADDR, i2c_msg);
                         }
 
                         vTaskDelay(100 / portTICK_PERIOD_MS);
@@ -184,7 +184,7 @@ void pp_nixie_display_main(void* arg)
                     {
                         memset(i2c_msg, 0, 5);
                         pp_nixie_display_generate_i2c_msg(expander, i2c_msg);
-                        pca_write_all_reg(EXPANDER_ADDRESS[expander], OP0_ADDR, i2c_msg);
+                        pp_pca_write_all_reg(EXPANDER_ADDRESS[expander], OP0_ADDR, i2c_msg);
                     }
 
                     vTaskDelay(100 / portTICK_PERIOD_MS);
@@ -201,7 +201,7 @@ void pp_nixie_display_main(void* arg)
                     {
                         memset(i2c_msg, 0, 5);
                         pp_nixie_display_generate_i2c_msg(expander, i2c_msg);
-                        pca_write_all_reg(EXPANDER_ADDRESS[expander], OP0_ADDR, i2c_msg);
+                        pp_pca_write_all_reg(EXPANDER_ADDRESS[expander], OP0_ADDR, i2c_msg);
                     }
 
                     vTaskDelay(200 / portTICK_PERIOD_MS);
@@ -209,13 +209,13 @@ void pp_nixie_display_main(void* arg)
                 else if (write_display_flag)
                 {
                     write_display_flag = false;
-                    set_nixie_state();
+                    pp_set_nixie_state();
 
                     for ( uint8_t expander = 0; expander < 6; expander++ )
                     {
                         memset(i2c_msg, 0, 5);
                         pp_nixie_display_generate_i2c_msg(expander, i2c_msg);
-                        pca_write_all_reg(EXPANDER_ADDRESS[expander], OP0_ADDR, i2c_msg);
+                        pp_pca_write_all_reg(EXPANDER_ADDRESS[expander], OP0_ADDR, i2c_msg);
                     }
                     
                     vTaskDelay(pdMS_TO_TICKS(10));
@@ -272,7 +272,7 @@ void pp_nixie_display_main(void* arg)
                 {
                     memset(i2c_msg, 0, 5);
                     pp_nixie_display_generate_i2c_msg(expander, i2c_msg);
-                    pca_write_all_reg(EXPANDER_ADDRESS[expander], OP0_ADDR, i2c_msg);
+                    pp_pca_write_all_reg(EXPANDER_ADDRESS[expander], OP0_ADDR, i2c_msg);
                 }
 
                 vTaskDelay(pdMS_TO_TICKS(30));
@@ -385,7 +385,7 @@ void pp_nixie_display_main(void* arg)
                 {
                     memset(i2c_msg, 0, 5);
                     pp_nixie_display_generate_i2c_msg(expander, i2c_msg);
-                    pca_write_all_reg(EXPANDER_ADDRESS[expander], OP0_ADDR, i2c_msg);
+                    pp_pca_write_all_reg(EXPANDER_ADDRESS[expander], OP0_ADDR, i2c_msg);
                 }
 
                 vTaskDelay(pdMS_TO_TICKS(30));
@@ -487,7 +487,7 @@ void pp_nixie_display_main(void* arg)
                 {
                     memset(i2c_msg, 0, 5);
                     pp_nixie_display_generate_i2c_msg(expander, i2c_msg);
-                    pca_write_all_reg(EXPANDER_ADDRESS[expander], OP0_ADDR, i2c_msg);
+                    pp_pca_write_all_reg(EXPANDER_ADDRESS[expander], OP0_ADDR, i2c_msg);
                 }
 
                 vTaskDelay(pdMS_TO_TICKS(30));
@@ -519,7 +519,7 @@ void pp_nixie_display_main(void* arg)
                     {
                         memset(i2c_msg, 0, 5);
                         pp_nixie_display_generate_i2c_msg(expander, i2c_msg);
-                        pca_write_all_reg(EXPANDER_ADDRESS[expander], OP0_ADDR, i2c_msg);
+                        pp_pca_write_all_reg(EXPANDER_ADDRESS[expander], OP0_ADDR, i2c_msg);
                     }
 
                     vTaskDelay(pdMS_TO_TICKS(100));
@@ -547,7 +547,7 @@ void pp_nixie_display_main(void* arg)
                         {
                             memset(i2c_msg, 0, 5);
                             pp_nixie_display_generate_i2c_msg(expander, i2c_msg);
-                            pca_write_all_reg(EXPANDER_ADDRESS[expander], OP0_ADDR, i2c_msg);
+                            pp_pca_write_all_reg(EXPANDER_ADDRESS[expander], OP0_ADDR, i2c_msg);
                         }
 
                         vTaskDelay(pdMS_TO_TICKS(70));
@@ -574,7 +574,7 @@ void pp_nixie_display_main(void* arg)
                         {
                             memset(i2c_msg, 0, 5);
                             pp_nixie_display_generate_i2c_msg(expander, i2c_msg);
-                            pca_write_all_reg(EXPANDER_ADDRESS[expander], OP0_ADDR, i2c_msg);
+                            pp_pca_write_all_reg(EXPANDER_ADDRESS[expander], OP0_ADDR, i2c_msg);
                         }
 
                         vTaskDelay(pdMS_TO_TICKS(70));
@@ -587,7 +587,7 @@ void pp_nixie_display_main(void* arg)
             case ALARM_RING_MODE:
             {
                 static bool alarm_blink_switch = true;
-                set_nixie_state();
+                pp_set_nixie_state();
 
                 if (alarm_blink_switch)
                 {
@@ -605,7 +605,7 @@ void pp_nixie_display_main(void* arg)
                 {
                     memset(i2c_msg, 0, 5);
                     pp_nixie_display_generate_i2c_msg(expander, i2c_msg);
-                    pca_write_all_reg(EXPANDER_ADDRESS[expander], OP0_ADDR, i2c_msg);
+                    pp_pca_write_all_reg(EXPANDER_ADDRESS[expander], OP0_ADDR, i2c_msg);
                 }
                 
                 vTaskDelay(pdMS_TO_TICKS(500));
@@ -619,12 +619,12 @@ esp_err_t pp_nixie_diplay_init()
 {
     uint8_t conf_output_mask[5];
     memset(conf_output_mask, 0, 5);
-    pca_write_all_reg(SLAVE_ADDR_0, IOC0_ADDR, conf_output_mask);
-    pca_write_all_reg(SLAVE_ADDR_1, IOC0_ADDR, conf_output_mask);
-    pca_write_all_reg(SLAVE_ADDR_2, IOC0_ADDR, conf_output_mask);
-    pca_write_all_reg(SLAVE_ADDR_3, IOC0_ADDR, conf_output_mask);
-    pca_write_all_reg(SLAVE_ADDR_4, IOC0_ADDR, conf_output_mask);
-    pca_write_all_reg(SLAVE_ADDR_5, IOC0_ADDR, conf_output_mask);
+    pp_pca_write_all_reg(SLAVE_ADDR_0, IOC0_ADDR, conf_output_mask);
+    pp_pca_write_all_reg(SLAVE_ADDR_1, IOC0_ADDR, conf_output_mask);
+    pp_pca_write_all_reg(SLAVE_ADDR_2, IOC0_ADDR, conf_output_mask);
+    pp_pca_write_all_reg(SLAVE_ADDR_3, IOC0_ADDR, conf_output_mask);
+    pp_pca_write_all_reg(SLAVE_ADDR_4, IOC0_ADDR, conf_output_mask);
+    pp_pca_write_all_reg(SLAVE_ADDR_5, IOC0_ADDR, conf_output_mask);
 
     BaseType_t res = xTaskCreate(pp_nixie_display_main, "NIXIE DISPLAY", 4096, NULL, 1, NULL);
     if(res != pdPASS)
@@ -665,7 +665,7 @@ esp_err_t pp_nixie_diplay_init()
     gptimer_handle_t anti_poisoing_gptimer = NULL;
     ESP_ERROR_CHECK(gptimer_new_timer(&timer_config, &anti_poisoing_gptimer));
     gptimer_event_callbacks_t anti_poisoning_cbs = {
-        .on_alarm = anti_poisoning_timer_cb,
+        .on_alarm = pp_anti_poisoning_timer_cb,
     };
     ESP_ERROR_CHECK(gptimer_register_event_callbacks(anti_poisoing_gptimer, &anti_poisoning_cbs, NULL));
     ESP_LOGI(TAG, "Enable anti-poisoning routine timer");
@@ -680,7 +680,7 @@ esp_err_t pp_nixie_diplay_init()
     ESP_ERROR_CHECK(gptimer_set_alarm_action(anti_poisoing_gptimer, &anti_poisoning_alarm_config));
     ESP_ERROR_CHECK(gptimer_start(anti_poisoing_gptimer));
 
-    blink_timer_h = xTimerCreate(NULL, pdMS_TO_TICKS(500), pdTRUE, NULL, blink_timer_cb);
+    blink_timer_h = xTimerCreate(NULL, pdMS_TO_TICKS(500), pdTRUE, NULL, pp_blink_timer_cb);
     xTimerStart(blink_timer_h, 1);
 
     return ESP_OK;

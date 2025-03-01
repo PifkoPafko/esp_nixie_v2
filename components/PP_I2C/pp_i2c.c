@@ -19,11 +19,11 @@ static SemaphoreHandle_t i2c_mutex;
 
 /* Functions */
 
-/** @brief i2c_create_mutex: Creates mutex for I2C
+/** @brief pp_i2c_create_mutex: Creates mutex for I2C
  *
  * @return  esp_err_t
  */
-static esp_err_t i2c_create_mutex(void) 
+static esp_err_t pp_i2c_create_mutex(void) 
 {
 	i2c_mutex = xSemaphoreCreateMutex();
     if(!i2c_mutex)
@@ -35,45 +35,33 @@ static esp_err_t i2c_create_mutex(void)
     return ESP_OK;
 }
 
-/** @brief i2c_take_mutex: Takes mutex for I2C
- *
- * @return  esp_err_t
- */
-static esp_err_t i2c_take_mutex(void) 
-{
-#if MUTEX_ON == 1
-    if(!xSemaphoreTake(i2c_mutex, pdMS_TO_TICKS(I2CDEV_TIMEOUT)))
-    {
-        ESP_LOGE(I2C_TAG, "Could not take i2c_mutex");
-        return ESP_ERR_TIMEOUT;
-    }
-#endif
-
-    return ESP_OK;
-}
-
-/** @brief i2c_give_mutex: Gives mutex for I2C
- *
- * @return  esp_err_t
- */
-static esp_err_t i2c_give_mutex(void) 
-{
-#if MUTEX_ON == 1
-    if(!xSemaphoreGive(i2c_mutex)) 
-    {
-        ESP_LOGE(I2C_TAG, "Could not give i2c_mutex");
-        return ESP_FAIL;
-    }
-#endif
-
-    return ESP_OK;
-}
-
-/** @brief i2c_init: Initializes I2C
+/** @brief pp_i2c_take_mutex: Takes mutex for I2C
  *
  * @return
  */
-void i2c_init(void) 
+static void pp_i2c_take_mutex(void) 
+{
+#if MUTEX_ON == 1
+    ESP_ERROR_CHECK(xSemaphoreTake(i2c_mutex, pdMS_TO_TICKS(I2CDEV_TIMEOUT)));
+#endif
+}
+
+/** @brief pp_i2c_give_mutex: Gives mutex for I2C
+ *
+ * @return
+ */
+static void pp_i2c_give_mutex(void) 
+{
+#if MUTEX_ON == 1
+    ESP_ERROR_CHECK(xSemaphoreGive(i2c_mutex));
+#endif
+}
+
+/** @brief pp_i2c_init: Initializes I2C
+ *
+ * @return
+ */
+void pp_i2c_init(void) 
 {
     uint32_t freq = I2C_FREQ;
 	if(freq < I2C_FREQ_MIN) freq = I2C_FREQ_MIN;
@@ -90,17 +78,17 @@ void i2c_init(void)
 
     ESP_ERROR_CHECK(i2c_param_config(I2C_MASTER_NUM, &conf));
     ESP_ERROR_CHECK(i2c_driver_install(I2C_MASTER_NUM, I2C_MODE_MASTER, 0, 0, 0));
-    ESP_ERROR_CHECK(i2c_create_mutex());
+    ESP_ERROR_CHECK(pp_i2c_create_mutex());
 }
 
-/** @brief i2c_check_dev: Checks respond of target device
+/** @brief pp_i2c_check_dev: Checks respond of target device
  *
  * @param[in]   slave_addr  (uint8_t) Address of the target slave device
  * @return
  */
-void i2c_check_dev(uint8_t slave_addr)
+void pp_i2c_check_dev(uint8_t slave_addr)
 {
-	ESP_ERROR_CHECK(i2c_take_mutex());
+	pp_i2c_take_mutex();
 
     i2c_cmd_handle_t icmd = i2c_cmd_link_create();
 	ESP_ERROR_CHECK(i2c_master_start(icmd));
@@ -109,18 +97,18 @@ void i2c_check_dev(uint8_t slave_addr)
 	ESP_ERROR_CHECK(i2c_master_cmd_begin(I2C_MASTER_NUM, icmd, 100));
     i2c_cmd_link_delete(icmd);
 
-    ESP_ERROR_CHECK(i2c_give_mutex());
+    pp_i2c_give_mutex();
 }
 
-/** @brief i2c_write_byte_to_dev: Writes 1 byte to target device
+/** @brief pp_i2c_write_byte_to_dev: Writes 1 byte to target device
  *
  * @param[in]   slave_addr  (uint8_t) Address of the target slave device
  * @param[in]   byte        (uint8_t) Data to write
  * @return
  */
-void i2c_write_byte_to_dev(uint8_t slave_addr, uint8_t byte)
+void pp_i2c_write_byte_to_dev(uint8_t slave_addr, uint8_t byte)
 {
-	ESP_ERROR_CHECK(i2c_take_mutex());
+	pp_i2c_take_mutex();
 
     i2c_cmd_handle_t icmd = i2c_cmd_link_create();
 	ESP_ERROR_CHECK(i2c_master_start(icmd));
@@ -130,18 +118,18 @@ void i2c_write_byte_to_dev(uint8_t slave_addr, uint8_t byte)
 	ESP_ERROR_CHECK(i2c_master_cmd_begin(I2C_MASTER_NUM, icmd, 100));
     i2c_cmd_link_delete(icmd);
 
-    ESP_ERROR_CHECK(i2c_give_mutex());
+    pp_i2c_give_mutex();
 }
 
-/** @brief i2c_write_word_to_dev: Writes 1 word to target device
+/** @brief pp_i2c_write_word_to_dev: Writes 1 word to target device
  *
  * @param[in]   slave_addr  (uint8_t) Address of the target slave device
  * @param[in]   word        (uint16_t) Data to write 
  * @return
  */
-void i2c_write_word_to_dev(uint8_t slave_addr, uint16_t word)
+void pp_i2c_write_word_to_dev(uint8_t slave_addr, uint16_t word)
 {
-	ESP_ERROR_CHECK(i2c_take_mutex());
+	pp_i2c_take_mutex();
 
     i2c_cmd_handle_t icmd = i2c_cmd_link_create();
 	ESP_ERROR_CHECK(i2c_master_start(icmd));
@@ -152,18 +140,18 @@ void i2c_write_word_to_dev(uint8_t slave_addr, uint16_t word)
 	ESP_ERROR_CHECK(i2c_master_cmd_begin(I2C_MASTER_NUM, icmd, 100));
     i2c_cmd_link_delete(icmd);
 
-    ESP_ERROR_CHECK(i2c_give_mutex());
+    pp_i2c_give_mutex();
 }
 
-/** @brief i2c_read_byte_from_dev: Reads 1 byte from target device
+/** @brief pp_i2c_read_byte_from_dev: Reads 1 byte from target device
  *
  * @param[in]   slave_addr  (uint8_t) Address of the target slave device
  * @param[out]  byte        (uint8_t*) Pointer to memory where the data will be stored
  * @return
  */
-void i2c_read_byte_from_dev(uint8_t slave_addr, uint8_t *byte)
+void pp_i2c_read_byte_from_dev(uint8_t slave_addr, uint8_t *byte)
 {
-	ESP_ERROR_CHECK(i2c_take_mutex());
+	pp_i2c_take_mutex();
 
     i2c_cmd_handle_t icmd = i2c_cmd_link_create();
 	ESP_ERROR_CHECK(i2c_master_start(icmd));
@@ -173,19 +161,19 @@ void i2c_read_byte_from_dev(uint8_t slave_addr, uint8_t *byte)
 	ESP_ERROR_CHECK(i2c_master_cmd_begin(I2C_MASTER_NUM, icmd, 100));
     i2c_cmd_link_delete(icmd);
 
-    ESP_ERROR_CHECK(i2c_give_mutex());
+    pp_i2c_give_mutex();
 }
 
-/** @brief i2c_read_word_from_dev: Reads 1 word from target device
+/** @brief pp_i2c_read_word_from_dev: Reads 1 word from target device
  *
  * @param[in]   slave_addr  (uint8_t) Address of the target slave device
  * @param[out]  word        (uint16_t*) Pointer to memory where the data will be stored
  * @return
  */
-void i2c_read_word_from_dev(uint8_t slave_addr, uint16_t *word)
+void pp_i2c_read_word_from_dev(uint8_t slave_addr, uint16_t *word)
 {
 	uint8_t msb, lsb;
-	ESP_ERROR_CHECK(i2c_take_mutex());
+	pp_i2c_take_mutex();
 
     i2c_cmd_handle_t icmd = i2c_cmd_link_create();
 	ESP_ERROR_CHECK(i2c_master_start(icmd));
@@ -197,10 +185,10 @@ void i2c_read_word_from_dev(uint8_t slave_addr, uint16_t *word)
     i2c_cmd_link_delete(icmd);
 
     *word = (msb<<8) | lsb;
-    ESP_ERROR_CHECK(i2c_give_mutex());
+    pp_i2c_give_mutex();
 }
 
-/** @brief i2c_dev_read: Reads data from target device
+/** @brief pp_i2c_dev_read: Reads data from target device
  *
  * @param[in]   slave_addr  (uint8_t) Address of the target slave device
  * @param[in]   out_data    (const void*) Pointer to output data
@@ -209,14 +197,14 @@ void i2c_read_word_from_dev(uint8_t slave_addr, uint16_t *word)
  * @param[in]   in_size     (size_t) Maximum size of read data
  * @return
  */
-void i2c_dev_read(uint8_t slave_addr, const void *out_data, size_t out_size, void *in_data, size_t in_size)
+void pp_i2c_dev_read(uint8_t slave_addr, const void *out_data, size_t out_size, void *in_data, size_t in_size)
 {
     if(!in_data || !in_size)
     {
         ESP_ERROR_CHECK(ESP_ERR_INVALID_ARG);
     }
 
-    ESP_ERROR_CHECK(i2c_take_mutex());
+    pp_i2c_take_mutex();
 
     i2c_cmd_handle_t cmd = i2c_cmd_link_create();
 
@@ -234,10 +222,10 @@ void i2c_dev_read(uint8_t slave_addr, const void *out_data, size_t out_size, voi
     ESP_ERROR_CHECK(i2c_master_cmd_begin(I2C_MASTER_NUM, cmd, pdMS_TO_TICKS(I2CDEV_TIMEOUT)));
     i2c_cmd_link_delete(cmd);
 
-    ESP_ERROR_CHECK(i2c_give_mutex());
+    pp_i2c_give_mutex();
 }
 
-/** @brief i2c_dev_write: Writes data to target device
+/** @brief pp_i2c_dev_write: Writes data to target device
  *
  * @param[in]   slave_addr   (uint8_t) Address of the target slave device
  * @param[in]   out_reg      (const uint8_t*) Pointer to output register
@@ -246,14 +234,14 @@ void i2c_dev_read(uint8_t slave_addr, const void *out_data, size_t out_size, voi
  * @param[in]   out_size     (size_t) Size of output data
  * @return
  */
-void i2c_dev_write(uint8_t slave_addr, const uint8_t *out_reg, size_t out_reg_size, const uint8_t *out_data, size_t out_size)
+void pp_i2c_dev_write(uint8_t slave_addr, const uint8_t *out_reg, size_t out_reg_size, const uint8_t *out_data, size_t out_size)
 {
     if(!out_data || !out_size) 
     {
         ESP_ERROR_CHECK(ESP_ERR_INVALID_ARG);
     }
 
-    ESP_ERROR_CHECK(i2c_take_mutex());
+    pp_i2c_take_mutex();
 
     i2c_cmd_handle_t cmd = i2c_cmd_link_create();
     ESP_ERROR_CHECK(i2c_master_start(cmd));
@@ -269,10 +257,10 @@ void i2c_dev_write(uint8_t slave_addr, const uint8_t *out_reg, size_t out_reg_si
     ESP_ERROR_CHECK(i2c_master_cmd_begin(I2C_MASTER_NUM, cmd, pdMS_TO_TICKS(I2CDEV_TIMEOUT)));
     i2c_cmd_link_delete(cmd);
 
-    ESP_ERROR_CHECK(i2c_give_mutex());
+    pp_i2c_give_mutex();
 }
 
-/** @brief i2c_dev_read_reg: Reads register from target device
+/** @brief pp_i2c_dev_read_reg: Reads register from target device
  *
  * @param[in]   slave_addr  (uint8_t) Address of the target slave device
  * @param[in]   reg         (uint8_t) Target device register to read
@@ -280,12 +268,12 @@ void i2c_dev_write(uint8_t slave_addr, const uint8_t *out_reg, size_t out_reg_si
  * @param[in]   in_size     (size_t) Maximum size of read data
  * @return
  */
-void i2c_dev_read_reg(uint8_t slave_addr, uint8_t reg, void *in_data, size_t in_size)
+void pp_i2c_dev_read_reg(uint8_t slave_addr, uint8_t reg, void *in_data, size_t in_size)
 {
-    i2c_dev_read(slave_addr, &reg, 1, in_data, in_size);
+    pp_i2c_dev_read(slave_addr, &reg, 1, in_data, in_size);
 }
 
-/** @brief i2c_dev_write_reg: Writes register from target device
+/** @brief pp_i2c_dev_write_reg: Writes register from target device
  *
  * @param[in]   slave_addr  (uint8_t) Address of the target slave device
  * @param[in]   reg         (uint8_t) Target device register to write
@@ -293,7 +281,7 @@ void i2c_dev_read_reg(uint8_t slave_addr, uint8_t reg, void *in_data, size_t in_
  * @param[in]   in_size     (size_t) Size of write data
  * @return
  */
-void i2c_dev_write_reg(uint8_t slave_addr, uint8_t reg, const void *out_data, size_t out_size)
+void pp_i2c_dev_write_reg(uint8_t slave_addr, uint8_t reg, const void *out_data, size_t out_size)
 {
-    i2c_dev_write(slave_addr, &reg, 1, out_data, out_size);
+    pp_i2c_dev_write(slave_addr, &reg, 1, out_data, out_size);
 }

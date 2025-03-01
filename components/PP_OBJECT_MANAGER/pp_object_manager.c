@@ -1,7 +1,7 @@
-#include "ObjectManager.h"
-#include "ObjectManagerIdList.h"
-#include "ObjectTransfer_defs.h"
-#include "FilterOrder.h"
+#include "pp_object_manager.h"
+#include "pp_object_manager_id_list.h"
+#include "pp_object_transfer_defs.h"
+#include "pp_filter_order.h"
 #include "pp_sd_card.h"
 
 #include <string.h>
@@ -32,11 +32,11 @@ static file_transfer_t file_transfer = {
 uint8_t alarm_type_uuid[ESP_UUID_LEN_128] = {0x02, 0x00, 0x12, 0xAC, 0x42, 0x02, 0x61, 0xA2, 0xED, 0x11, 0xBA, 0x29, 0xB8, 0x13, 0x08, 0xCC};
 uint8_t ringtone_type_uuid[ESP_UUID_LEN_128] = {0x03, 0x00, 0x12, 0xAC, 0x42, 0x02, 0x61, 0xA2, 0xED, 0x11, 0xBA, 0x29, 0xB8, 0x13, 0x08, 0xCC};
 static char* id_to_string(char* bfr, uint64_t id);
-static void ObjectManager_print_file();
-static void ObjectManager_print_current_object();
-static void ObjectManager_set_current_object_from_file(uint64_t id);
+static void pp_object_manager_print_file();
+static void pp_object_manager_print_current_object();
+static void pp_object_manager_set_current_object_from_file(uint64_t id);
 
-static esp_err_t ObjectManager_init_list()
+static esp_err_t pp_object_manager_init_list()
 {
     FILE* stream = fopen(FILE_LIST_NAME, "a+");
     fseek( stream, 0, SEEK_SET );
@@ -52,21 +52,21 @@ static esp_err_t ObjectManager_init_list()
         if(id)
         {
             ESP_LOGI(OBJECT_TAG, "File found: " MOUNT_POINT "%llx.txt", id);
-            ObjectManager_list_add_by_id(id);
+            pp_object_manager_list_add_by_id(id);
             
         }
     }
     fclose(stream);
 
-    FilterOrder_make_list();
+    pp_filter_order_make_list();
 
     return ESP_OK;
 }
 
-esp_err_t ObjectManager_init(void)
+esp_err_t pp_object_manager_init(void)
 {   
     
-    esp_err_t ret = ObjectManager_init_list();
+    esp_err_t ret = pp_object_manager_init_list();
     if (ret)
     {
         ESP_LOGE(OBJECT_TAG, "Object Manager list initialization fail. err=%d", ret);
@@ -76,17 +76,17 @@ esp_err_t ObjectManager_init(void)
     return ESP_OK;
 }
 
-object_t* ObjectManager_get_object(void)
+object_t* pp_object_manager_get_object(void)
 {
     return current_object;
 }
 
-void ObjectManager_null_current_object(void)
+void pp_object_manager_null_current_object(void)
 {
     current_object = NULL;
 }
 
-esp_err_t ObjectManager_create_object(uint32_t size, esp_bt_uuid_t type, oacp_op_code_result_t *result)
+esp_err_t pp_object_manager_create_object(uint32_t size, esp_bt_uuid_t type, oacp_op_code_result_t *result)
 {
     ESP_LOGI(OBJECT_TAG, "Requested object type UUID:");
     if(type.len == ESP_UUID_LEN_16) ESP_LOGI(OBJECT_TAG, "%02x", type.uuid.uuid16);
@@ -100,7 +100,7 @@ esp_err_t ObjectManager_create_object(uint32_t size, esp_bt_uuid_t type, oacp_op
         return ESP_OK;
     }
 
-    int ret_type = ObjectManager_check_type(type.uuid.uuid128);
+    int ret_type = pp_object_manager_check_type(type.uuid.uuid128);
 
     switch(ret_type)
     {
@@ -121,7 +121,7 @@ esp_err_t ObjectManager_create_object(uint32_t size, esp_bt_uuid_t type, oacp_op
     *result = OACP_RES_SUCCESS;
 
     ESP_LOGI(OBJECT_TAG, "Creating list object");
-    object_id_list_t* object = ObjectManager_list_add();
+    object_id_list_t* object = pp_object_manager_list_add();
     ESP_LOGI(OBJECT_TAG, "Object created, ID: %" PRIx64, object->id);
 
     if(current_object == NULL)
@@ -139,7 +139,7 @@ esp_err_t ObjectManager_create_object(uint32_t size, esp_bt_uuid_t type, oacp_op
     current_object->properties = PROPERTY_ALL;
 
     ESP_LOGI(OBJECT_TAG, "Creating file on SD Card");
-    FILE* f = ObjectManager_open_file("w+", object->id);
+    FILE* f = pp_object_manager_open_file("w+", object->id);
 
     fprintf(f, "Size: %x\n", current_object->size);
     fprintf(f, "Allocated size: %x\n", current_object->alloc_size);
@@ -177,13 +177,13 @@ esp_err_t ObjectManager_create_object(uint32_t size, esp_bt_uuid_t type, oacp_op
 
     ESP_LOGI(OBJECT_TAG, "ID inserted into the list");
 
-    FilterOrder_make_list();
-    ObjectManager_print_current_object();
+    pp_filter_order_make_list();
+    pp_object_manager_print_current_object();
 
     return ESP_OK;
 }
 
-esp_err_t ObjectManager_delete_object(oacp_op_code_result_t *result)
+esp_err_t pp_object_manager_delete_object(oacp_op_code_result_t *result)
 {
     if(current_object == NULL)
     {
@@ -245,16 +245,16 @@ esp_err_t ObjectManager_delete_object(oacp_op_code_result_t *result)
     *result = OACP_RES_SUCCESS;
 
     ESP_LOGI(OBJECT_TAG, "ID to remove from list: %llx", current_object->id);
-    ObjectManager_list_delete_by_id(current_object->id);
+    pp_object_manager_list_delete_by_id(current_object->id);
     ESP_LOGI(OBJECT_TAG, "ID removed from list");
-    FilterOrder_make_list();
+    pp_filter_order_make_list();
 
     return ESP_OK;
 }
 
-esp_err_t ObjectManager_change_name_in_file()
+esp_err_t pp_object_manager_change_name_in_file()
 {
-    FILE* f = ObjectManager_open_file("r+", current_object->id);
+    FILE* f = pp_object_manager_open_file("r+", current_object->id);
 
     char line[70];
 
@@ -281,14 +281,14 @@ esp_err_t ObjectManager_change_name_in_file()
     fputs(name_len_string, f);
     fclose(f);
 
-    ObjectManager_print_current_object();
+    pp_object_manager_print_current_object();
 
     return ESP_OK;
 }
 
-esp_err_t ObjectManager_first_object(olcp_op_code_result_t *result)
+esp_err_t pp_object_manager_first_object(olcp_op_code_result_t *result)
 {
-    object_id_list_t* object = ObjectManager_sort_list_first_elem();
+    object_id_list_t* object = pp_object_manager_sort_list_first_elem();
 
     if(object == NULL)
     {
@@ -302,17 +302,17 @@ esp_err_t ObjectManager_first_object(olcp_op_code_result_t *result)
         current_object = (object_t*)malloc(sizeof(object_t));
     }
 
-    ObjectManager_set_current_object_from_file(object->id);
+    pp_object_manager_set_current_object_from_file(object->id);
     *result = OLCP_RES_SUCCESS;
 
-    ObjectManager_print_current_object();
-    ObjectManager_print_file();
+    pp_object_manager_print_current_object();
+    pp_object_manager_print_file();
     return ESP_OK;
 }
 
-esp_err_t ObjectManager_last_object(olcp_op_code_result_t *result)
+esp_err_t pp_object_manager_last_object(olcp_op_code_result_t *result)
 {
-    object_id_list_t* object = ObjectManager_sort_list_last_elem();
+    object_id_list_t* object = pp_object_manager_sort_list_last_elem();
 
     if(object == NULL)
     {
@@ -326,14 +326,14 @@ esp_err_t ObjectManager_last_object(olcp_op_code_result_t *result)
         current_object = (object_t*)malloc(sizeof(object_t));
     }
 
-    ObjectManager_set_current_object_from_file(object->id);
+    pp_object_manager_set_current_object_from_file(object->id);
     *result = OLCP_RES_SUCCESS;
 
-    ObjectManager_print_current_object();
+    pp_object_manager_print_current_object();
     return ESP_OK;
 }
 
-esp_err_t ObjectManager_next_object(olcp_op_code_result_t *result)
+esp_err_t pp_object_manager_next_object(olcp_op_code_result_t *result)
 {
     if(current_object == NULL)
     {
@@ -342,7 +342,7 @@ esp_err_t ObjectManager_next_object(olcp_op_code_result_t *result)
         return ESP_OK;
     }
 
-    object_id_list_t *object = ObjectManager_list_search(true, current_object->id);
+    object_id_list_t *object = pp_object_manager_list_search(true, current_object->id);
 
     if(object->next == NULL)
     {
@@ -353,15 +353,15 @@ esp_err_t ObjectManager_next_object(olcp_op_code_result_t *result)
 
     object = object->next;
 
-    ObjectManager_set_current_object_from_file(object->id);
+    pp_object_manager_set_current_object_from_file(object->id);
     *result = OLCP_RES_SUCCESS;
 
-    ObjectManager_print_current_object();
-    ObjectManager_print_file();
+    pp_object_manager_print_current_object();
+    pp_object_manager_print_file();
     return ESP_OK;
 }
 
-esp_err_t ObjectManager_previous_object(olcp_op_code_result_t *result)
+esp_err_t pp_object_manager_previous_object(olcp_op_code_result_t *result)
 {
     if(current_object == NULL)
     {
@@ -370,7 +370,7 @@ esp_err_t ObjectManager_previous_object(olcp_op_code_result_t *result)
         return ESP_OK;
     }
 
-    object_id_list_t *object = ObjectManager_list_search(true, current_object->id);
+    object_id_list_t *object = pp_object_manager_list_search(true, current_object->id);
 
     if(object->prev == NULL)
     {
@@ -381,16 +381,16 @@ esp_err_t ObjectManager_previous_object(olcp_op_code_result_t *result)
 
     object = object->prev;
 
-    ObjectManager_set_current_object_from_file(object->id);
+    pp_object_manager_set_current_object_from_file(object->id);
     *result = OLCP_RES_SUCCESS;
 
-    ObjectManager_print_current_object();
+    pp_object_manager_print_current_object();
     return ESP_OK;
 }
 
-esp_err_t ObjectManager_goto_object(uint64_t id, olcp_op_code_result_t *result)
+esp_err_t pp_object_manager_goto_object(uint64_t id, olcp_op_code_result_t *result)
 {
-    object_id_list_t *object = ObjectManager_sort_list_first_elem();
+    object_id_list_t *object = pp_object_manager_sort_list_first_elem();
     if(object == NULL)
     {
         ESP_LOGI(OBJECT_TAG, "No objects on the server");
@@ -398,7 +398,7 @@ esp_err_t ObjectManager_goto_object(uint64_t id, olcp_op_code_result_t *result)
         return ESP_OK;
     }
 
-    object = ObjectManager_list_search(true, id);
+    object = pp_object_manager_list_search(true, id);
 
     if(object == NULL)
     {
@@ -407,22 +407,22 @@ esp_err_t ObjectManager_goto_object(uint64_t id, olcp_op_code_result_t *result)
         return ESP_OK;
     }
 
-    ObjectManager_set_current_object_from_file(object->id);
+    pp_object_manager_set_current_object_from_file(object->id);
     *result = OLCP_RES_SUCCESS;
 
-    ObjectManager_print_current_object();
+    pp_object_manager_print_current_object();
     return ESP_OK;
 }
 
-esp_err_t ObjectManager_order_object(uint8_t type, olcp_op_code_result_t *result)
+esp_err_t pp_object_manager_order_object(uint8_t type, olcp_op_code_result_t *result)
 {
 
     return ESP_OK;
 }
 
-esp_err_t ObjectManager_request_number(uint32_t *number, olcp_op_code_result_t *result)
+esp_err_t pp_object_manager_request_number(uint32_t *number, olcp_op_code_result_t *result)
 {
-    object_id_list_t* object = ObjectManager_sort_list_first_elem();
+    object_id_list_t* object = pp_object_manager_sort_list_first_elem();
 
     while(object)
     {
@@ -435,13 +435,13 @@ esp_err_t ObjectManager_request_number(uint32_t *number, olcp_op_code_result_t *
     return ESP_OK;
 }
 
-esp_err_t ObjectManager_clear_marking(olcp_op_code_result_t *result)
+esp_err_t pp_object_manager_clear_marking(olcp_op_code_result_t *result)
 {
-    object_id_list_t* object = ObjectManager_sort_list_first_elem();
+    object_id_list_t* object = pp_object_manager_sort_list_first_elem();
 
     while(object)
     {
-        FILE* f = ObjectManager_open_file("r+", object->id);
+        FILE* f = pp_object_manager_open_file("r+", object->id);
 
         char line[70];
 
@@ -479,9 +479,9 @@ esp_err_t ObjectManager_clear_marking(olcp_op_code_result_t *result)
     return ESP_OK;
 }
 
-esp_err_t ObjectManager_change_properties_in_file()
+esp_err_t pp_object_manager_change_properties_in_file()
 {
-    FILE* f = ObjectManager_open_file("r+", current_object->id);
+    FILE* f = pp_object_manager_open_file("r+", current_object->id);
 
     fseek(f, 0, SEEK_SET);
 
@@ -505,18 +505,18 @@ esp_err_t ObjectManager_change_properties_in_file()
 
     fclose(f);
 
-    ObjectManager_print_current_object();
+    pp_object_manager_print_current_object();
 
     return ESP_OK;
 }
 
-esp_err_t ObjectManager_change_alarm_data_in_file(alarm_mode_args_t alarm)
+esp_err_t pp_object_manager_change_alarm_data_in_file(alarm_mode_args_t alarm)
 {
-    FILE* f = ObjectManager_open_file("r+", current_object->id);
+    FILE* f = pp_object_manager_open_file("r+", current_object->id);
 
     fseek(f, 0, SEEK_SET);
     fpos_t alarmPosition;
-    bool found = seekfor(f, "ALARM PROPERTIES\n", &alarmPosition);
+    bool found = pp_seekfor(f, "ALARM PROPERTIES\n", &alarmPosition);
     fsetpos(f, &alarmPosition);
 
     if(!found) fprintf(f, "\n");
@@ -563,10 +563,10 @@ esp_err_t ObjectManager_change_alarm_data_in_file(alarm_mode_args_t alarm)
     uint32_t truncate_offset = ftell(f);
     fseek(f, 0, SEEK_SET);
     fclose(f);
-    ObjectManager_truncate_rest(current_object->id, truncate_offset);
+    pp_object_manager_truncate_rest(current_object->id, truncate_offset);
 
-    ObjectManager_print_current_object();
-    ObjectManager_print_file();
+    pp_object_manager_print_current_object();
+    pp_object_manager_print_file();
 
     return ESP_OK;
 }
@@ -585,14 +585,14 @@ static char* id_to_string(char* bfr, uint64_t id)
     return bfr;
 }
 
-static void ObjectManager_print_file()
+static void pp_object_manager_print_file()
 {
     // if(current_object == NULL)
     // {
     //     return;
     // }
 
-    // FILE* f = ObjectManager_open_file("r", current_object->id);
+    // FILE* f = pp_object_manager_open_file("r", current_object->id);
 
     // char line[70];
 
@@ -604,13 +604,13 @@ static void ObjectManager_print_file()
     // fclose(f);
 }
 
-void ObjectManager_printf_alarm_info()
+void pp_object_manager_printf_alarm_info()
 {
     // if(current_object == NULL) return;
 
-    // FILE* f = ObjectManager_open_file("r", current_object->id);
+    // FILE* f = pp_object_manager_open_file("r", current_object->id);
     // fpos_t pos;
-    // bool found = seekfor(f, "ALARM PROPERTIES\n", &pos);
+    // bool found = pp_seekfor(f, "ALARM PROPERTIES\n", &pos);
     // fclose(f);
 
     // if(found)
@@ -665,7 +665,7 @@ void ObjectManager_printf_alarm_info()
     // }
 }
 
-static void ObjectManager_print_current_object()
+static void pp_object_manager_print_current_object()
 {
     // if(current_object)
     // {
@@ -684,21 +684,21 @@ static void ObjectManager_print_current_object()
     //     printf("ID: %llx\n", current_object->id);
     //     printf("Properties: 0x%" PRIx32 "\n\n", current_object->properties);
 
-    //     if(ObjectManager_check_type(current_object->type.uuid.uuid128) == ALARM_TYPE && current_object->set_custom_object)
+    //     if(pp_object_manager_check_type(current_object->type.uuid.uuid128) == ALARM_TYPE && current_object->set_custom_object)
     //     {
-    //         ObjectManager_printf_alarm_info();
+    //         pp_object_manager_printf_alarm_info();
     //     }
     // }
 }
 
-static void ObjectManager_set_current_object_from_file(uint64_t id)
+static void pp_object_manager_set_current_object_from_file(uint64_t id)
 {
     if(current_object == NULL)
     {
         current_object = (object_t*)malloc(sizeof(object_t));
     }
 
-    FILE* f = ObjectManager_open_file("r", id);
+    FILE* f = pp_object_manager_open_file("r", id);
 
     char line[50];
     char *ptr;
@@ -741,15 +741,15 @@ static void ObjectManager_set_current_object_from_file(uint64_t id)
 
     current_object->id = id;
 
-    int ret_type = ObjectManager_check_type(current_object->type.uuid.uuid128);
+    int ret_type = pp_object_manager_check_type(current_object->type.uuid.uuid128);
 
     switch(ret_type)
     {
         case ALARM_TYPE:
         {
-            alarm_mode_args_t * alarm_p = get_alarm_pointer();
+            alarm_mode_args_t * alarm_p = pp_get_alarm_pointer();
             fpos_t pos;
-            bool found = seekfor(f, "ALARM PROPERTIES\n", &pos);
+            bool found = pp_seekfor(f, "ALARM PROPERTIES\n", &pos);
             if(!found)
             {
                 current_object->set_custom_object = false;
@@ -835,7 +835,7 @@ static void ObjectManager_set_current_object_from_file(uint64_t id)
     fclose(f);
 }
 
-bool seekfor(FILE *stream, const char* str, fpos_t *pos)
+bool pp_seekfor(FILE *stream, const char* str, fpos_t *pos)
 {
     char line[70];
     bool present = false;
@@ -852,7 +852,7 @@ bool seekfor(FILE *stream, const char* str, fpos_t *pos)
     return present;
 }
 
-FILE* ObjectManager_open_file(const char* option,  uint64_t id)
+FILE* pp_object_manager_open_file(const char* option,  uint64_t id)
 {
     char file[20];
     strcpy(file, MOUNT_POINT);
@@ -863,7 +863,7 @@ FILE* ObjectManager_open_file(const char* option,  uint64_t id)
     return fopen(file, option);
 }
 
-void ObjectManager_truncate_rest(uint64_t id, uint32_t offset)
+void pp_object_manager_truncate_rest(uint64_t id, uint32_t offset)
 {
     char file[20];
     strcpy(file, MOUNT_POINT);
@@ -873,14 +873,14 @@ void ObjectManager_truncate_rest(uint64_t id, uint32_t offset)
     truncate(file, offset);
 }
 
-int ObjectManager_check_type(uint8_t *uuid)
+int pp_object_manager_check_type(uint8_t *uuid)
 {
     if(memcmp(uuid, alarm_type_uuid, ESP_UUID_LEN_128) == 0) return ALARM_TYPE;
     else if(memcmp(uuid, ringtone_type_uuid, ESP_UUID_LEN_128) == 0) return RINGTONE_TYPE;
     else return -1;
 }
 
-void print_all_files()
+void pp_print_all_files()
 {
     ESP_LOGI(OBJECT_TAG, "Printing All Files");
 

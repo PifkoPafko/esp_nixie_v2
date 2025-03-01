@@ -28,9 +28,9 @@ extern alarm_add_digits_t alatm_add_digits;
 
 esp_err_t pp_nixie_diplay_init();
 bool pp_nixie_display_generate_i2c_msg(uint8_t expander_id, uint8_t *msg);
-void set_display_passkey(uint32_t passkey);
-void set_ble_pairing_flag(bool enable);
-void set_insert_passkey_flag(bool enable);
+void pp_set_display_passkey(uint32_t passkey);
+void pp_set_ble_pairing_flag(bool enable);
+void pp_set_insert_passkey_flag(bool enable);
 
 #define NIXIE_FIRST_ID      0
 #define NIXIE_SECOND_ID     1

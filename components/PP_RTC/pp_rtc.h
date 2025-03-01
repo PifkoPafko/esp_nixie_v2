@@ -11,12 +11,21 @@
  *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.                   *
  ****************************************************************************/
 
- /* Headers */
+/* Headers */
+#include "esp_log.h"
+
+#include <sys/time.h>
+#include <time.h>
+#include "pp_i2c.h"
+#include "pp_alarm.h"
+
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include "freertos/semphr.h"
 
 /* Macros */
+#define RTC_TAG "RTC"
+
 #define CENTRAL_EUROPEAN_TIME_ZONE	"CET-1CEST,M3.5.0/2,M10.5.0/3"  // for Poland
 
 #define WRITE_BIT_MASK(x)   (((x) << 1) & 0xFE)
@@ -55,7 +64,34 @@
 #define DS_MONTH_TO_DEC(x)              ((((DS_MONTH_TEN_MSK & (x)) >> 4) * 10) + (DS_MONTH_MSK & (x)))
 #define DS_YEAR_TO_DEC(x)               ((((DS_YEAR_TEN_MSK & (x)) >> 4) * 10) + (DS_YEAR_MSK & (x)))
 
+#define DS_SECONDS_TO_TM(x)            (DS_SECONDS_TO_DEC(x))
+#define DS_MINUTES_TO_TM(x)            (DS_MINUTES_TO_DEC(x))
+#define DS_HOURS_12_TO_TM(x)           (DS_HOURS_12_TO_DEC(x))
+#define DS_HOURS_TWENTY_24_TO_TM(x)    (DS_HOURS_TWENTY_24_TO_DEC(x))
+#define DS_HOURS_24_TO_TM(x)           (DS_HOURS_24_TO_DEC(x))
+#define DS_WEEK_DAY_TO_TM(x)           (DS_WEEK_DAY_TO_DEC(x))
+#define DS_MONTH_DAY_TO_TM(x)          (DS_MONTH_DAY_TO_DEC(x))
+#define DS_MONTH_TO_TM(x)              (DS_MONTH_TO_DEC(x) - 1)
+#define DS_YEAR_TO_TM(x)               (DS_YEAR_TO_DEC(x) + 100)
+
 /* Functions */
-esp_err_t pp_rtc_init();
-void pp_rtc_set_time(uint8_t seconds, uint8_t minutes, uint8_t hours, uint8_t dayOfWeek, uint8_t dayOfMonth, uint8_t month, uint8_t year);
-void pp_rtc_read_time(struct timeval *tv);
+
+/** @brief pp_rtc_init: Initializes RTC
+ *
+ * @return
+ */
+void pp_rtc_init();
+
+/** @brief pp_rtc_set_time: Sets time to RTC
+ *
+ * @param[in]   timeinfo    (struct tm*) Pointer to the tm structure
+ * @return
+ */
+void pp_rtc_set_time(struct tm *timeinfo);
+
+/** @brief pp_rtc_read_time: Reads time from RTC
+ *
+ * @param[out]   timeinfo    (struct tm*) Pointer to the tm structure
+ * @return
+ */
+void pp_rtc_read_time(struct tm *timeinfo);

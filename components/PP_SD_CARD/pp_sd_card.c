@@ -16,11 +16,11 @@
 
 /* Functions */
 
-/** @brief sd_card_init: Initializes sd card and fat file system on it.
+/** @brief pp_sd_card_init: Initializes sd card and fat file system on it.
  *
  * @return
  */
-void sd_card_init(void)
+void pp_sd_card_init(void)
 {
     ESP_LOGI(SDCARD_TAG, "Initializing sd card");
     esp_vfs_fat_sdmmc_mount_config_t mount_config = 

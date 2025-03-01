@@ -8,7 +8,7 @@
 #include "freertos/semphr.h"
 
 #include "driver/i2s_std.h" // i2s setup
-#include "alarm.h"
+#include "pp_alarm.h"
 #include "driver/gpio.h"
 
 static const char *TAG = "WAV PLAYER";
@@ -17,12 +17,12 @@ i2s_chan_handle_t tx_handle;
 
 volatile bool play_alarm_flag = false;
 
-void set_play_alarm_flag(bool new_val)
+void pp_set_play_alarm_flag(bool new_val)
 {
   play_alarm_flag = new_val;
 }
 
-static esp_err_t i2s_setup()
+static esp_err_t pp_i2s_setup()
 {
   // setup a standard config and the channel
   i2s_chan_config_t chan_cfg = I2S_CHANNEL_DEFAULT_CONFIG(I2S_NUM_AUTO, I2S_ROLE_MASTER);
@@ -49,7 +49,7 @@ static esp_err_t i2s_setup()
   return i2s_channel_init_std_mode(tx_handle, &std_cfg);
 }
 
-static esp_err_t play_wave()
+static esp_err_t pp_play_wave()
 {
   FILE *fh = fopen("/sdcard/ringtone0.wav", "r");
   if (fh == NULL)
@@ -63,7 +63,7 @@ static esp_err_t play_wave()
   size_t bytes_read = 0;
   size_t bytes_written = 0;
 
-  while (get_device_mode() == ALARM_RING_MODE)
+  while (pp_get_device_mode() == ALARM_RING_MODE)
   {
     // skip the header...
     fseek(fh, 44, SEEK_SET);
@@ -78,7 +78,7 @@ static esp_err_t play_wave()
 
     while (bytes_read > 0)
     {
-      if (get_device_mode() == ALARM_RING_MODE)
+      if (pp_get_device_mode() == ALARM_RING_MODE)
       {
         // write the buffer to the i2s
         i2s_channel_write(tx_handle, buf, bytes_read * sizeof(int16_t), &bytes_written, portMAX_DELAY);
@@ -113,9 +113,9 @@ void pp_wav_player_main(void* arg)
     {
       play_alarm_flag = false;
       ESP_LOGI(TAG, "Playing wav file");
-      set_timer_for_playing_alarm();
-      ESP_ERROR_CHECK(play_wave(WAV_FILE));
-      set_next_alarm();
+      pp_set_timer_for_playing_alarm();
+      ESP_ERROR_CHECK(pp_play_wave(WAV_FILE));
+      pp_set_next_alarm();
     }
 
     vTaskDelay(1000 / portTICK_PERIOD_MS);
@@ -127,7 +127,7 @@ esp_err_t pp_wave_player_init()
   ESP_LOGI(TAG, "Initializing wave player");
 
   ESP_LOGI(TAG, "Initializing i2s");
-  esp_err_t res = i2s_setup();
+  esp_err_t res = pp_i2s_setup();
   if (res) 
   {
       ESP_LOGE(TAG, "I2S initialize failed, err: %x", res);

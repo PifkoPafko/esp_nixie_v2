@@ -34,10 +34,10 @@
 
 /* Functions */
 
-/** @brief gpio_init: Initializes and sets gpio configuration for OE line, red, green and blue leds.
+/** @brief pp_gpio_init: Initializes and sets gpio configuration for OE line, red, green and blue leds.
  *
  * @return
  */
-void gpio_init(void);
+void pp_gpio_init(void);
 
 #endif

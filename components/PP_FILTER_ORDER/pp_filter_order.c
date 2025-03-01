@@ -1,7 +1,7 @@
-#include "FilterOrder.h"
-#include "ObjectManager.h"
-#include "ObjectManagerIdList.h"
-#include "ObjectTransfer_defs.h"
+#include "pp_filter_order.h"
+#include "pp_object_manager.h"
+#include "pp_object_manager_id_list.h"
+#include "pp_object_transfer_defs.h"
 #include "esp_log.h"
 #include "stdlib.h"
 #include "string.h"
@@ -15,79 +15,79 @@ typedef bool (*compare_function_filter)(uint64_t);
 static ListFilter_t filter;
 static uint8_t order;
 
-static void FilterOrder_sort(compare_function fun, bool asc);
-static void FilterOrder_filter(compare_function_filter fun);
+static void pp_filter_order_sort(compare_function fun, bool asc);
+static void pp_filter_order_filter(compare_function_filter fun);
 
-static int name_compare(uint64_t rID, uint64_t lID, bool asc);
-static int type_compare(uint64_t rID, uint64_t lID, bool asc);
-static int size_compare(uint64_t rID, uint64_t lID, bool asc);
+static int pp_name_compare(uint64_t rID, uint64_t lID, bool asc);
+static int pp_type_compare(uint64_t rID, uint64_t lID, bool asc);
+static int pp_size_compare(uint64_t rID, uint64_t lID, bool asc);
 
-static char* read_name_from_file(char* dest, uint64_t id);
-static uint8_t* read_type_from_file(uint8_t* dest, uint64_t id);
-static uint32_t read_current_size_from_file(uint64_t id);
+static char* pp_read_name_from_file(char* dest, uint64_t id);
+static uint8_t* pp_read_type_from_file(uint8_t* dest, uint64_t id);
+static uint32_t pp_read_current_size_from_file(uint64_t id);
 
-static bool name_starts_with(uint64_t id);
-static bool name_ends_with(uint64_t id);
-static bool name_containts(uint64_t id);
-static bool name_is_exactly(uint64_t id);
-static bool object_type(uint64_t id);
-static bool current_size_between(uint64_t id);
-static bool alloc_size_between(uint64_t id);
-static bool marked_objects(uint64_t id);
+static bool pp_name_starts_with(uint64_t id);
+static bool pp_name_ends_with(uint64_t id);
+static bool pp_name_containts(uint64_t id);
+static bool pp_name_is_exactly(uint64_t id);
+static bool pp_object_type(uint64_t id);
+static bool pp_current_size_between(uint64_t id);
+static bool pp_alloc_size_between(uint64_t id);
+static bool pp_marked_objects(uint64_t id);
 
 
-void FilterOrder_init()
+void pp_filter_order_init()
 {
     order = 0;
     filter.type = 0;
     filter.par_length = 0;
 }
 
-ListFilter_t* FilterOrder_get_filter(void)
+ListFilter_t* pp_filter_order_get_filter(void)
 {
     return &filter;
 }
 
-uint8_t* FilterOrder_get_order(void)
+uint8_t* pp_filter_order_get_order(void)
 {
     return &order;
 }
 
-void FilterOrder_make_list(void)
+void pp_filter_order_make_list(void)
 {
-    ObjectManager_sort_list_reinit();
+    pp_object_manager_sort_list_reinit();
     ESP_LOGI(TAG, "ORDER OP Code: %x", order);
     ESP_LOGI(TAG, "Filter OP Code: %x", filter.type);
     switch(order)
     {
         case NAME_ASC:
             ESP_LOGI(TAG, "Sorting by name, ascending");
-            FilterOrder_sort(name_compare, true);
+            pp_filter_order_sort(pp_name_compare, true);
             break;
 
         case TYPE_ASC:
             ESP_LOGI(TAG, "Sorting by type, ascending");
-            FilterOrder_sort(type_compare, true);
+            pp_filter_order_sort(pp_type_compare, true);
             break;
 
         case CURRENT_SIZE_ASC:
             ESP_LOGI(TAG, "Sorting by current size, ascending");
-            FilterOrder_sort(size_compare, true);
+            pp_filter_order_sort(pp_size_compare, true);
             break;
 
         case NAME_DESC:
             ESP_LOGI(TAG, "Sorting by name, descending");
-            FilterOrder_sort(name_compare, false);
+            pp_filter_order_sort(pp_name_compare, false);
             break;
 
         case TYPE_DESC:
             ESP_LOGI(TAG, "Sorting by type, descending");
-            FilterOrder_sort(type_compare, false);
+            pp_filter_order_sort(pp_type_compare, false);
             break;
 
         case CURRENT_SIZE_DESC:
             ESP_LOGI(TAG, "Sorting by current size, descending");
-            FilterOrder_sort(size_compare, false);
+            pp_filter_order_sort(pp_size_compare, false);
             break;
 
         default:
@@ -102,61 +102,61 @@ void FilterOrder_make_list(void)
 
         case NAME_STARTS_WITH:
             ESP_LOGI(TAG, "'Name starts with' filter");
-            FilterOrder_filter(name_starts_with);
+            pp_filter_order_filter(pp_name_starts_with);
             break;
 
         case NAME_ENDS_WITH:
             ESP_LOGI(TAG, "Name ends with filter");
-            FilterOrder_filter(name_ends_with);
+            pp_filter_order_filter(pp_name_ends_with);
             break;
 
         case NAME_CONTAINS:
             ESP_LOGI(TAG, "Name contains filter");
-            FilterOrder_filter(name_containts);
+            pp_filter_order_filter(pp_name_containts);
             break;
 
         case NAME_IS_EXACTLY:
             ESP_LOGI(TAG, "Name is exactly filter");
-            FilterOrder_filter(name_is_exactly);
+            pp_filter_order_filter(pp_name_is_exactly);
             break;
 
         case OBJECT_TYPE:
             ESP_LOGI(TAG, "Object type filter");
-            FilterOrder_filter(object_type);
+            pp_filter_order_filter(pp_object_type);
             break;
 
         case CURRENT_SIZE_BETWEEN:
             ESP_LOGI(TAG, "Current size between filter");
-            FilterOrder_filter(current_size_between);
+            pp_filter_order_filter(pp_current_size_between);
             break;
 
         case ALLOC_SIZE_BETWEEN:
             ESP_LOGI(TAG, "Allocated size between filter");
-            FilterOrder_filter(alloc_size_between);
+            pp_filter_order_filter(pp_alloc_size_between);
             break;
 
         case MARKED_OBJECTS:
             ESP_LOGI(TAG, "Marked objects filter");
-            FilterOrder_filter(marked_objects);
+            pp_filter_order_filter(pp_marked_objects);
             break;
     }
     ESP_LOGI(TAG, "Sorting and filtering done");
 
-    object_t* object = ObjectManager_get_object();
+    object_t* object = pp_object_manager_get_object();
 
     if(object)
     {
-        if(ObjectManager_list_search(true, object->id) == NULL)
+        if(pp_object_manager_list_search(true, object->id) == NULL)
         {
-            ObjectManager_null_current_object();
+            pp_object_manager_null_current_object();
         }
     }
 }
 
-static void FilterOrder_sort(compare_function fun, bool asc)
+static void pp_filter_order_sort(compare_function fun, bool asc)
 {
     int swapped;
-    object_id_list_t *rptr = ObjectManager_sort_list_first_elem();
+    object_id_list_t *rptr = pp_object_manager_sort_list_first_elem();
     object_id_list_t *lptr = NULL;
 
     /* Checking for empty list */
@@ -166,7 +166,7 @@ static void FilterOrder_sort(compare_function fun, bool asc)
     do
     {
         swapped = 0;
-        rptr = ObjectManager_sort_list_first_elem();
+        rptr = pp_object_manager_sort_list_first_elem();
 
         while (rptr->next != lptr)
         {
@@ -186,13 +186,13 @@ static void FilterOrder_sort(compare_function fun, bool asc)
 
 }
 
-static int name_compare(uint64_t rID, uint64_t lID, bool asc)
+static int pp_name_compare(uint64_t rID, uint64_t lID, bool asc)
 {
     char rName[NAME_LEN_MAX];
     char lName[NAME_LEN_MAX];
 
-    read_name_from_file(rName, rID);
-    read_name_from_file(lName, lID);
+    pp_read_name_from_file(rName, rID);
+    pp_read_name_from_file(lName, lID);
 
     uint8_t rName_len = strlen(rName);
     uint8_t lName_len = strlen(lName);
@@ -260,13 +260,13 @@ static int name_compare(uint64_t rID, uint64_t lID, bool asc)
     return cmp;
 }
 
-static int type_compare(uint64_t rID, uint64_t lID, bool asc)
+static int pp_type_compare(uint64_t rID, uint64_t lID, bool asc)
 {
     uint8_t rType[16];
     uint8_t lType[16];
 
-    read_type_from_file(rType, rID);
-    read_type_from_file(lType, lID);
+    pp_read_type_from_file(rType, rID);
+    pp_read_type_from_file(lType, lID);
 
     int cmp = memcmp(rType, lType, 16);
     if(asc == false) cmp = -cmp;
@@ -274,10 +274,10 @@ static int type_compare(uint64_t rID, uint64_t lID, bool asc)
     return cmp;
 }
 
-static int size_compare(uint64_t rID, uint64_t lID, bool asc)
+static int pp_size_compare(uint64_t rID, uint64_t lID, bool asc)
 {
-    uint32_t rSize = read_current_size_from_file(rID);
-    uint32_t lSize = read_current_size_from_file(lID);
+    uint32_t rSize = pp_read_current_size_from_file(rID);
+    uint32_t lSize = pp_read_current_size_from_file(lID);
 
     int cmp;
     if(rSize>lSize) cmp = 1;
@@ -289,9 +289,9 @@ static int size_compare(uint64_t rID, uint64_t lID, bool asc)
     return cmp;
 }
 
-static char* read_name_from_file(char* dest, uint64_t id)
+static char* pp_read_name_from_file(char* dest, uint64_t id)
 {
-    FILE* f = ObjectManager_open_file("r", id);
+    FILE* f = pp_object_manager_open_file("r", id);
 
     char line[50];
 
@@ -310,9 +310,9 @@ static char* read_name_from_file(char* dest, uint64_t id)
     return dest;
 }
 
-static uint8_t* read_type_from_file(uint8_t* dest, uint64_t id)
+static uint8_t* pp_read_type_from_file(uint8_t* dest, uint64_t id)
 {
-    FILE* f = ObjectManager_open_file("r", id);
+    FILE* f = pp_object_manager_open_file("r", id);
     char line[50];
 
     fgets(line, sizeof(line), f);
@@ -338,9 +338,9 @@ static uint8_t* read_type_from_file(uint8_t* dest, uint64_t id)
     return dest;
 }
 
-static uint32_t read_current_size_from_file(uint64_t id)
+static uint32_t pp_read_current_size_from_file(uint64_t id)
 {
-    FILE* f = ObjectManager_open_file("r", id);
+    FILE* f = pp_object_manager_open_file("r", id);
     char line[50];
 
     fgets(line, sizeof(line), f);
@@ -353,24 +353,24 @@ static uint32_t read_current_size_from_file(uint64_t id)
     return size;
 }
 
-static void FilterOrder_filter(compare_function_filter fun)
+static void pp_filter_order_filter(compare_function_filter fun)
 {
-    object_id_list_t *object = ObjectManager_sort_list_first_elem();
+    object_id_list_t *object = pp_object_manager_sort_list_first_elem();
 
     while(object)
     {
         if(fun(object->id))
         {
-            ObjectManager_list_delete_from_sort_list(object);
+            pp_object_manager_list_delete_from_sort_list(object);
         }
         object = object->next;
     }
 }
 
-static bool name_starts_with(uint64_t id)
+static bool pp_name_starts_with(uint64_t id)
 {
     char name[NAME_LEN_MAX];
-    read_name_from_file(name, id);
+    pp_read_name_from_file(name, id);
     uint8_t name_len = strlen(name);
 
     if(filter.par_length > name_len)
@@ -386,10 +386,10 @@ static bool name_starts_with(uint64_t id)
     return false;
 }
 
-static bool name_ends_with(uint64_t id)
+static bool pp_name_ends_with(uint64_t id)
 {
     char name[NAME_LEN_MAX];
-    read_name_from_file(name, id);
+    pp_read_name_from_file(name, id);
     uint8_t name_len = strlen(name);
 
     if(filter.par_length > name_len)
@@ -405,10 +405,10 @@ static bool name_ends_with(uint64_t id)
     return false;
 }
 
-static bool name_containts(uint64_t id)
+static bool pp_name_containts(uint64_t id)
 {
     char name[NAME_LEN_MAX];
-    read_name_from_file(name, id);
+    pp_read_name_from_file(name, id);
     uint8_t name_len = strlen(name);
 
     if(filter.par_length > name_len)
@@ -428,10 +428,10 @@ static bool name_containts(uint64_t id)
     return false;
 }
 
-static bool name_is_exactly(uint64_t id)
+static bool pp_name_is_exactly(uint64_t id)
 {
     char name[NAME_LEN_MAX];
-    read_name_from_file(name, id);
+    pp_read_name_from_file(name, id);
     uint8_t name_len = strlen(name);
 
     if(filter.par_length != name_len)
@@ -451,10 +451,10 @@ static bool name_is_exactly(uint64_t id)
     return false;
 }
 
-static bool object_type(uint64_t id)
+static bool pp_object_type(uint64_t id)
 {
     uint8_t uuid[16];
-    read_type_from_file(uuid, id);
+    pp_read_type_from_file(uuid, id);
 
     if(memcmp(uuid, filter.parameter, 16))
     {
@@ -464,9 +464,9 @@ static bool object_type(uint64_t id)
     return false;
 }
 
-static bool current_size_between(uint64_t id)
+static bool pp_current_size_between(uint64_t id)
 {
-    uint32_t current_size = read_current_size_from_file(id);
+    uint32_t current_size = pp_read_current_size_from_file(id);
     uint32_t size_left, size_right;
 
     memcpy(&size_left, filter.parameter, 4);
@@ -480,9 +480,9 @@ static bool current_size_between(uint64_t id)
     return false;
 }
 
-static bool alloc_size_between(uint64_t id)
+static bool pp_alloc_size_between(uint64_t id)
 {
-    FILE* f = ObjectManager_open_file("r", id);
+    FILE* f = pp_object_manager_open_file("r", id);
     char line[50];
 
     fgets(line, sizeof(line), f);
@@ -505,9 +505,9 @@ static bool alloc_size_between(uint64_t id)
     return false;
 }
 
-static bool marked_objects(uint64_t id)
+static bool pp_marked_objects(uint64_t id)
 {
-    FILE* f = ObjectManager_open_file("r", id);
+    FILE* f = pp_object_manager_open_file("r", id);
     char line[50];
 
     fgets(line, sizeof(line), f);

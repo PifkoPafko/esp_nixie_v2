@@ -1,9 +1,9 @@
 #include "project_defs.h"
-#include "alarm.h"
-#include "ObjectManager.h"
-#include "ObjectTransfer_attr_ids.h"
-#include "ObjectTransfer_defs.h"
-#include "ObjectManagerIdList.h"
+#include "pp_alarm.h"
+#include "pp_object_manager.h"
+#include "pp_object_transfer_attr_ids.h"
+#include "pp_object_transfer_defs.h"
+#include "pp_object_manager_id_list.h"
 #include "pp_wave_player.h"
 
 #include "freertos/FreeRTOS.h"
@@ -30,25 +30,25 @@ time_t next_alarm_interval = 0;
 
 #define ALARM_LOG
 
-static bool IRAM_ATTR alarm_timer_cb(gptimer_handle_t timer, const gptimer_alarm_event_data_t *edata, void *user_data)
+static bool IRAM_ATTR pp_alarm_timer_cb(gptimer_handle_t timer, const gptimer_alarm_event_data_t *edata, void *user_data)
 {
     gptimer_stop(timer);
     gptimer_set_raw_count(timer, 0);
 
-    if (get_device_mode() == ALARM_RING_MODE)
+    if (pp_get_device_mode() == ALARM_RING_MODE)
     {
-        set_device_mode(DEFAULT_MODE);
+        pp_set_device_mode(DEFAULT_MODE);
     }
     else
     {
-        set_device_mode(ALARM_RING_MODE);
-        set_play_alarm_flag(true);
+        pp_set_device_mode(ALARM_RING_MODE);
+        pp_set_play_alarm_flag(true);
     }
     
     return false;
 }
 
-esp_err_t alarm_init()
+esp_err_t pp_alarm_init()
 {
     gptimer_config_t timer_config = {
         .clk_src = GPTIMER_CLK_SRC_DEFAULT,
@@ -59,7 +59,7 @@ esp_err_t alarm_init()
     gptimer_new_timer(&timer_config, &alarm_timer);
 
      gptimer_event_callbacks_t cbs = {
-        .on_alarm = alarm_timer_cb,
+        .on_alarm = pp_alarm_timer_cb,
     };
 
     gptimer_register_event_callbacks(alarm_timer, &cbs, NULL);
@@ -70,7 +70,7 @@ esp_err_t alarm_init()
     return ESP_OK;
 }
 
-uint8_t set_alarm_values(uint8_t *payload, uint16_t payload_len)
+uint8_t pp_set_alarm_values(uint8_t *payload, uint16_t payload_len)
 {
     if((payload_len < ALARM_MODE_PAYLOAD_SIZE_MIN || payload_len > ALARM_MODE_PAYLOAD_SIZE_MAX))
     {
@@ -216,9 +216,9 @@ uint8_t set_alarm_values(uint8_t *payload, uint16_t payload_len)
     return STATUS_OK;
 }
 
-esp_err_t get_alarm_from_file(uint64_t id, alarm_mode_args_t *alarm_p)
+esp_err_t pp_get_alarm_from_file(uint64_t id, alarm_mode_args_t *alarm_p)
 {
-    FILE* f = ObjectManager_open_file("r", id);
+    FILE* f = pp_object_manager_open_file("r", id);
 
     if(f == NULL)
     {
@@ -226,7 +226,7 @@ esp_err_t get_alarm_from_file(uint64_t id, alarm_mode_args_t *alarm_p)
     }
 
     fpos_t pos;
-    bool found = seekfor(f, "ALARM PROPERTIES\n", &pos);
+    bool found = pp_seekfor(f, "ALARM PROPERTIES\n", &pos);
 
     if(!found)
     {
@@ -304,17 +304,17 @@ esp_err_t get_alarm_from_file(uint64_t id, alarm_mode_args_t *alarm_p)
     return ESP_OK;
 }
 
-alarm_mode_args_t get_alarm_values()
+alarm_mode_args_t pp_get_alarm_values()
 {
     return alarm;
 }
 
-alarm_mode_args_t* get_alarm_pointer()
+alarm_mode_args_t* pp_get_alarm_pointer()
 {
     return &alarm;
 }
 
-uint8_t get_days_to_next_monthly(uint8_t year, uint8_t month)
+uint8_t pp_get_days_to_next_monthly(uint8_t year, uint8_t month)
 {
     switch(month)
     {
@@ -367,7 +367,7 @@ uint8_t get_days_to_next_monthly(uint8_t year, uint8_t month)
     return 0;
 }
 
-uint16_t get_days_to_next_yearly(uint8_t year)
+uint16_t pp_get_days_to_next_yearly(uint8_t year)
 {
     uint16_t next_year = year + 1;
     if ( ( next_year % 4 == 0 && next_year % 100 != 0 ) || ( next_year % 400 == 0 ) )
@@ -380,17 +380,17 @@ uint16_t get_days_to_next_yearly(uint8_t year)
     }
 }
 
-bool get_alarm_state()
+bool pp_get_alarm_state()
 {
     return next_alarm_enabled;
 }
 
-uint64_t get_current_active_alarm_id()
+uint64_t pp_get_current_active_alarm_id()
 {
     return next_alarm_id;
 }
 
-void disable_current_alarm()
+void pp_disable_current_alarm()
 {
     gptimer_stop(alarm_timer);
     gptimer_set_raw_count(alarm_timer, 0);
@@ -400,9 +400,9 @@ void disable_current_alarm()
     next_alarm_id = 0;
 }
 
-void set_timer_for_playing_alarm()
+void pp_set_timer_for_playing_alarm()
 {
-    disable_current_alarm();
+    pp_disable_current_alarm();
     gptimer_alarm_config_t alarm_config = {
         .alarm_count = 300000000,
         .reload_count = 0,
@@ -413,10 +413,10 @@ void set_timer_for_playing_alarm()
     gptimer_start(alarm_timer);
 }
 
-void set_next_alarm()
+void pp_set_next_alarm()
 {
     alarm_mode_args_t next_alarm;
-    object_id_list_t* object_p =  ObjectManager_list_first_elem();
+    object_id_list_t* object_p =  pp_object_manager_list_first_elem();
     esp_err_t ret;
 
     time_t now;
@@ -424,7 +424,7 @@ void set_next_alarm()
 
     time(&now);
     localtime_r(&now, &timeinfo);
-    disable_current_alarm();
+    pp_disable_current_alarm();
 
     if ( object_p == NULL )
     {
@@ -434,7 +434,7 @@ void set_next_alarm()
 
     while ( object_p )
     {
-        ret = get_alarm_from_file(object_p->id, &next_alarm);
+        ret = pp_get_alarm_from_file(object_p->id, &next_alarm);
 
         if (!ret && next_alarm.enable)
         {
@@ -542,7 +542,7 @@ void set_next_alarm()
 
                     if ( t < now )
                     {
-                        t = t + DAYS_TO_SEC(get_days_to_next_monthly(tm.tm_year, tm.tm_mon));
+                        t = t + DAYS_TO_SEC(pp_get_days_to_next_monthly(tm.tm_year, tm.tm_mon));
                     }
                     should_check = true;
 
@@ -566,7 +566,7 @@ void set_next_alarm()
 
                     if ( t < now )
                     {
-                        t = t + DAYS_TO_SEC(get_days_to_next_yearly(tm.tm_year));
+                        t = t + DAYS_TO_SEC(pp_get_days_to_next_yearly(tm.tm_year));
                     }
                     should_check = true;
 
@@ -624,7 +624,7 @@ void set_next_alarm()
     }
     else
     {
-        disable_current_alarm();
+        pp_disable_current_alarm();
         ESP_LOGI(TAG, "No enabled alarm to be set");
     }
 }

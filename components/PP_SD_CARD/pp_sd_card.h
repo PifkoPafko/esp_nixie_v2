@@ -19,22 +19,22 @@
 #include "esp_vfs_fat.h"
 
 /* Macros */
-#define SDCARD_TAG "SD CARD"
+#define SDCARD_TAG  "SD CARD"
 
-#define MOUNT_POINT "/sdcard"
-#define FILE_LIST_NAME MOUNT_POINT "/file_id_list.txt"
-#define ALARMS_PATH MOUNT_POINT "/alarms"
-#define RIGNTONES_PATH MOUNT_POINT "/ringtones"
-#define TEMP_FILE_PATH MOUNT_POINT "/temp"
+#define MOUNT_POINT                 "/sdcard"
+#define FILE_LIST_NAME MOUNT_POINT  "/file_id_list.txt"
+#define ALARMS_PATH MOUNT_POINT     "/alarms"
+#define RIGNTONES_PATH MOUNT_POINT  "/ringtones"
+#define TEMP_FILE_PATH MOUNT_POINT  "/temp"
 
 // #define FORMAT_SD
 
 /* Functions */
 
-/** @brief sd_card_init: Initializes sd card and fat file system on it.
+/** @brief pp_sd_card_init: Initializes sd card and fat file system on it.
  *
  * @return
  */
-void sd_card_init(void);
+void pp_sd_card_init(void);
 
 #endif

@@ -6,4 +6,4 @@
 #define WAV_FILE "/sdcard/ringtone0.wav" // wav file to play
 
 esp_err_t pp_wave_player_init();
-void set_play_alarm_flag(bool new_val);
+void pp_set_play_alarm_flag(bool new_val);

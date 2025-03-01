@@ -41,15 +41,15 @@ typedef struct
     uint8_t volume;
 }alarm_mode_args_t;
 
-esp_err_t alarm_init();
-uint8_t set_alarm_values(uint8_t *payload, uint16_t payload_len);
-alarm_mode_args_t get_alarm_values();
-alarm_mode_args_t* get_alarm_pointer();
-void set_next_alarm();
-void disable_current_alarm();
-uint64_t get_current_active_alarm_id();
-bool get_alarm_state();
-void set_timer_for_playing_alarm();
+esp_err_t pp_alarm_init();
+uint8_t pp_set_alarm_values(uint8_t *payload, uint16_t payload_len);
+alarm_mode_args_t pp_get_alarm_values();
+alarm_mode_args_t* pp_get_alarm_pointer();
+void pp_set_next_alarm();
+void pp_disable_current_alarm();
+uint64_t pp_get_current_active_alarm_id();
+bool pp_get_alarm_state();
+void pp_set_timer_for_playing_alarm();
 
 #define ALARM_SINGLE_MODE   0
 #define ALARM_WEEKLY_MODE   1

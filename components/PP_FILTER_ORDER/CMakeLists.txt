@@ -1,4 +1,4 @@
 set(COMPONENT_SRCDIRS ".")
 set(COMPONENT_ADD_INCLUDEDIRS ".")
-set(COMPONENT_REQUIRES ObjectTransferGattServer PP_RTC)
+set(COMPONENT_REQUIRES PP_OBJECT_MANAGER)
 register_component()

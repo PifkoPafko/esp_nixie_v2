@@ -140,10 +140,10 @@ typedef struct {
     uint8_t volume;
 } alarm_add_digits_t;
 
-void set_device_mode(device_mode_t mode);
-device_mode_t get_device_mode();
-void time_change_mode(button_action_t action_handler, bool start);
-void alarm_add_mode(button_action_t action_handler, bool start);
-void alarm_delete_mode(button_action_t action_handler);
+void pp_set_device_mode(device_mode_t mode);
+device_mode_t pp_get_device_mode();
+void pp_time_change_mode(button_action_t action_handler, bool start);
+void pp_alarm_add_mode(button_action_t action_handler, bool start);
+void pp_alarm_delete_mode(button_action_t action_handler);
 
 #endif

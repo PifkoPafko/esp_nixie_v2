@@ -1,6 +1,6 @@
 // to complete............
-#include "ObjectManagerIdList.h"
-#include "ObjectManager.h"
+#include "pp_object_manager_id_list.h"
+#include "pp_object_manager.h"
 
 #define MAX_ID_VAL 0xFFFFFFFFFFFF
 
@@ -10,7 +10,7 @@ static object_id_list_t *last_elem = NULL;
 static object_id_list_t *first_elem_sort = NULL;
 static object_id_list_t *last_elem_sort = NULL;
 
-void ObjectManager_sort_list_reinit()
+void pp_object_manager_sort_list_reinit()
 {
     object_id_list_t *object = first_elem_sort;
     object_id_list_t *object_next = NULL;
@@ -68,7 +68,7 @@ void ObjectManager_sort_list_reinit()
     // }
 }
 
-esp_err_t ObjectManager_list_delete_from_sort_list(object_id_list_t *object)
+esp_err_t pp_object_manager_list_delete_from_sort_list(object_id_list_t *object)
 {
     if(object->prev)
     {
@@ -92,7 +92,7 @@ esp_err_t ObjectManager_list_delete_from_sort_list(object_id_list_t *object)
     return ESP_OK;
 }
 
-object_id_list_t* ObjectManager_list_add(void)
+object_id_list_t* pp_object_manager_list_add(void)
 {
     object_id_list_t *elem = first_elem;
     object_id_list_t *elem_prev = NULL;
@@ -145,7 +145,7 @@ object_id_list_t* ObjectManager_list_add(void)
     return new_elem;
 }
 
-object_id_list_t* ObjectManager_list_add_by_id(uint64_t id)
+object_id_list_t* pp_object_manager_list_add_by_id(uint64_t id)
 {
     object_id_list_t *elem = first_elem;
     object_id_list_t *elem_prev = NULL;
@@ -196,7 +196,7 @@ object_id_list_t* ObjectManager_list_add_by_id(uint64_t id)
     return new_elem;
 }
 
-esp_err_t ObjectManager_list_delete_by_id(uint64_t id)
+esp_err_t pp_object_manager_list_delete_by_id(uint64_t id)
 {
     object_id_list_t *elem = first_elem;
     object_id_list_t *elem_prev = NULL;
@@ -232,7 +232,7 @@ esp_err_t ObjectManager_list_delete_by_id(uint64_t id)
             }
 
             free(elem);
-            ObjectManager_null_current_object();
+            pp_object_manager_null_current_object();
             break;
         }
         elem_prev = elem;
@@ -242,7 +242,7 @@ esp_err_t ObjectManager_list_delete_by_id(uint64_t id)
     return ESP_OK;
 }
 
-object_id_list_t* ObjectManager_list_search(bool sorted, uint64_t id)
+object_id_list_t* pp_object_manager_list_search(bool sorted, uint64_t id)
 {
     object_id_list_t *elem;
     if(sorted) elem = first_elem_sort;
@@ -260,22 +260,22 @@ object_id_list_t* ObjectManager_list_search(bool sorted, uint64_t id)
     return elem;
 }
 
-object_id_list_t* ObjectManager_list_first_elem()
+object_id_list_t* pp_object_manager_list_first_elem()
 {
     return first_elem;
 }
 
-object_id_list_t* ObjectManager_list_last_elem()
+object_id_list_t* pp_object_manager_list_last_elem()
 {
     return last_elem;
 }
 
-object_id_list_t* ObjectManager_sort_list_first_elem()
+object_id_list_t* pp_object_manager_sort_list_first_elem()
 {
     return first_elem_sort;
 }
 
-object_id_list_t* ObjectManager_sort_list_last_elem()
+object_id_list_t* pp_object_manager_sort_list_last_elem()
 {
     return last_elem_sort;
 }

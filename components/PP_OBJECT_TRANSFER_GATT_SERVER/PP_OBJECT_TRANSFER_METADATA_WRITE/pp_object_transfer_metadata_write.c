@@ -1,15 +1,15 @@
-#include "ObjectTransfer_metadata_write.h"
-#include "ObjectManager.h"
-#include "ObjectTransfer_attr_ids.h"
-#include "ObjectTransfer_defs.h"
-#include "ObjectManagerIdList.h"
-#include "FilterOrder.h"
+#include "pp_object_transfer_metadata_write.h"
+#include "pp_object_manager.h"
+#include "pp_object_transfer_attr_ids.h"
+#include "pp_object_transfer_defs.h"
+#include "pp_object_manager_id_list.h"
+#include "pp_filter_order.h"
 #include "esp_err.h"
 #include "esp_gatts_api.h"
 #include "esp_log.h"
 #include "esp_wifi.h"
-#include "wifi.h"
-#include "alarm.h"
+#include "pp_wifi.h"
+#include "pp_alarm.h"
 
 #include "stdlib.h"
 
@@ -19,55 +19,55 @@ static esp_gatt_if_t gatts_interface;
 uint16_t handle_wifi;
 uint16_t connection_id;
 
-static esp_err_t ObjectTransfer_write_name(esp_gatt_if_t gatts_if, esp_ble_gatts_cb_param_t *param, uint16_t *handle_table);
-static esp_err_t ObjectTransfer_write_properties(esp_gatt_if_t gatts_if, esp_ble_gatts_cb_param_t *param, uint16_t *handle_table);
-static esp_err_t ObjectTransfer_write_list_filter(esp_gatt_if_t gatts_if, esp_ble_gatts_cb_param_t *param, uint16_t *handle_table);
+static esp_err_t pp_object_transfer_write_name(esp_gatt_if_t gatts_if, esp_ble_gatts_cb_param_t *param, uint16_t *handle_table);
+static esp_err_t pp_object_transfer_write_properties(esp_gatt_if_t gatts_if, esp_ble_gatts_cb_param_t *param, uint16_t *handle_table);
+static esp_err_t pp_object_transfer_write_list_filter(esp_gatt_if_t gatts_if, esp_ble_gatts_cb_param_t *param, uint16_t *handle_table);
 
-static esp_err_t ObjectTransfer_write_OACP(esp_gatt_if_t gatts_if, esp_ble_gatts_cb_param_t *param, uint16_t *handle_table);
-static esp_err_t ObjectTransfer_write_OACP_CCC(esp_gatt_if_t gatts_if, esp_ble_gatts_cb_param_t *param, uint16_t *handle_table);
-static esp_err_t ObjectTransfer_write_OACP_Create(esp_gatt_if_t gatts_if, esp_ble_gatts_cb_param_t *param, uint16_t *handle_table);
-static esp_err_t ObjectTransfer_write_OACP_Delete(esp_gatt_if_t gatts_if, esp_ble_gatts_cb_param_t *param, uint16_t *handle_table);
-static esp_err_t ObjectTransfer_write_OACP_OP_NS(esp_gatt_if_t gatts_if, esp_ble_gatts_cb_param_t *param, uint16_t *handle_table);
+static esp_err_t pp_object_transfer_write_OACP(esp_gatt_if_t gatts_if, esp_ble_gatts_cb_param_t *param, uint16_t *handle_table);
+static esp_err_t pp_object_transfer_write_OACP_CCC(esp_gatt_if_t gatts_if, esp_ble_gatts_cb_param_t *param, uint16_t *handle_table);
+static esp_err_t pp_object_transfer_write_OACP_Create(esp_gatt_if_t gatts_if, esp_ble_gatts_cb_param_t *param, uint16_t *handle_table);
+static esp_err_t pp_object_transfer_write_OACP_Delete(esp_gatt_if_t gatts_if, esp_ble_gatts_cb_param_t *param, uint16_t *handle_table);
+static esp_err_t pp_object_transfer_write_OACP_OP_NS(esp_gatt_if_t gatts_if, esp_ble_gatts_cb_param_t *param, uint16_t *handle_table);
 
-static esp_err_t ObjectTransfer_write_OLCP(esp_gatt_if_t gatts_if, esp_ble_gatts_cb_param_t *param, uint16_t *handle_table);
-static esp_err_t ObjectTransfer_write_OLCP_CCC(esp_gatt_if_t gatts_if, esp_ble_gatts_cb_param_t *param, uint16_t *handle_table);
-static esp_err_t ObjectTransfer_write_OLCP_First(esp_gatt_if_t gatts_if, esp_ble_gatts_cb_param_t *param, uint16_t *handle_table);
-static esp_err_t ObjectTransfer_write_OLCP_Last(esp_gatt_if_t gatts_if, esp_ble_gatts_cb_param_t *param, uint16_t *handle_table);
-static esp_err_t ObjectTransfer_write_OLCP_Next(esp_gatt_if_t gatts_if, esp_ble_gatts_cb_param_t *param, uint16_t *handle_table);
-static esp_err_t ObjectTransfer_write_OLCP_Previous(esp_gatt_if_t gatts_if, esp_ble_gatts_cb_param_t *param, uint16_t *handle_table);
-static esp_err_t ObjectTransfer_write_OLCP_Last(esp_gatt_if_t gatts_if, esp_ble_gatts_cb_param_t *param, uint16_t *handle_table);
-static esp_err_t ObjectTransfer_write_OLCP_Goto(esp_gatt_if_t gatts_if, esp_ble_gatts_cb_param_t *param, uint16_t *handle_table);
-static esp_err_t ObjectTransfer_write_OLCP_Order(esp_gatt_if_t gatts_if, esp_ble_gatts_cb_param_t *param, uint16_t *handle_table);
-static esp_err_t ObjectTransfer_write_OLCP_Request_Num(esp_gatt_if_t gatts_if, esp_ble_gatts_cb_param_t *param, uint16_t *handle_table);
-static esp_err_t ObjectTransfer_write_OLCP_Clear_Marking(esp_gatt_if_t gatts_if, esp_ble_gatts_cb_param_t *param, uint16_t *handle_table);
-static esp_err_t ObjectTransfer_write_OLCP_OP_NS(esp_gatt_if_t gatts_if, esp_ble_gatts_cb_param_t *param, uint16_t *handle_table);
+static esp_err_t pp_object_transfer_write_OLCP(esp_gatt_if_t gatts_if, esp_ble_gatts_cb_param_t *param, uint16_t *handle_table);
+static esp_err_t pp_object_transfer_write_OLCP_CCC(esp_gatt_if_t gatts_if, esp_ble_gatts_cb_param_t *param, uint16_t *handle_table);
+static esp_err_t pp_object_transfer_write_OLCP_First(esp_gatt_if_t gatts_if, esp_ble_gatts_cb_param_t *param, uint16_t *handle_table);
+static esp_err_t pp_object_transfer_write_OLCP_Last(esp_gatt_if_t gatts_if, esp_ble_gatts_cb_param_t *param, uint16_t *handle_table);
+static esp_err_t pp_object_transfer_write_OLCP_Next(esp_gatt_if_t gatts_if, esp_ble_gatts_cb_param_t *param, uint16_t *handle_table);
+static esp_err_t pp_object_transfer_write_OLCP_Previous(esp_gatt_if_t gatts_if, esp_ble_gatts_cb_param_t *param, uint16_t *handle_table);
+static esp_err_t pp_object_transfer_write_OLCP_Last(esp_gatt_if_t gatts_if, esp_ble_gatts_cb_param_t *param, uint16_t *handle_table);
+static esp_err_t pp_object_transfer_write_OLCP_Goto(esp_gatt_if_t gatts_if, esp_ble_gatts_cb_param_t *param, uint16_t *handle_table);
+static esp_err_t pp_object_transfer_write_OLCP_Order(esp_gatt_if_t gatts_if, esp_ble_gatts_cb_param_t *param, uint16_t *handle_table);
+static esp_err_t pp_object_transfer_write_OLCP_Request_Num(esp_gatt_if_t gatts_if, esp_ble_gatts_cb_param_t *param, uint16_t *handle_table);
+static esp_err_t pp_object_transfer_write_OLCP_Clear_Marking(esp_gatt_if_t gatts_if, esp_ble_gatts_cb_param_t *param, uint16_t *handle_table);
+static esp_err_t pp_object_transfer_write_OLCP_OP_NS(esp_gatt_if_t gatts_if, esp_ble_gatts_cb_param_t *param, uint16_t *handle_table);
 
-static esp_err_t ObjectTransfer_write_Alarm_Action(esp_gatt_if_t gatts_if, esp_ble_gatts_cb_param_t *param, uint16_t *handle_table);
-// static esp_err_t ObjectTransfer_write_Ringtone_Action(esp_gatt_if_t gatts_if, esp_ble_gatts_cb_param_t *param, uint16_t *handle_table);
+static esp_err_t pp_object_transfer_write_Alarm_Action(esp_gatt_if_t gatts_if, esp_ble_gatts_cb_param_t *param, uint16_t *handle_table);
+// static esp_err_t pp_object_transfer_write_Ringtone_Action(esp_gatt_if_t gatts_if, esp_ble_gatts_cb_param_t *param, uint16_t *handle_table);
 
-static esp_err_t ObjectTransfer_write_wifi_action(esp_gatt_if_t gatts_if, esp_ble_gatts_cb_param_t *param, uint16_t *handle_table);
-static esp_err_t ObjectTransfer_write_wifi_CCC(esp_gatt_if_t gatts_if, esp_ble_gatts_cb_param_t *param, uint16_t *handle_table);
-static esp_err_t ObjectTransfer_write_wifi_search(esp_gatt_if_t gatts_if, esp_ble_gatts_cb_param_t *param, uint16_t *handle_table);
-static esp_err_t ObjectTransfer_write_wifi_connect(esp_gatt_if_t gatts_if, esp_ble_gatts_cb_param_t *param, uint16_t *handle_table);
+static esp_err_t pp_object_transfer_write_wifi_action(esp_gatt_if_t gatts_if, esp_ble_gatts_cb_param_t *param, uint16_t *handle_table);
+static esp_err_t pp_object_transfer_write_wifi_CCC(esp_gatt_if_t gatts_if, esp_ble_gatts_cb_param_t *param, uint16_t *handle_table);
+static esp_err_t pp_object_transfer_write_wifi_search(esp_gatt_if_t gatts_if, esp_ble_gatts_cb_param_t *param, uint16_t *handle_table);
+static esp_err_t pp_object_transfer_write_wifi_connect(esp_gatt_if_t gatts_if, esp_ble_gatts_cb_param_t *param, uint16_t *handle_table);
 
-esp_err_t ObjectTranfer_metadata_write_event(esp_gatt_if_t gatts_if, esp_ble_gatts_cb_param_t *param, uint16_t *handle_table)
+esp_err_t pp_object_transfer_metadata_write_event(esp_gatt_if_t gatts_if, esp_ble_gatts_cb_param_t *param, uint16_t *handle_table)
 {
-    if(param->write.handle == handle_table[OPT_IDX_CHAR_OBJECT_NAME_VAL]) ObjectTransfer_write_name(gatts_if, param, handle_table);
-    else if(param->write.handle == handle_table[OPT_IDX_CHAR_OBJECT_PROPERTIES_VAL]) ObjectTransfer_write_properties(gatts_if, param, handle_table);
-    else if(param->write.handle == handle_table[OPT_IDX_CHAR_OBJECT_OACP_VAL]) ObjectTransfer_write_OACP(gatts_if, param, handle_table);
-    else if(param->write.handle == handle_table[OPT_IDX_CHAR_OBJECT_OACP_IND_CFG]) ObjectTransfer_write_OACP_CCC(gatts_if, param, handle_table);
-    else if(param->write.handle == handle_table[OPT_IDX_CHAR_OBJECT_OLCP_VAL]) ObjectTransfer_write_OLCP(gatts_if, param, handle_table);
-    else if(param->write.handle == handle_table[OPT_IDX_CHAR_OBJECT_OLCP_IND_CFG]) ObjectTransfer_write_OLCP_CCC(gatts_if, param, handle_table);
-    else if(param->write.handle == handle_table[OPT_IDX_CHAR_OBJECT_LIST_FILTER_VAL]) ObjectTransfer_write_list_filter(gatts_if, param, handle_table);
-    else if(param->write.handle == handle_table[OPT_IDX_CHAR_OBJECT_ALARM_ACTION_VAL]) ObjectTransfer_write_Alarm_Action(gatts_if, param, handle_table);
-    // else if(param->write.handle == handle_table[OPT_IDX_CHAR_OBJECT_RINGTONE_ACTION_VAL]) ObjectTransfer_write_Ringtone_Action(gatts_if, param, handle_table);
-    else if(param->write.handle == handle_table[OPT_IDX_CHAR_OBJECT_WIFI_ACTION_VAL]) ObjectTransfer_write_wifi_action(gatts_if, param, handle_table);
-    else if(param->write.handle == handle_table[OPT_IDX_CHAR_OBJECT_WIFI_ACTION_CFG]) ObjectTransfer_write_wifi_CCC(gatts_if, param, handle_table);
+    if(param->write.handle == handle_table[OPT_IDX_CHAR_OBJECT_NAME_VAL]) pp_object_transfer_write_name(gatts_if, param, handle_table);
+    else if(param->write.handle == handle_table[OPT_IDX_CHAR_OBJECT_PROPERTIES_VAL]) pp_object_transfer_write_properties(gatts_if, param, handle_table);
+    else if(param->write.handle == handle_table[OPT_IDX_CHAR_OBJECT_OACP_VAL]) pp_object_transfer_write_OACP(gatts_if, param, handle_table);
+    else if(param->write.handle == handle_table[OPT_IDX_CHAR_OBJECT_OACP_IND_CFG]) pp_object_transfer_write_OACP_CCC(gatts_if, param, handle_table);
+    else if(param->write.handle == handle_table[OPT_IDX_CHAR_OBJECT_OLCP_VAL]) pp_object_transfer_write_OLCP(gatts_if, param, handle_table);
+    else if(param->write.handle == handle_table[OPT_IDX_CHAR_OBJECT_OLCP_IND_CFG]) pp_object_transfer_write_OLCP_CCC(gatts_if, param, handle_table);
+    else if(param->write.handle == handle_table[OPT_IDX_CHAR_OBJECT_LIST_FILTER_VAL]) pp_object_transfer_write_list_filter(gatts_if, param, handle_table);
+    else if(param->write.handle == handle_table[OPT_IDX_CHAR_OBJECT_ALARM_ACTION_VAL]) pp_object_transfer_write_Alarm_Action(gatts_if, param, handle_table);
+    // else if(param->write.handle == handle_table[OPT_IDX_CHAR_OBJECT_RINGTONE_ACTION_VAL]) pp_object_transfer_write_Ringtone_Action(gatts_if, param, handle_table);
+    else if(param->write.handle == handle_table[OPT_IDX_CHAR_OBJECT_WIFI_ACTION_VAL]) pp_object_transfer_write_wifi_action(gatts_if, param, handle_table);
+    else if(param->write.handle == handle_table[OPT_IDX_CHAR_OBJECT_WIFI_ACTION_CFG]) pp_object_transfer_write_wifi_CCC(gatts_if, param, handle_table);
 
     return ESP_OK;
 }
 
-static esp_err_t ObjectTransfer_write_name(esp_gatt_if_t gatts_if, esp_ble_gatts_cb_param_t *param, uint16_t *handle_table)
+static esp_err_t pp_object_transfer_write_name(esp_gatt_if_t gatts_if, esp_ble_gatts_cb_param_t *param, uint16_t *handle_table)
 {
     ESP_LOGI(TAG, "Object Name WRITE EVENT");
 
@@ -76,7 +76,7 @@ static esp_err_t ObjectTransfer_write_name(esp_gatt_if_t gatts_if, esp_ble_gatts
     esp_err_t ret;
 
     object_t *object;
-    object = ObjectManager_get_object();
+    object = pp_object_manager_get_object();
     if(object == NULL)
     {
         ESP_LOGE(TAG, "Object not selected");
@@ -122,12 +122,12 @@ static esp_err_t ObjectTransfer_write_name(esp_gatt_if_t gatts_if, esp_ble_gatts
         ret = esp_ble_gatts_send_response(gatts_if, param->write.conn_id, param->write.trans_id, STATUS_OK, &rsp);
         if(ret) return ret;
     }
-    ObjectManager_change_name_in_file();
+    pp_object_manager_change_name_in_file();
 
     return ESP_OK;
 }
 
-static esp_err_t ObjectTransfer_write_properties(esp_gatt_if_t gatts_if, esp_ble_gatts_cb_param_t *param, uint16_t *handle_table)
+static esp_err_t pp_object_transfer_write_properties(esp_gatt_if_t gatts_if, esp_ble_gatts_cb_param_t *param, uint16_t *handle_table)
 {
     ESP_LOGD(TAG, "Object Properties WRITE EVENT");
 
@@ -151,7 +151,7 @@ static esp_err_t ObjectTransfer_write_properties(esp_gatt_if_t gatts_if, esp_ble
     }
 
     object_t *object;
-    object = ObjectManager_get_object();
+    object = pp_object_manager_get_object();
     if(object == NULL && param->write.need_rsp)
     {
         ESP_LOGE(TAG, "Object not selected");
@@ -171,12 +171,12 @@ static esp_err_t ObjectTransfer_write_properties(esp_gatt_if_t gatts_if, esp_ble
         if(ret) return ret;
     }
 
-    ObjectManager_change_properties_in_file();
+    pp_object_manager_change_properties_in_file();
 
     return ESP_OK;
 }
 
-static esp_err_t ObjectTransfer_write_list_filter(esp_gatt_if_t gatts_if, esp_ble_gatts_cb_param_t *param, uint16_t *handle_table)
+static esp_err_t pp_object_transfer_write_list_filter(esp_gatt_if_t gatts_if, esp_ble_gatts_cb_param_t *param, uint16_t *handle_table)
 {
     ESP_LOGD(TAG, "Object Properties WRITE EVENT");
 
@@ -280,13 +280,13 @@ static esp_err_t ObjectTransfer_write_list_filter(esp_gatt_if_t gatts_if, esp_bl
             break;
     }
 
-    ListFilter_t *filter = FilterOrder_get_filter();
+    ListFilter_t *filter = pp_filter_order_get_filter();
     filter->type = param->write.value[0];
     memcpy(filter->parameter, &param->write.value[1], param->write.len-1);
     //if(filter->type >= 0x01 && filter->type <= 0x04) filter->parameter[param->write.len-1] = '\0';
     filter->par_length = param->write.len-1;
 
-    FilterOrder_make_list();
+    pp_filter_order_make_list();
 
     if(param->write.need_rsp)
     {
@@ -297,7 +297,7 @@ static esp_err_t ObjectTransfer_write_list_filter(esp_gatt_if_t gatts_if, esp_bl
     return ESP_OK;
 }
 
-static esp_err_t ObjectTransfer_write_OACP(esp_gatt_if_t gatts_if, esp_ble_gatts_cb_param_t *param, uint16_t *handle_table)
+static esp_err_t pp_object_transfer_write_OACP(esp_gatt_if_t gatts_if, esp_ble_gatts_cb_param_t *param, uint16_t *handle_table)
 {
     ESP_LOGD(TAG, "Object OACP WRITE EVENT");
 
@@ -316,42 +316,42 @@ static esp_err_t ObjectTransfer_write_OACP(esp_gatt_if_t gatts_if, esp_ble_gatts
     switch(param->write.value[0])
     {
         case OACP_OP_CODE_CREATE:
-            ObjectTransfer_write_OACP_Create(gatts_if, param, handle_table);
+            pp_object_transfer_write_OACP_Create(gatts_if, param, handle_table);
             break;
 
         case OACP_OP_CODE_DELETE:
-            ObjectTransfer_write_OACP_Delete(gatts_if, param, handle_table);
+            pp_object_transfer_write_OACP_Delete(gatts_if, param, handle_table);
             break;
 
         case OACP_OP_CODE_CALC_SUM:
-            ObjectTransfer_write_OACP_OP_NS(gatts_if, param, handle_table);
+            pp_object_transfer_write_OACP_OP_NS(gatts_if, param, handle_table);
             break;
 
         case OACP_OP_CODE_EXECUTE:
-            ObjectTransfer_write_OACP_OP_NS(gatts_if, param, handle_table);
+            pp_object_transfer_write_OACP_OP_NS(gatts_if, param, handle_table);
             break;
 
         case OACP_OP_CODE_READ:
-            ObjectTransfer_write_OACP_OP_NS(gatts_if, param, handle_table);
+            pp_object_transfer_write_OACP_OP_NS(gatts_if, param, handle_table);
             break;
 
         case OACP_OP_CODE_WRITE:
-            ObjectTransfer_write_OACP_OP_NS(gatts_if, param, handle_table);
+            pp_object_transfer_write_OACP_OP_NS(gatts_if, param, handle_table);
             break;
 
         case OACP_OP_CODE_ABORT:
-            ObjectTransfer_write_OACP_OP_NS(gatts_if, param, handle_table);
+            pp_object_transfer_write_OACP_OP_NS(gatts_if, param, handle_table);
             break;
 
         default:
-            ObjectTransfer_write_OACP_OP_NS(gatts_if, param, handle_table);
+            pp_object_transfer_write_OACP_OP_NS(gatts_if, param, handle_table);
             break;
     }
 
     return ESP_OK;
 }
 
-static esp_err_t ObjectTransfer_write_OACP_Create(esp_gatt_if_t gatts_if, esp_ble_gatts_cb_param_t *param, uint16_t *handle_table)
+static esp_err_t pp_object_transfer_write_OACP_Create(esp_gatt_if_t gatts_if, esp_ble_gatts_cb_param_t *param, uint16_t *handle_table)
 {
     esp_gatt_rsp_t rsp;
     rsp.handle = handle_table[OPT_IDX_CHAR_OBJECT_OACP_VAL];
@@ -392,7 +392,7 @@ static esp_err_t ObjectTransfer_write_OACP_Create(esp_gatt_if_t gatts_if, esp_bl
     }
 
     oacp_op_code_result_t result;
-    ObjectManager_create_object(size, type, &result);
+    pp_object_manager_create_object(size, type, &result);
     indicate_data_len = 2;
     indicate_data[1] = result;
     esp_ble_gatts_send_indicate(gatts_if, param->write.conn_id, handle_table[OPT_IDX_CHAR_OBJECT_OACP_VAL], indicate_data_len, indicate_data, true);
@@ -400,7 +400,7 @@ static esp_err_t ObjectTransfer_write_OACP_Create(esp_gatt_if_t gatts_if, esp_bl
     return ESP_OK;
 }
 
-static esp_err_t ObjectTransfer_write_OACP_Delete(esp_gatt_if_t gatts_if, esp_ble_gatts_cb_param_t *param, uint16_t *handle_table)
+static esp_err_t pp_object_transfer_write_OACP_Delete(esp_gatt_if_t gatts_if, esp_ble_gatts_cb_param_t *param, uint16_t *handle_table)
 {
     esp_gatt_rsp_t rsp;
     rsp.handle = handle_table[OPT_IDX_CHAR_OBJECT_OACP_VAL];
@@ -429,16 +429,16 @@ static esp_err_t ObjectTransfer_write_OACP_Delete(esp_gatt_if_t gatts_if, esp_bl
 
 
     oacp_op_code_result_t result;
-    ObjectManager_delete_object(&result);
+    pp_object_manager_delete_object(&result);
     indicate_data_len = 2;
     indicate_data[1] = result;
     esp_ble_gatts_send_indicate(gatts_if, param->write.conn_id, handle_table[OPT_IDX_CHAR_OBJECT_OACP_VAL], indicate_data_len, indicate_data, true);
-    set_next_alarm();
+    pp_set_next_alarm();
 
     return ESP_OK;
 }
 
-static esp_err_t ObjectTransfer_write_OACP_OP_NS(esp_gatt_if_t gatts_if, esp_ble_gatts_cb_param_t *param, uint16_t *handle_table)
+static esp_err_t pp_object_transfer_write_OACP_OP_NS(esp_gatt_if_t gatts_if, esp_ble_gatts_cb_param_t *param, uint16_t *handle_table)
 {
     esp_gatt_rsp_t rsp;
     rsp.handle = handle_table[OPT_IDX_CHAR_OBJECT_OACP_VAL];
@@ -457,7 +457,7 @@ static esp_err_t ObjectTransfer_write_OACP_OP_NS(esp_gatt_if_t gatts_if, esp_ble
     return ESP_OK;
 }
 
-static esp_err_t ObjectTransfer_write_OACP_CCC(esp_gatt_if_t gatts_if, esp_ble_gatts_cb_param_t *param, uint16_t *handle_table)
+static esp_err_t pp_object_transfer_write_OACP_CCC(esp_gatt_if_t gatts_if, esp_ble_gatts_cb_param_t *param, uint16_t *handle_table)
 {
     if(param->write.len == 2){
         uint16_t descr_value = param->write.value[1]<<8 | param->write.value[0];
@@ -478,7 +478,7 @@ static esp_err_t ObjectTransfer_write_OACP_CCC(esp_gatt_if_t gatts_if, esp_ble_g
     return ESP_OK;
 }
 
-static esp_err_t ObjectTransfer_write_OLCP(esp_gatt_if_t gatts_if, esp_ble_gatts_cb_param_t *param, uint16_t *handle_table)
+static esp_err_t pp_object_transfer_write_OLCP(esp_gatt_if_t gatts_if, esp_ble_gatts_cb_param_t *param, uint16_t *handle_table)
 {
     ESP_LOGD(TAG, "Object OLCP WRITE EVENT");
 
@@ -497,46 +497,46 @@ static esp_err_t ObjectTransfer_write_OLCP(esp_gatt_if_t gatts_if, esp_ble_gatts
     switch(param->write.value[0])
     {
         case OLCP_OP_CODE_FIRST:
-            ObjectTransfer_write_OLCP_First(gatts_if, param, handle_table);
+            pp_object_transfer_write_OLCP_First(gatts_if, param, handle_table);
             break;
 
         case OLCP_OP_CODE_LAST:
-            ObjectTransfer_write_OLCP_Last(gatts_if, param, handle_table);
+            pp_object_transfer_write_OLCP_Last(gatts_if, param, handle_table);
             break;
 
         case OLCP_OP_CODE_PREVIOUS:
-            ObjectTransfer_write_OLCP_Previous(gatts_if, param, handle_table);
+            pp_object_transfer_write_OLCP_Previous(gatts_if, param, handle_table);
             break;
 
         case OLCP_OP_CODE_NEXT:
-            ObjectTransfer_write_OLCP_Next(gatts_if, param, handle_table);
+            pp_object_transfer_write_OLCP_Next(gatts_if, param, handle_table);
             break;
 
         case OLCP_OP_CODE_GOTO:
-            ObjectTransfer_write_OLCP_Goto(gatts_if, param, handle_table);
+            pp_object_transfer_write_OLCP_Goto(gatts_if, param, handle_table);
             break;
 
         case OLCP_OP_CODE_ORDER:
-            ObjectTransfer_write_OLCP_Order(gatts_if, param, handle_table);
+            pp_object_transfer_write_OLCP_Order(gatts_if, param, handle_table);
             break;
 
         case OLCP_OP_CODE_REQ_NUM_OF_OBJ:
-            ObjectTransfer_write_OLCP_Request_Num(gatts_if, param, handle_table);
+            pp_object_transfer_write_OLCP_Request_Num(gatts_if, param, handle_table);
             break;
 
         case OLCP_OP_CODE_CLEAR_MARING:
-            ObjectTransfer_write_OLCP_Clear_Marking(gatts_if, param, handle_table);
+            pp_object_transfer_write_OLCP_Clear_Marking(gatts_if, param, handle_table);
             break;
 
         default:
-            ObjectTransfer_write_OLCP_OP_NS(gatts_if, param, handle_table);
+            pp_object_transfer_write_OLCP_OP_NS(gatts_if, param, handle_table);
             break;
     }
 
     return ESP_OK;
 }
 
-static esp_err_t ObjectTransfer_write_OLCP_First(esp_gatt_if_t gatts_if, esp_ble_gatts_cb_param_t *param, uint16_t *handle_table)
+static esp_err_t pp_object_transfer_write_OLCP_First(esp_gatt_if_t gatts_if, esp_ble_gatts_cb_param_t *param, uint16_t *handle_table)
 {
     esp_gatt_rsp_t rsp;
     rsp.handle = handle_table[OPT_IDX_CHAR_OBJECT_OLCP_VAL];
@@ -561,7 +561,7 @@ static esp_err_t ObjectTransfer_write_OLCP_First(esp_gatt_if_t gatts_if, esp_ble
     if(status != STATUS_OK) return ESP_OK;
 
     olcp_op_code_result_t result;
-    ObjectManager_first_object(&result);
+    pp_object_manager_first_object(&result);
     indicate_data_len = 2;
     indicate_data[1] = result;
     esp_ble_gatts_send_indicate(gatts_if, param->write.conn_id, handle_table[OPT_IDX_CHAR_OBJECT_OLCP_VAL], indicate_data_len, indicate_data, true);
@@ -569,7 +569,7 @@ static esp_err_t ObjectTransfer_write_OLCP_First(esp_gatt_if_t gatts_if, esp_ble
     return ESP_OK;
 }
 
-static esp_err_t ObjectTransfer_write_OLCP_Last(esp_gatt_if_t gatts_if, esp_ble_gatts_cb_param_t *param, uint16_t *handle_table)
+static esp_err_t pp_object_transfer_write_OLCP_Last(esp_gatt_if_t gatts_if, esp_ble_gatts_cb_param_t *param, uint16_t *handle_table)
 {
     esp_gatt_rsp_t rsp;
     rsp.handle = handle_table[OPT_IDX_CHAR_OBJECT_OLCP_VAL];
@@ -594,7 +594,7 @@ static esp_err_t ObjectTransfer_write_OLCP_Last(esp_gatt_if_t gatts_if, esp_ble_
     if(status != STATUS_OK) return ESP_OK;
 
     olcp_op_code_result_t result;
-    ObjectManager_last_object(&result);
+    pp_object_manager_last_object(&result);
     indicate_data_len = 2;
     indicate_data[1] = result;
     esp_ble_gatts_send_indicate(gatts_if, param->write.conn_id, handle_table[OPT_IDX_CHAR_OBJECT_OLCP_VAL], indicate_data_len, indicate_data, true);
@@ -602,7 +602,7 @@ static esp_err_t ObjectTransfer_write_OLCP_Last(esp_gatt_if_t gatts_if, esp_ble_
     return ESP_OK;
 }
 
-static esp_err_t ObjectTransfer_write_OLCP_Previous(esp_gatt_if_t gatts_if, esp_ble_gatts_cb_param_t *param, uint16_t *handle_table)
+static esp_err_t pp_object_transfer_write_OLCP_Previous(esp_gatt_if_t gatts_if, esp_ble_gatts_cb_param_t *param, uint16_t *handle_table)
 {
     esp_gatt_rsp_t rsp;
     rsp.handle = handle_table[OPT_IDX_CHAR_OBJECT_OLCP_VAL];
@@ -627,7 +627,7 @@ static esp_err_t ObjectTransfer_write_OLCP_Previous(esp_gatt_if_t gatts_if, esp_
     if(status != STATUS_OK) return ESP_OK;
 
     olcp_op_code_result_t result;
-    ObjectManager_previous_object(&result);
+    pp_object_manager_previous_object(&result);
     indicate_data_len = 2;
     indicate_data[1] = result;
     esp_ble_gatts_send_indicate(gatts_if, param->write.conn_id, handle_table[OPT_IDX_CHAR_OBJECT_OLCP_VAL], indicate_data_len, indicate_data, true);
@@ -635,7 +635,7 @@ static esp_err_t ObjectTransfer_write_OLCP_Previous(esp_gatt_if_t gatts_if, esp_
     return ESP_OK;
 }
 
-static esp_err_t ObjectTransfer_write_OLCP_Next(esp_gatt_if_t gatts_if, esp_ble_gatts_cb_param_t *param, uint16_t *handle_table)
+static esp_err_t pp_object_transfer_write_OLCP_Next(esp_gatt_if_t gatts_if, esp_ble_gatts_cb_param_t *param, uint16_t *handle_table)
 {
     esp_gatt_rsp_t rsp;
     rsp.handle = handle_table[OPT_IDX_CHAR_OBJECT_OLCP_VAL];
@@ -660,7 +660,7 @@ static esp_err_t ObjectTransfer_write_OLCP_Next(esp_gatt_if_t gatts_if, esp_ble_
     if(status != STATUS_OK) return ESP_OK;
 
     olcp_op_code_result_t result;
-    ObjectManager_next_object(&result);
+    pp_object_manager_next_object(&result);
     indicate_data_len = 2;
     indicate_data[1] = result;
     esp_ble_gatts_send_indicate(gatts_if, param->write.conn_id, handle_table[OPT_IDX_CHAR_OBJECT_OLCP_VAL], indicate_data_len, indicate_data, true);
@@ -668,7 +668,7 @@ static esp_err_t ObjectTransfer_write_OLCP_Next(esp_gatt_if_t gatts_if, esp_ble_
     return ESP_OK;
 }
 
-static esp_err_t ObjectTransfer_write_OLCP_Goto(esp_gatt_if_t gatts_if, esp_ble_gatts_cb_param_t *param, uint16_t *handle_table)
+static esp_err_t pp_object_transfer_write_OLCP_Goto(esp_gatt_if_t gatts_if, esp_ble_gatts_cb_param_t *param, uint16_t *handle_table)
 {
     esp_gatt_rsp_t rsp;
     rsp.handle = handle_table[OPT_IDX_CHAR_OBJECT_OLCP_VAL];
@@ -705,7 +705,7 @@ static esp_err_t ObjectTransfer_write_OLCP_Goto(esp_gatt_if_t gatts_if, esp_ble_
 
     ESP_LOGI(TAG, "Searching for ID: %llx", id);
 
-    ObjectManager_goto_object(id, &result);
+    pp_object_manager_goto_object(id, &result);
     indicate_data_len = 2;
     indicate_data[1] = result;
     esp_ble_gatts_send_indicate(gatts_if, param->write.conn_id, handle_table[OPT_IDX_CHAR_OBJECT_OLCP_VAL], indicate_data_len, indicate_data, true);
@@ -713,7 +713,7 @@ static esp_err_t ObjectTransfer_write_OLCP_Goto(esp_gatt_if_t gatts_if, esp_ble_
     return ESP_OK;
 }
 
-static esp_err_t ObjectTransfer_write_OLCP_Order(esp_gatt_if_t gatts_if, esp_ble_gatts_cb_param_t *param, uint16_t *handle_table)
+static esp_err_t pp_object_transfer_write_OLCP_Order(esp_gatt_if_t gatts_if, esp_ble_gatts_cb_param_t *param, uint16_t *handle_table)
 {
     esp_gatt_rsp_t rsp;
     rsp.handle = handle_table[OPT_IDX_CHAR_OBJECT_OLCP_VAL];
@@ -740,7 +740,7 @@ static esp_err_t ObjectTransfer_write_OLCP_Order(esp_gatt_if_t gatts_if, esp_ble
     olcp_op_code_result_t result = OLCP_RES_SUCCESS;
 
     uint8_t type = param->write.value[1];
-    object_id_list_t *object = ObjectManager_list_first_elem();
+    object_id_list_t *object = pp_object_manager_list_first_elem();
 
     if(type == 0 || (type >= 0x04 && type <= 0x10) || type >= 0x14)
     {
@@ -754,10 +754,10 @@ static esp_err_t ObjectTransfer_write_OLCP_Order(esp_gatt_if_t gatts_if, esp_ble
 
     if(result == OLCP_RES_SUCCESS)
     {
-        uint8_t *order = FilterOrder_get_order();
+        uint8_t *order = pp_filter_order_get_order();
         *order = type;
         ESP_LOGI(TAG, "Order type: %x", *order);
-        FilterOrder_make_list();
+        pp_filter_order_make_list();
     }
 
     indicate_data_len = 2;
@@ -767,7 +767,7 @@ static esp_err_t ObjectTransfer_write_OLCP_Order(esp_gatt_if_t gatts_if, esp_ble
     return ESP_OK;
 }
 
-static esp_err_t ObjectTransfer_write_OLCP_Request_Num(esp_gatt_if_t gatts_if, esp_ble_gatts_cb_param_t *param, uint16_t *handle_table)
+static esp_err_t pp_object_transfer_write_OLCP_Request_Num(esp_gatt_if_t gatts_if, esp_ble_gatts_cb_param_t *param, uint16_t *handle_table)
 {
     esp_gatt_rsp_t rsp;
     rsp.handle = handle_table[OPT_IDX_CHAR_OBJECT_OLCP_VAL];
@@ -795,7 +795,7 @@ static esp_err_t ObjectTransfer_write_OLCP_Request_Num(esp_gatt_if_t gatts_if, e
 
     olcp_op_code_result_t result;
     uint32_t number_of_objects = 0;
-    ObjectManager_request_number(&number_of_objects, &result);
+    pp_object_manager_request_number(&number_of_objects, &result);
     indicate_data[2] = result;
 
     if(result == OLCP_RES_SUCCESS)
@@ -813,7 +813,7 @@ static esp_err_t ObjectTransfer_write_OLCP_Request_Num(esp_gatt_if_t gatts_if, e
     return ESP_OK;
 }
 
-static esp_err_t ObjectTransfer_write_OLCP_Clear_Marking(esp_gatt_if_t gatts_if, esp_ble_gatts_cb_param_t *param, uint16_t *handle_table)
+static esp_err_t pp_object_transfer_write_OLCP_Clear_Marking(esp_gatt_if_t gatts_if, esp_ble_gatts_cb_param_t *param, uint16_t *handle_table)
 {
     esp_gatt_rsp_t rsp;
     rsp.handle = handle_table[OPT_IDX_CHAR_OBJECT_OLCP_VAL];
@@ -838,7 +838,7 @@ static esp_err_t ObjectTransfer_write_OLCP_Clear_Marking(esp_gatt_if_t gatts_if,
     if(status != STATUS_OK) return ESP_OK;
 
     olcp_op_code_result_t result;
-    ObjectManager_clear_marking(&result);
+    pp_object_manager_clear_marking(&result);
     indicate_data_len = 2;
     indicate_data[1] = result;
     esp_ble_gatts_send_indicate(gatts_if, param->write.conn_id, handle_table[OPT_IDX_CHAR_OBJECT_OLCP_VAL], indicate_data_len, indicate_data, true);
@@ -846,7 +846,7 @@ static esp_err_t ObjectTransfer_write_OLCP_Clear_Marking(esp_gatt_if_t gatts_if,
     return ESP_OK;
 }
 
-static esp_err_t ObjectTransfer_write_OLCP_OP_NS(esp_gatt_if_t gatts_if, esp_ble_gatts_cb_param_t *param, uint16_t *handle_table)
+static esp_err_t pp_object_transfer_write_OLCP_OP_NS(esp_gatt_if_t gatts_if, esp_ble_gatts_cb_param_t *param, uint16_t *handle_table)
 {
     esp_gatt_rsp_t rsp;
     rsp.handle = handle_table[OPT_IDX_CHAR_OBJECT_OLCP_VAL];
@@ -864,7 +864,7 @@ static esp_err_t ObjectTransfer_write_OLCP_OP_NS(esp_gatt_if_t gatts_if, esp_ble
     return ESP_OK;
 }
 
-static esp_err_t ObjectTransfer_write_OLCP_CCC(esp_gatt_if_t gatts_if, esp_ble_gatts_cb_param_t *param, uint16_t *handle_table)
+static esp_err_t pp_object_transfer_write_OLCP_CCC(esp_gatt_if_t gatts_if, esp_ble_gatts_cb_param_t *param, uint16_t *handle_table)
 {
     if(param->write.len == 2){
         uint16_t descr_value = param->write.value[1]<<8 | param->write.value[0];
@@ -885,7 +885,7 @@ static esp_err_t ObjectTransfer_write_OLCP_CCC(esp_gatt_if_t gatts_if, esp_ble_g
     return ESP_OK;
 }
 
-static esp_err_t ObjectTransfer_write_Alarm_Action(esp_gatt_if_t gatts_if, esp_ble_gatts_cb_param_t *param, uint16_t *handle_table)
+static esp_err_t pp_object_transfer_write_Alarm_Action(esp_gatt_if_t gatts_if, esp_ble_gatts_cb_param_t *param, uint16_t *handle_table)
 {
     ESP_LOGI(TAG, "Object Alarm Action WRITE EVENT, payload length: %u", param->write.len);
 
@@ -894,7 +894,7 @@ static esp_err_t ObjectTransfer_write_Alarm_Action(esp_gatt_if_t gatts_if, esp_b
     esp_err_t ret;
 
     object_t *object;
-    object = ObjectManager_get_object();
+    object = pp_object_manager_get_object();
     if(object == NULL && param->write.need_rsp)
     {
         ESP_LOGE(TAG, "Object not selected");
@@ -902,15 +902,15 @@ static esp_err_t ObjectTransfer_write_Alarm_Action(esp_gatt_if_t gatts_if, esp_b
         return ESP_OK;
     }
 
-    if(ObjectManager_check_type(object->type.uuid.uuid128) != ALARM_TYPE)
+    if(pp_object_manager_check_type(object->type.uuid.uuid128) != ALARM_TYPE)
     {
         ESP_LOGI(TAG, "Wrong type - required: Alarm");
         ret = esp_ble_gatts_send_response(gatts_if, param->write.conn_id, param->write.trans_id, WRITE_REQUEST_REJECTED, &rsp);
         return ESP_OK;
     }
 
-    uint8_t result = set_alarm_values(param->write.value, param->write.len);
-    alarm_mode_args_t alarm = get_alarm_values();
+    uint8_t result = pp_set_alarm_values(param->write.value, param->write.len);
+    alarm_mode_args_t alarm = pp_get_alarm_values();
 
     if(result && param->write.need_rsp)
     {
@@ -921,7 +921,7 @@ static esp_err_t ObjectTransfer_write_Alarm_Action(esp_gatt_if_t gatts_if, esp_b
 
     object->set_custom_object = true;
 
-    ObjectManager_change_alarm_data_in_file(alarm);
+    pp_object_manager_change_alarm_data_in_file(alarm);
 
     ESP_LOGI("WRITE", "Object alarm data changed");
 
@@ -931,12 +931,12 @@ static esp_err_t ObjectTransfer_write_Alarm_Action(esp_gatt_if_t gatts_if, esp_b
         if(ret) return ret;
     }
 
-    set_next_alarm();
+    pp_set_next_alarm();
 
     return ESP_OK;
 }
 
-// static esp_err_t ObjectTransfer_write_Ringtone_Action(esp_gatt_if_t gatts_if, esp_ble_gatts_cb_param_t *param, uint16_t *handle_table)
+// static esp_err_t pp_object_transfer_write_Ringtone_Action(esp_gatt_if_t gatts_if, esp_ble_gatts_cb_param_t *param, uint16_t *handle_table)
 // {
 //     ESP_LOGD(TAG, "Object Ringtone Action WRITE EVENT");
 
@@ -953,7 +953,7 @@ static esp_err_t ObjectTransfer_write_Alarm_Action(esp_gatt_if_t gatts_if, esp_b
 //     return ESP_OK;
 // }
 
-static esp_err_t ObjectTransfer_write_wifi_action(esp_gatt_if_t gatts_if, esp_ble_gatts_cb_param_t *param, uint16_t *handle_table)
+static esp_err_t pp_object_transfer_write_wifi_action(esp_gatt_if_t gatts_if, esp_ble_gatts_cb_param_t *param, uint16_t *handle_table)
 {
     ESP_LOGD(TAG, "Object Wifi Action WRITE EVENT");
 
@@ -972,11 +972,11 @@ static esp_err_t ObjectTransfer_write_wifi_action(esp_gatt_if_t gatts_if, esp_bl
     switch(param->write.value[0])
     {
         case 0x01:
-            ObjectTransfer_write_wifi_search(gatts_if, param, handle_table);
+            pp_object_transfer_write_wifi_search(gatts_if, param, handle_table);
             break;
         
         case 0x02:
-            ObjectTransfer_write_wifi_connect(gatts_if, param, handle_table);
+            pp_object_transfer_write_wifi_connect(gatts_if, param, handle_table);
             break;
 
         default:
@@ -988,7 +988,7 @@ static esp_err_t ObjectTransfer_write_wifi_action(esp_gatt_if_t gatts_if, esp_bl
     return ESP_OK;
 }
 
-static esp_err_t ObjectTransfer_write_wifi_CCC(esp_gatt_if_t gatts_if, esp_ble_gatts_cb_param_t *param, uint16_t *handle_table)
+static esp_err_t pp_object_transfer_write_wifi_CCC(esp_gatt_if_t gatts_if, esp_ble_gatts_cb_param_t *param, uint16_t *handle_table)
 {
     if(param->write.len == 2){
         uint16_t descr_value = param->write.value[1]<<8 | param->write.value[0];
@@ -1009,7 +1009,7 @@ static esp_err_t ObjectTransfer_write_wifi_CCC(esp_gatt_if_t gatts_if, esp_ble_g
     return ESP_OK;
 }
 
-static esp_err_t ObjectTransfer_write_wifi_search(esp_gatt_if_t gatts_if, esp_ble_gatts_cb_param_t *param, uint16_t *handle_table)
+static esp_err_t pp_object_transfer_write_wifi_search(esp_gatt_if_t gatts_if, esp_ble_gatts_cb_param_t *param, uint16_t *handle_table)
 {
     ESP_LOGI(TAG, "Object Wifi Action Search Action");
 
@@ -1036,12 +1036,12 @@ static esp_err_t ObjectTransfer_write_wifi_search(esp_gatt_if_t gatts_if, esp_bl
 
     if(status != STATUS_OK) return ESP_OK;
 
-    start_search_task();
+    pp_start_search_task();
 
     return ESP_OK;
 }
 
-static esp_err_t ObjectTransfer_write_wifi_connect(esp_gatt_if_t gatts_if, esp_ble_gatts_cb_param_t *param, uint16_t *handle_table)
+static esp_err_t pp_object_transfer_write_wifi_connect(esp_gatt_if_t gatts_if, esp_ble_gatts_cb_param_t *param, uint16_t *handle_table)
 {
     ESP_LOGI(TAG, "Object Wifi Action Connect Action");
 
@@ -1093,12 +1093,12 @@ static esp_err_t ObjectTransfer_write_wifi_connect(esp_gatt_if_t gatts_if, esp_b
 
     if(status != STATUS_OK) return ESP_OK;
 
-    connect_wifi(ssid, ssid_len, password, password_len);
+    pp_connect_wifi(ssid, ssid_len, password, password_len);
 
     return ESP_OK;
 }
 
-esp_err_t ObjectTransfer_send_found_wifi_ind(wifi_ap_record_t *wifi_record)
+esp_err_t pp_object_transfer_send_found_wifi_ind(wifi_ap_record_t *wifi_record)
 {
     uint8_t indicate_data[37];
     indicate_data[0] = 1;
@@ -1122,7 +1122,7 @@ esp_err_t ObjectTransfer_send_found_wifi_ind(wifi_ap_record_t *wifi_record)
     return ret;
 }
 
-esp_err_t ObjectTransfer_send_simple_wifi_ind(uint8_t val)
+esp_err_t pp_object_transfer_send_simple_wifi_ind(uint8_t val)
 {
     esp_err_t ret = esp_ble_gatts_send_indicate(gatts_interface, connection_id, handle_wifi, 1, &val, true);
     return ret;

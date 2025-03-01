@@ -12,105 +12,90 @@
  ****************************************************************************/
 
  /* Headers */
-#include <string.h>
-#include "esp_log.h"
-
-#include <sys/time.h>
-#include <time.h>
-#include "pp_i2c.h"
 #include "pp_rtc.h"
-#include "alarm.h"
-
-#include "freertos/FreeRTOS.h"
-#include "freertos/task.h"
-#include "freertos/semphr.h"
-
-/* Variables */
-static const char *TAG = "nixie-display";
 
 /* Functions */
 
-void pp_rtc_set_time(uint8_t seconds, uint8_t minutes, uint8_t hours, uint8_t dayOfWeek, uint8_t dayOfMonth, uint8_t month, uint8_t year)
-{
-    uint8_t outData[7];
-    outData[0] = ((seconds / 10) << 4 ) | (seconds % 10);
-    outData[1] = ((minutes / 10) << 4 ) | (minutes % 10);
-    outData[2] = ((hours / 10) << 4 ) | (hours % 10);
-    outData[3] = dayOfWeek;
-    outData[4] = ((dayOfMonth / 10) << 4 ) | (dayOfMonth % 10);
-    outData[5] = ((month / 10) << 4 ) | (month % 10);
-    outData[6] = ((year / 10) << 4 ) | (year % 10);
-
-    i2c_dev_write_reg(DS_RTC_ADDR, DS_RTC_START_REG_ADDR, &outData, 7);
-}
-
-void pp_rtc_read_time(struct timeval *tv)
-{
-    uint8_t recData[7];
-    memset(recData, 0, 7);
-
-    i2c_dev_read_reg(DS_RTC_ADDR, DS_RTC_START_REG_ADDR, recData, 7);
-
-    uint8_t seconds = DS_SECONDS_TO_DEC(recData[0]);
-    uint8_t minutes = DS_MINUTES_TO_DEC(recData[1]);
-    uint8_t hours = DS_HOURS_24_TO_DEC(recData[2]);
-    uint8_t day = DS_MONTH_DAY_TO_DEC(recData[4]);
-    uint8_t month = DS_MONTH_TO_DEC(recData[5]);
-    uint16_t year = DS_YEAR_TO_DEC(recData[6]);
-
-    ESP_LOGI(TAG, "Time: %02d:%02d:%02d", hours, minutes, seconds);
-    ESP_LOGI(TAG, "Date: %02d:%02d:%04d", day, month, year + 2000);
-
-    if (tv)
-    {
-        // time_t rawtime;
-        // struct tm timeinfo;
-        // time(&rawtime);
-        // localtime_r(&timeinfo, &rawtime);
-
-        struct tm tm;
-
-        tm.tm_year 	= year + 100;
-        tm.tm_mon 	= month - 1;
-        tm.tm_mday 	= day;
-        tm.tm_hour 	= hours;
-        tm.tm_min 	= minutes;
-        tm.tm_sec 	= seconds;
-        tm.tm_isdst = -1;
-
-        time_t t = mktime(&tm);
-        tv->tv_sec = t;
-    }
-}
-
-void pp_rtc_main(void* arg)
+/** @brief pp_rtc_main: RTC Task main function
+ *
+ * @param[in]   arg (void*) Reserved
+ * @return
+ */
+static void pp_rtc_main(void* arg)
 {
     while (true)
     {
+        struct tm timeinfo;
+        pp_rtc_read_time(&timeinfo);
+        time_t t = mktime(&timeinfo);
         struct timeval now;
-        pp_rtc_read_time(&now);
+        now.tv_sec = t;
         settimeofday(&now, NULL);
-        ESP_LOGI(TAG, "Time updated from RTC");
+        ESP_LOGI(RTC_TAG, "Time updated from RTC");
 
-        set_next_alarm();
+        pp_set_next_alarm();
         vTaskDelay(3600000 / portTICK_PERIOD_MS);
     }
 }
 
-esp_err_t pp_rtc_init()
+/** @brief pp_rtc_init: Initializes RTC
+ *
+ * @return
+ */
+void pp_rtc_init()
 {
+    ESP_LOGI(RTC_TAG, "Initializing RTC");
     setenv("TZ", CENTRAL_EUROPEAN_TIME_ZONE, 1);
 	tzset();
     
     uint8_t regVal = 0x1C;
-    i2c_dev_write_reg(DS_RTC_ADDR, DS_RTC_CONTROL_REG_ADDR, &regVal, 1);
-
-    BaseType_t res = xTaskCreate(pp_rtc_main, "RTC", 3072, NULL, 2, NULL);
-    if(res != pdPASS)
-    {
-        ESP_LOGE(TAG, "Creating rtc task failed");
-        return res;
-    }
-
-    return ESP_OK;
+    pp_i2c_dev_write_reg(DS_RTC_ADDR, DS_RTC_CONTROL_REG_ADDR, &regVal, 1);
+    ESP_ERROR_CHECK(xTaskCreate(pp_rtc_main, "RTC", 3072, NULL, 2, NULL));
 }
+
+/** @brief pp_rtc_set_time: Sets time to RTC
+ *
+ * @param[in]   timeinfo    (struct tm*) Pointer to the tm structure
+ * @return
+ */
+void pp_rtc_set_time(struct tm *timeinfo)
+{
+    if(timeinfo == NULL) ESP_ERROR_CHECK(ESP_ERR_INVALID_ARG);
+
+    uint8_t outData[7];
+    outData[0] = ((timeinfo->tm_sec / 10) << 4 ) | (timeinfo->tm_sec % 10);
+    outData[1] = ((timeinfo->tm_min / 10) << 4 ) | (timeinfo->tm_min % 10);
+    outData[2] = ((timeinfo->tm_hour / 10) << 4 ) | (timeinfo->tm_hour % 10);
+    outData[3] = timeinfo->tm_wday + 1;
+    outData[4] = ((timeinfo->tm_mday / 10) << 4 ) | (timeinfo->tm_mday % 10);
+    outData[5] = (((timeinfo->tm_mon + 1) / 10) << 4 ) | ((timeinfo->tm_mon + 1) % 10);
+    outData[6] = (((timeinfo->tm_year - 100) / 10) << 4 ) | ((timeinfo->tm_year - 100) % 10);
+
+    pp_i2c_dev_write_reg(DS_RTC_ADDR, DS_RTC_START_REG_ADDR, &outData, 7);
+}
+
+/** @brief pp_rtc_read_time: Reads time from RTC
+ *
+ * @param[out]   timeinfo    (struct tm*) Pointer to the tm structure
+ * @return
+ */
+void pp_rtc_read_time(struct tm *timeinfo)
+{
+    if(timeinfo == NULL) ESP_ERROR_CHECK(ESP_ERR_INVALID_ARG);
+
+    uint8_t recData[7];
+    memset(recData, 0, 7);
+    pp_i2c_dev_read_reg(DS_RTC_ADDR, DS_RTC_START_REG_ADDR, recData, 7);
+
+    timeinfo->tm_sec = DS_SECONDS_TO_TM(recData[0]);
+    timeinfo->tm_min = DS_MINUTES_TO_TM(recData[1]);
+    timeinfo->tm_hour = DS_HOURS_24_TO_TM(recData[2]);
+    timeinfo->tm_mday = DS_MONTH_DAY_TO_TM(recData[4]);
+    timeinfo->tm_mon = DS_MONTH_TO_TM(recData[5]);
+    timeinfo->tm_year = DS_YEAR_TO_TM(recData[6]);
+    timeinfo->tm_isdst = -1;
+
+    ESP_LOGI(RTC_TAG, "Time: %02d:%02d:%02d", timeinfo->tm_hour, timeinfo->tm_min, timeinfo->tm_sec);
+    ESP_LOGI(RTC_TAG, "Date: %02d:%02d:%04d", timeinfo->tm_mday, timeinfo->tm_mon + 1, timeinfo->tm_year + 1900);
+}
+
