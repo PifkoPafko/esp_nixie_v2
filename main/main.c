@@ -27,6 +27,7 @@
 #include "pp_wave_player.h"
 
 #include "gpio.h"
+#include "sdcard.h"
 
 #include "esp_bt.h"
 #include "esp_gap_ble_api.h"
@@ -34,9 +35,6 @@
 #include "esp_gatt_common_api.h"
 #include "esp_bt_defs.h"
 #include "esp_bt_main.h"
-#include "esp_vfs_fat.h"
-#include "sdmmc_cmd.h"
-#include "driver/sdmmc_host.h"
 #include "driver/gpio.h"
 #include "driver/gptimer.h"
 #include <sys/time.h>
@@ -137,48 +135,6 @@ static esp_err_t bt_init()
      */
 
     return ESP_OK;
-}
-
-static esp_err_t sd_cad_init()
-{
-    esp_vfs_fat_sdmmc_mount_config_t mount_config = {
-        .format_if_mount_failed = false,
-        .max_files = 5,
-        .allocation_unit_size = 16 * 1024
-    };
-
-    sdmmc_card_t *card;
-    const char mount_point[] = MOUNT_POINT;
-    sdmmc_host_t host = SDMMC_HOST_DEFAULT();
-    host.max_freq_khz = 10000;          // TODO: Change in future to higher value
-    sdmmc_slot_config_t slot_config = SDMMC_SLOT_CONFIG_DEFAULT();
-
-    slot_config.width = 4;
-    slot_config.cmd = 16;
-    slot_config.clk = 15;
-    slot_config.d0 = 17;
-    slot_config.d1 = 5;
-    slot_config.d2 = 6;
-    slot_config.d3 = 7;
-    slot_config.cd = 4;
-    slot_config.flags |= SDMMC_SLOT_FLAG_INTERNAL_PULLUP;
-
-    ESP_LOGI(MAIN_TAG, "Mounting filesystem");
-    esp_err_t ret = esp_vfs_fat_sdmmc_mount(mount_point, &host, &slot_config, &mount_config, &card);
-
-    // ret = esp_vfs_fat_sdcard_format(mount_point, card);     //TODO remember to delete this
-
-    if (ret != ESP_OK) {
-        if (ret == ESP_FAIL) {
-            ESP_LOGE(MAIN_TAG, "Failed to mount filesystem.");
-        } else {
-            ESP_LOGE(MAIN_TAG, "Failed to initialize the card (%s).", esp_err_to_name(ret));
-        }
-        return ret;
-    }
-    ESP_LOGI(MAIN_TAG, "Filesystem mounted");
-
-    return ret;
 }
 
 static esp_err_t wifi_init()
@@ -2028,17 +1984,11 @@ static esp_err_t button_init()
 void app_main(void)
 {
     // INITS
-    leds_init();
-
-    ESP_LOGI(MAIN_TAG, "Initializing sd card");
-    esp_err_t ret = sd_cad_init();
-    if (ret) {
-        ESP_LOGE(MAIN_TAG, "sd card initialize failed, err: %x", ret);
-        return;
-    }
+    gpio_init();
+    sd_card_init();
 
     ESP_LOGI(MAIN_TAG, "Initializing NVS");
-    ret = nvs_flash_init();
+    esp_err_t ret = nvs_flash_init();
     if (ret == ESP_ERR_NVS_NO_FREE_PAGES || ret == ESP_ERR_NVS_NEW_VERSION_FOUND) {
         ESP_ERROR_CHECK(nvs_flash_erase());
         ret = nvs_flash_init();

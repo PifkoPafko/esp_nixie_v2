@@ -17,14 +17,15 @@
 /****************************************************************************/
 /* Functions */
 
-/** @brief Initializes and sets gpio configuration for OE line, red, green and blue leds.
+/** @brief gpio_init: Initializes and sets gpio configuration for OE line, red, green and blue leds.
  *
  * @param[in]  param1_name  N/A
  * @param[out]  param2_name  N/A
  * @return N/A
  */
-void leds_init(void)
+void gpio_init(void)
 {
+    ESP_LOGI(GPIO_TAG, "Initializing gpio");
     gpio_config_t io_conf = {};
     io_conf.intr_type = GPIO_INTR_DISABLE;
     io_conf.mode = GPIO_MODE_OUTPUT;

@@ -11,28 +11,25 @@
  *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.                   *
  ****************************************************************************/
 
-#ifndef __GPIO_H__
-#define __GPIO_H__
+#ifndef __SD_CARD_H__
+#define __SD_CARD_H__
 
 /* Headers */
-#include "esp_log.h"
-#include "driver/gpio.h"
+#include "driver/sdmmc_host.h"
+#include "esp_vfs_fat.h"
 
 /* Macros */
-#define GPIO_TAG "GPIO"
+#define SDCARD_TAG "SD CARD"
 
-#define GPIO_OUTPUT_OE          GPIO_NUM_3
-#define GPIO_OUTPUT_RED         GPIO_NUM_47
-#define GPIO_OUTPUT_BLUE        GPIO_NUM_21
-#define GPIO_OUTPUT_GREEN       GPIO_NUM_48
-#define GPIO_OUTPUT_PIN_SEL     ((1ULL<<GPIO_OUTPUT_OE) | (1ULL<<GPIO_OUTPUT_RED) | (1ULL<<GPIO_OUTPUT_BLUE) | (1ULL<<GPIO_OUTPUT_GREEN))
+#define MOUNT_POINT "/sdcard"
+#define FILE_LIST_NAME MOUNT_POINT "/file_id_list.txt"
+#define ALARMS_PATH MOUNT_POINT "/alarms"
+#define RIGNTONES_PATH MOUNT_POINT "/ringtones"
+#define TEMP_FILE_PATH MOUNT_POINT "/temp"
 
-#define GPIO_INPUT_IO_0     GPIO_NUM_12
-#define GPIO_INPUT_IO_1     GPIO_NUM_13
-#define GPIO_INPUT_IO_2     GPIO_NUM_14
-#define GPIO_INPUT_PIN_SEL  ((1ULL<<GPIO_INPUT_IO_0) | (1ULL<<GPIO_INPUT_IO_1) | (1ULL<<GPIO_INPUT_IO_2))
+// #define FORMAT_SD
 
 /* Functions */
-void gpio_init(void);
+void sd_card_init(void);
 
 #endif

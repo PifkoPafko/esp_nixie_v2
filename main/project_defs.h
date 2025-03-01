@@ -7,13 +7,6 @@
 #include <time.h>
 #include "driver/gpio.h"
 
-#define MOUNT_POINT "/sdcard"
-#define FILE_LIST_NAME MOUNT_POINT "/file_id_list.txt"
-#define ALARMS_PATH MOUNT_POINT "/alarms"
-#define RIGNTONES_PATH MOUNT_POINT "/ringtones"
-
-#define TEMP_FILE_PATH MOUNT_POINT "/temp"
-
 // #define FILE_PATH_FROM_ID(name) MOUNT_POINT "/" name
 
 #define ALARM_FILE_TYPE ".txt"
