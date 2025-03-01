@@ -1,5 +1,5 @@
 /****************************************************************************
- * Copyright (C) 2012 by Matteo Franchin                                    *
+ * Copyright (C) 2025 by Paweł Smarkucki                                    *
  *                                                                          *
  *   This file is part of NIXIE B16.                                        *
  *                                                                          *
@@ -14,14 +14,11 @@
 /* Headers */
 #include "pp_gpio.h"
 
-/****************************************************************************/
 /* Functions */
 
 /** @brief gpio_init: Initializes and sets gpio configuration for OE line, red, green and blue leds.
  *
- * @param[in]  param1_name  N/A
- * @param[out]  param2_name  N/A
- * @return N/A
+ * @return
  */
 void gpio_init(void)
 {

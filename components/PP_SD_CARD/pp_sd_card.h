@@ -1,5 +1,5 @@
 /****************************************************************************
- * Copyright (C) 2012 by Matteo Franchin                                    *
+ * Copyright (C) 2025 by Paweł Smarkucki                                    *
  *                                                                          *
  *   This file is part of NIXIE B16.                                        *
  *                                                                          *
@@ -30,6 +30,11 @@
 // #define FORMAT_SD
 
 /* Functions */
+
+/** @brief sd_card_init: Initializes sd card and fat file system on it.
+ *
+ * @return
+ */
 void sd_card_init(void);
 
 #endif

@@ -1,5 +1,5 @@
 /****************************************************************************
- * Copyright (C) 2012 by Matteo Franchin                                    *
+ * Copyright (C) 2025 by Paweł Smarkucki                                    *
  *                                                                          *
  *   This file is part of NIXIE B16.                                        *
  *                                                                          *
@@ -14,14 +14,11 @@
 /* Headers */
 #include "pp_sd_card.h"
 
-/****************************************************************************/
 /* Functions */
 
 /** @brief sd_card_init: Initializes sd card and fat file system on it.
  *
- * @param[in]  param1_name  N/A
- * @param[out]  param2_name  N/A
- * @return N/A
+ * @return
  */
 void sd_card_init(void)
 {

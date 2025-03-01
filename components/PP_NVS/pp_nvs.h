@@ -1,5 +1,5 @@
 /****************************************************************************
- * Copyright (C) 2012 by Matteo Franchin                                    *
+ * Copyright (C) 2025 by Paweł Smarkucki                                    *
  *                                                                          *
  *   This file is part of NIXIE B16.                                        *
  *                                                                          *
@@ -22,6 +22,11 @@
 #define NVS_TAG "NVS"
 
 /* Functions */
+
+/** @brief nvs_init: Initializes nvs flash memory.
+ *
+ * @return
+ */
 void nvs_init(void);
 
 #endif

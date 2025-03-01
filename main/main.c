@@ -1,34 +1,18 @@
-/*
-   This example code is in the Public Domain (or CC0 licensed, at your option.)
-
-   Unless required by applicable law or agreed to in writing, this
-   software is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR
-   CONDITIONS OF ANY KIND, either express or implied.
-*/
-
 /****************************************************************************
-*
-* This demo showcases creating a GATT database using a predefined attribute table.
-* It acts as a GATT server and can send adv data, be connected by client.
-* Run the gatt_client demo, the client demo will automatically connect to the gatt_server_service_table demo.
-* Client demo will enable GATT server's notify after connection. The two devices will then exchange
-* data.
-*
-****************************************************************************/
+ * Copyright (C) 2025 by Paweł Smarkucki                                    *
+ *                                                                          *
+ *   This file is part of NIXIE B16.                                        *
+ *                                                                          *
+ *   NIXIE B16 is free software: you can redistribute it, modify it,        *
+ *   sell it and do whatever you want under no terms or conditions.         *
+ *                                                                          *
+ *   NIXIE B16 is distributed in the hope that it will be useful,           *
+ *   but WITHOUT ANY WARRANTY; without even the implied warranty of         *
+ *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.                   *
+ ****************************************************************************/
+
 #include "freertos/FreeRTOS.h"
 #include "freertos/timers.h"
-
-#include <inttypes.h>
-#include "esp_log.h"
-#include "ObjectTransfer_gatt_server.h"
-#include "ObjectManager.h"
-#include "project_defs.h"
-#include "pp_wave_player.h"
-
-#include "pp_gpio.h"
-#include "pp_sd_card.h"
-#include "pp_nvs.h"
-
 #include "esp_bt.h"
 #include "esp_gap_ble_api.h"
 #include "esp_gatts_api.h"
@@ -39,11 +23,19 @@
 #include "driver/gptimer.h"
 #include <sys/time.h>
 #include <time.h>
-
+#include <inttypes.h>
+#include "esp_log.h"
 #include "esp_wifi.h"
-#include "wifi.h"
 
-#include "mk_i2c.h"
+#include "ObjectTransfer_gatt_server.h"
+#include "ObjectManager.h"
+#include "project_defs.h"
+#include "pp_wave_player.h"
+#include "pp_gpio.h"
+#include "pp_sd_card.h"
+#include "pp_nvs.h"
+#include "wifi.h"
+#include "pp_i2c.h"
 #include "pp_rtc.h"
 #include "pp_nixie_display.h"
 
@@ -1987,14 +1979,9 @@ void app_main(void)
     gpio_init();
     sd_card_init();
     nvs_init();
+    i2c_init();
 
-    esp_err_t ret = i2c_init(I2C_MASTER_NUM, GPIO_NUM_18, GPIO_NUM_8, 100);
-    if (ret) {
-        ESP_LOGE(MAIN_TAG, "i2c init failed, err: %x", ret);
-        return;
-    }
-
-    ret = pp_rtc_init();
+    esp_err_t ret = pp_rtc_init();
     if (ret) {
         ESP_LOGE(MAIN_TAG, "rtc init failed, err: %x", ret);
         return;

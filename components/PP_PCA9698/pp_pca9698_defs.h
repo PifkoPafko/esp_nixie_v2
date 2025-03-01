@@ -1,7 +1,3 @@
-#define I2C_MASTER_NUM  0
-#define I2C_PORT_0      0
-#define I2C_PORT_1      1
-
 /* SLAVE ADDRESSES*/
 typedef enum{
     SLAVE_ADDR_0 =          0x20,

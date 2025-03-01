@@ -1,7 +1,7 @@
 #include <string.h>
 
 #include "project_defs.h"
-#include "mk_i2c.h"
+#include "pp_i2c.h"
 #include "pp_pca9698.h"
 #include "pp_nixie_display.h"
 #include "pp_wave_player.h"
@@ -166,7 +166,7 @@ void pp_nixie_display_main(void* arg)
                         {
                             memset(i2c_msg, 0, 5);
                             pp_nixie_display_generate_i2c_msg(expander, i2c_msg);
-                            pca_write_all_reg(I2C_MASTER_NUM, EXPANDER_ADDRESS[expander], OP0_ADDR, i2c_msg);
+                            pca_write_all_reg(EXPANDER_ADDRESS[expander], OP0_ADDR, i2c_msg);
                         }
 
                         vTaskDelay(100 / portTICK_PERIOD_MS);
@@ -184,7 +184,7 @@ void pp_nixie_display_main(void* arg)
                     {
                         memset(i2c_msg, 0, 5);
                         pp_nixie_display_generate_i2c_msg(expander, i2c_msg);
-                        pca_write_all_reg(I2C_MASTER_NUM, EXPANDER_ADDRESS[expander], OP0_ADDR, i2c_msg);
+                        pca_write_all_reg(EXPANDER_ADDRESS[expander], OP0_ADDR, i2c_msg);
                     }
 
                     vTaskDelay(100 / portTICK_PERIOD_MS);
@@ -201,7 +201,7 @@ void pp_nixie_display_main(void* arg)
                     {
                         memset(i2c_msg, 0, 5);
                         pp_nixie_display_generate_i2c_msg(expander, i2c_msg);
-                        pca_write_all_reg(I2C_MASTER_NUM, EXPANDER_ADDRESS[expander], OP0_ADDR, i2c_msg);
+                        pca_write_all_reg(EXPANDER_ADDRESS[expander], OP0_ADDR, i2c_msg);
                     }
 
                     vTaskDelay(200 / portTICK_PERIOD_MS);
@@ -215,7 +215,7 @@ void pp_nixie_display_main(void* arg)
                     {
                         memset(i2c_msg, 0, 5);
                         pp_nixie_display_generate_i2c_msg(expander, i2c_msg);
-                        pca_write_all_reg(I2C_MASTER_NUM, EXPANDER_ADDRESS[expander], OP0_ADDR, i2c_msg);
+                        pca_write_all_reg(EXPANDER_ADDRESS[expander], OP0_ADDR, i2c_msg);
                     }
                     
                     vTaskDelay(pdMS_TO_TICKS(10));
@@ -272,7 +272,7 @@ void pp_nixie_display_main(void* arg)
                 {
                     memset(i2c_msg, 0, 5);
                     pp_nixie_display_generate_i2c_msg(expander, i2c_msg);
-                    pca_write_all_reg(I2C_MASTER_NUM, EXPANDER_ADDRESS[expander], OP0_ADDR, i2c_msg);
+                    pca_write_all_reg(EXPANDER_ADDRESS[expander], OP0_ADDR, i2c_msg);
                 }
 
                 vTaskDelay(pdMS_TO_TICKS(30));
@@ -385,7 +385,7 @@ void pp_nixie_display_main(void* arg)
                 {
                     memset(i2c_msg, 0, 5);
                     pp_nixie_display_generate_i2c_msg(expander, i2c_msg);
-                    pca_write_all_reg(I2C_MASTER_NUM, EXPANDER_ADDRESS[expander], OP0_ADDR, i2c_msg);
+                    pca_write_all_reg(EXPANDER_ADDRESS[expander], OP0_ADDR, i2c_msg);
                 }
 
                 vTaskDelay(pdMS_TO_TICKS(30));
@@ -487,7 +487,7 @@ void pp_nixie_display_main(void* arg)
                 {
                     memset(i2c_msg, 0, 5);
                     pp_nixie_display_generate_i2c_msg(expander, i2c_msg);
-                    pca_write_all_reg(I2C_MASTER_NUM, EXPANDER_ADDRESS[expander], OP0_ADDR, i2c_msg);
+                    pca_write_all_reg(EXPANDER_ADDRESS[expander], OP0_ADDR, i2c_msg);
                 }
 
                 vTaskDelay(pdMS_TO_TICKS(30));
@@ -519,7 +519,7 @@ void pp_nixie_display_main(void* arg)
                     {
                         memset(i2c_msg, 0, 5);
                         pp_nixie_display_generate_i2c_msg(expander, i2c_msg);
-                        pca_write_all_reg(I2C_MASTER_NUM, EXPANDER_ADDRESS[expander], OP0_ADDR, i2c_msg);
+                        pca_write_all_reg(EXPANDER_ADDRESS[expander], OP0_ADDR, i2c_msg);
                     }
 
                     vTaskDelay(pdMS_TO_TICKS(100));
@@ -547,7 +547,7 @@ void pp_nixie_display_main(void* arg)
                         {
                             memset(i2c_msg, 0, 5);
                             pp_nixie_display_generate_i2c_msg(expander, i2c_msg);
-                            pca_write_all_reg(I2C_MASTER_NUM, EXPANDER_ADDRESS[expander], OP0_ADDR, i2c_msg);
+                            pca_write_all_reg(EXPANDER_ADDRESS[expander], OP0_ADDR, i2c_msg);
                         }
 
                         vTaskDelay(pdMS_TO_TICKS(70));
@@ -574,7 +574,7 @@ void pp_nixie_display_main(void* arg)
                         {
                             memset(i2c_msg, 0, 5);
                             pp_nixie_display_generate_i2c_msg(expander, i2c_msg);
-                            pca_write_all_reg(I2C_MASTER_NUM, EXPANDER_ADDRESS[expander], OP0_ADDR, i2c_msg);
+                            pca_write_all_reg(EXPANDER_ADDRESS[expander], OP0_ADDR, i2c_msg);
                         }
 
                         vTaskDelay(pdMS_TO_TICKS(70));
@@ -605,7 +605,7 @@ void pp_nixie_display_main(void* arg)
                 {
                     memset(i2c_msg, 0, 5);
                     pp_nixie_display_generate_i2c_msg(expander, i2c_msg);
-                    pca_write_all_reg(I2C_MASTER_NUM, EXPANDER_ADDRESS[expander], OP0_ADDR, i2c_msg);
+                    pca_write_all_reg(EXPANDER_ADDRESS[expander], OP0_ADDR, i2c_msg);
                 }
                 
                 vTaskDelay(pdMS_TO_TICKS(500));
@@ -619,12 +619,12 @@ esp_err_t pp_nixie_diplay_init()
 {
     uint8_t conf_output_mask[5];
     memset(conf_output_mask, 0, 5);
-    ESP_ERROR_CHECK(pca_write_all_reg(I2C_MASTER_NUM, SLAVE_ADDR_0, IOC0_ADDR, conf_output_mask));
-    ESP_ERROR_CHECK(pca_write_all_reg(I2C_MASTER_NUM, SLAVE_ADDR_1, IOC0_ADDR, conf_output_mask));
-    ESP_ERROR_CHECK(pca_write_all_reg(I2C_MASTER_NUM, SLAVE_ADDR_2, IOC0_ADDR, conf_output_mask));
-    ESP_ERROR_CHECK(pca_write_all_reg(I2C_MASTER_NUM, SLAVE_ADDR_3, IOC0_ADDR, conf_output_mask));
-    ESP_ERROR_CHECK(pca_write_all_reg(I2C_MASTER_NUM, SLAVE_ADDR_4, IOC0_ADDR, conf_output_mask));
-    ESP_ERROR_CHECK(pca_write_all_reg(I2C_MASTER_NUM, SLAVE_ADDR_5, IOC0_ADDR, conf_output_mask));
+    pca_write_all_reg(SLAVE_ADDR_0, IOC0_ADDR, conf_output_mask);
+    pca_write_all_reg(SLAVE_ADDR_1, IOC0_ADDR, conf_output_mask);
+    pca_write_all_reg(SLAVE_ADDR_2, IOC0_ADDR, conf_output_mask);
+    pca_write_all_reg(SLAVE_ADDR_3, IOC0_ADDR, conf_output_mask);
+    pca_write_all_reg(SLAVE_ADDR_4, IOC0_ADDR, conf_output_mask);
+    pca_write_all_reg(SLAVE_ADDR_5, IOC0_ADDR, conf_output_mask);
 
     BaseType_t res = xTaskCreate(pp_nixie_display_main, "NIXIE DISPLAY", 4096, NULL, 1, NULL);
     if(res != pdPASS)

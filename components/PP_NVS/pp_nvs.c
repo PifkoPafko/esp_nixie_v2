@@ -1,5 +1,5 @@
 /****************************************************************************
- * Copyright (C) 2012 by Matteo Franchin                                    *
+ * Copyright (C) 2025 by Paweł Smarkucki                                    *
  *                                                                          *
  *   This file is part of NIXIE B16.                                        *
  *                                                                          *
@@ -14,14 +14,11 @@
 /* Headers */
 #include "pp_nvs.h"
 
-/****************************************************************************/
 /* Functions */
 
 /** @brief nvs_init: Initializes nvs flash memory.
  *
- * @param[in]  param1_name  N/A
- * @param[out]  param2_name  N/A
- * @return N/A
+ * @return
  */
 void nvs_init(void)
 {

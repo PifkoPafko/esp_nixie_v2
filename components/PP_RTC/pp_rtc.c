@@ -1,9 +1,23 @@
+/****************************************************************************
+ * Copyright (C) 2025 by Paweł Smarkucki                                    *
+ *                                                                          *
+ *   This file is part of NIXIE B16.                                        *
+ *                                                                          *
+ *   NIXIE B16 is free software: you can redistribute it, modify it,        *
+ *   sell it and do whatever you want under no terms or conditions.         *
+ *                                                                          *
+ *   NIXIE B16 is distributed in the hope that it will be useful,           *
+ *   but WITHOUT ANY WARRANTY; without even the implied warranty of         *
+ *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.                   *
+ ****************************************************************************/
+
+ /* Headers */
 #include <string.h>
 #include "esp_log.h"
 
 #include <sys/time.h>
 #include <time.h>
-#include "mk_i2c.h"
+#include "pp_i2c.h"
 #include "pp_rtc.h"
 #include "alarm.h"
 
@@ -11,9 +25,12 @@
 #include "freertos/task.h"
 #include "freertos/semphr.h"
 
+/* Variables */
 static const char *TAG = "nixie-display";
 
-esp_err_t pp_rtc_set_time(uint8_t seconds, uint8_t minutes, uint8_t hours, uint8_t dayOfWeek, uint8_t dayOfMonth, uint8_t month, uint8_t year)
+/* Functions */
+
+void pp_rtc_set_time(uint8_t seconds, uint8_t minutes, uint8_t hours, uint8_t dayOfWeek, uint8_t dayOfMonth, uint8_t month, uint8_t year)
 {
     uint8_t outData[7];
     outData[0] = ((seconds / 10) << 4 ) | (seconds % 10);
@@ -24,18 +41,15 @@ esp_err_t pp_rtc_set_time(uint8_t seconds, uint8_t minutes, uint8_t hours, uint8
     outData[5] = ((month / 10) << 4 ) | (month % 10);
     outData[6] = ((year / 10) << 4 ) | (year % 10);
 
-    esp_err_t res = i2c_dev_write_reg(I2C_MASTER_NUM, DS_RTC_ADDR, DS_RTC_START_REG_ADDR, &outData, 7);
-    ESP_ERROR_CHECK(res);
-    return res;
+    i2c_dev_write_reg(DS_RTC_ADDR, DS_RTC_START_REG_ADDR, &outData, 7);
 }
 
-esp_err_t pp_rtc_read_time(struct timeval *tv)
+void pp_rtc_read_time(struct timeval *tv)
 {
     uint8_t recData[7];
     memset(recData, 0, 7);
 
-    esp_err_t res = i2c_dev_read_reg(I2C_MASTER_NUM, DS_RTC_ADDR, DS_RTC_START_REG_ADDR, recData, 7);
-    ESP_ERROR_CHECK(res);
+    i2c_dev_read_reg(DS_RTC_ADDR, DS_RTC_START_REG_ADDR, recData, 7);
 
     uint8_t seconds = DS_SECONDS_TO_DEC(recData[0]);
     uint8_t minutes = DS_MINUTES_TO_DEC(recData[1]);
@@ -67,8 +81,6 @@ esp_err_t pp_rtc_read_time(struct timeval *tv)
         time_t t = mktime(&tm);
         tv->tv_sec = t;
     }
-    
-    return res;
 }
 
 void pp_rtc_main(void* arg)
@@ -91,7 +103,7 @@ esp_err_t pp_rtc_init()
 	tzset();
     
     uint8_t regVal = 0x1C;
-    ESP_ERROR_CHECK(i2c_dev_write_reg(I2C_MASTER_NUM, DS_RTC_ADDR, DS_RTC_CONTROL_REG_ADDR, &regVal, 1));
+    i2c_dev_write_reg(DS_RTC_ADDR, DS_RTC_CONTROL_REG_ADDR, &regVal, 1);
 
     BaseType_t res = xTaskCreate(pp_rtc_main, "RTC", 3072, NULL, 2, NULL);
     if(res != pdPASS)
