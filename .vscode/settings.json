@@ -91,7 +91,10 @@
     "gpio.h": "c",
     "esp_vfs_fat.h": "c",
     "sdcard.h": "c",
-    "sdmmc_cmd.h": "c"
+    "sdmmc_cmd.h": "c",
+    "nvs.h": "c",
+    "nvs_pp.h": "c",
+    "pp_sd_card.h": "c"
   },
   "idf.flashType": "UART",
   "idf.portWin": "COM5",

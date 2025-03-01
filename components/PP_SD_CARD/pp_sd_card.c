@@ -12,7 +12,7 @@
  ****************************************************************************/
 
 /* Headers */
-#include "sdcard.h"
+#include "pp_sd_card.h"
 
 /****************************************************************************/
 /* Functions */
@@ -26,7 +26,8 @@
 void sd_card_init(void)
 {
     ESP_LOGI(SDCARD_TAG, "Initializing sd card");
-    esp_vfs_fat_sdmmc_mount_config_t mount_config = {
+    esp_vfs_fat_sdmmc_mount_config_t mount_config = 
+    {
         .format_if_mount_failed = false,
         .max_files = 5,
         .allocation_unit_size = 16 * 1024

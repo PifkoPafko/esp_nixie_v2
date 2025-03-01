@@ -20,14 +20,14 @@
 
 #include <inttypes.h>
 #include "esp_log.h"
-#include "nvs_flash.h"
 #include "ObjectTransfer_gatt_server.h"
 #include "ObjectManager.h"
 #include "project_defs.h"
 #include "pp_wave_player.h"
 
-#include "gpio.h"
-#include "sdcard.h"
+#include "pp_gpio.h"
+#include "pp_sd_card.h"
+#include "pp_nvs.h"
 
 #include "esp_bt.h"
 #include "esp_gap_ble_api.h"
@@ -1986,20 +1986,9 @@ void app_main(void)
     // INITS
     gpio_init();
     sd_card_init();
+    nvs_init();
 
-    ESP_LOGI(MAIN_TAG, "Initializing NVS");
-    esp_err_t ret = nvs_flash_init();
-    if (ret == ESP_ERR_NVS_NO_FREE_PAGES || ret == ESP_ERR_NVS_NEW_VERSION_FOUND) {
-        ESP_ERROR_CHECK(nvs_flash_erase());
-        ret = nvs_flash_init();
-        if (ret)
-        {
-            ESP_LOGE(MAIN_TAG, "Failed to initialize nvs.");
-            return;
-        }
-    }
-
-    ret = i2c_init(I2C_MASTER_NUM, GPIO_NUM_18, GPIO_NUM_8, 100);
+    esp_err_t ret = i2c_init(I2C_MASTER_NUM, GPIO_NUM_18, GPIO_NUM_8, 100);
     if (ret) {
         ESP_LOGE(MAIN_TAG, "i2c init failed, err: %x", ret);
         return;
