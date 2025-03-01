@@ -87,7 +87,9 @@
     "stdbool.h": "c",
     "time.h": "c",
     "pp_pca9698.h": "c",
-    "gpio_types.h": "c"
+    "gpio_types.h": "c",
+    "gpio.h": "c",
+    "esp_vfs_fat.h": "c"
   },
   "idf.flashType": "UART",
   "idf.portWin": "COM5",
