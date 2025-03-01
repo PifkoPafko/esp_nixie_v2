@@ -1,3 +1,4 @@
-idf_component_register( SRCS "pp_nixie_display.c"
-	INCLUDE_DIRS "."
-	REQUIRES main MK_I2C PP_PCA9698)
+set(COMPONENT_SRCDIRS ".")
+set(COMPONENT_ADD_INCLUDEDIRS ".")
+set(COMPONENT_REQUIRES esp_driver_i2c PP_GLOBAL PP_BLUETOOTH PP_PCA9698)
+register_component()

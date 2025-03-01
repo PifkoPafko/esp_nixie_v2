@@ -1,0 +1,68 @@
+/****************************************************************************
+ * Copyright (C) 2025 by Paweł Smarkucki                                    *
+ *                                                                          *
+ *   This file is part of NIXIE B16.                                        *
+ *                                                                          *
+ *   NIXIE B16 is free software: you can redistribute it, modify it,        *
+ *   sell it and do whatever you want under no terms or conditions.         *
+ *                                                                          *
+ *   NIXIE B16 is distributed in the hope that it will be useful,           *
+ *   but WITHOUT ANY WARRANTY; without even the implied warranty of         *
+ *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.                   *
+ ****************************************************************************/
+
+#ifndef __NIXIE_DISPLAY_MANAGER_H__
+#define __NIXIE_DISPLAY_MANAGER_H__
+
+/* Headers */
+#include <stdint.h>
+#include <stdbool.h>
+#include <time.h>
+
+#include "esp_log.h"
+
+#include "freertos/FreeRTOS.h"
+#include "freertos/timers.h"
+
+#include "pp_global.h"
+#include "pp_nixie_display.h"
+
+/* Macros */
+#define DEFAULT_PERIOD pdMS_TO_TICKS(1000)
+#define BLINK_PERIOD pdMS_TO_TICKS(500)
+#define ANTI_POISON_PERIOD pdMS_TO_TICKS(3600000)
+#define ANTI_POISON_DIGIT_PERIOD pdMS_TO_TICKS(1000)
+
+#define PASSKEY_SIZE 6
+
+/* Functions */
+
+/** @brief pp_display_manager_init: Initializes display manager and calls init function for display.
+ * 
+ * @return
+ */
+void pp_display_manager_init(void);
+
+/** @brief pp_update_display: Update state of the display.
+ * 
+ * @return
+ */
+void pp_update_display(void);
+
+/** @brief pp_set_display_passkey: Set bluetooth passkey to display afterwards
+ *
+ * @param[in]   key  (uint32_t) Bluetooth passkey.
+ * 
+ * @return
+ */
+void pp_set_display_passkey(uint32_t key);
+
+/** @brief pp_check_display_ready: Return if display is ready to change
+ * 
+ * Display is always ready to change except when there is undergoing anti-poisoning precudure (in default mode it lasts 1 second every 1 minute)
+ * 
+ * @return (Bool) True if display ready to change, false - display is not ready to change
+ */
+bool pp_check_display_ready(void);
+
+#endif

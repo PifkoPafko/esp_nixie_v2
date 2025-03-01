@@ -1,756 +1,168 @@
-#include <string.h>
+/****************************************************************************
+ * Copyright (C) 2025 by Paweł Smarkucki                                    *
+ *                                                                          *
+ *   This file is part of NIXIE B16.                                        *
+ *                                                                          *
+ *   NIXIE B16 is free software: you can redistribute it, modify it,        *
+ *   sell it and do whatever you want under no terms or conditions.         *
+ *                                                                          *
+ *   NIXIE B16 is distributed in the hope that it will be useful,           *
+ *   but WITHOUT ANY WARRANTY; without even the implied warranty of         *
+ *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.                   *
+ ****************************************************************************/
 
-#include "project_defs.h"
-#include "mk_i2c.h"
-#include "pp_pca9698.h"
+/* Headers */
 #include "pp_nixie_display.h"
-#include "pp_wave_player.h"
-#include "alarm.h"
-#include "esp_log.h"
 
-#include "freertos/FreeRTOS.h"
-#include "freertos/task.h"
-#include "freertos/semphr.h"
-#include "freertos/timers.h"
+/* Macros */
+#define NIXIE_DISPLAY_TAG "NIXIE DISPLAY"
 
-#include "driver/gpio.h"
-#include "driver/gptimer.h"
+/* Declarations */
+static void pp_nixie_display_generate_i2c_msg(display_state_t *nixie_state, uint8_t *i2c_msg);
 
-#include <sys/time.h>
-#include <time.h>
+/* Variables */
+static i2c_master_dev_handle_t exp_dev_handle[6];
 
-static const char *TAG = "NIXIE DISPLAY";
-static const uint8_t FIRST_NIX_DIGIT_MASK[10] = { NIXIE_0_0_BIT, NIXIE_0_1_BIT, NIXIE_0_2_BIT, NIXIE_0_3_BIT, NIXIE_0_4_BIT, NIXIE_0_5_BIT, NIXIE_0_6_BIT, NIXIE_0_7_BIT, NIXIE_0_8_BIT, NIXIE_0_9_BIT };
-static const uint8_t FIRST_NIX_DIGIT_REG_ID[10] = { NIXIE_0_0_REG_ID, NIXIE_0_1_REG_ID, NIXIE_0_2_REG_ID, NIXIE_0_3_REG_ID, NIXIE_0_4_REG_ID, NIXIE_0_5_REG_ID, NIXIE_0_6_REG_ID, NIXIE_0_7_REG_ID, NIXIE_0_8_REG_ID, NIXIE_0_9_REG_ID };
+static const uint8_t FIRST_NIX_DIGIT_MASK[DIGITS_COUNT] = { NIXIE_0_0_BIT, NIXIE_0_1_BIT, NIXIE_0_2_BIT, NIXIE_0_3_BIT, NIXIE_0_4_BIT, NIXIE_0_5_BIT, NIXIE_0_6_BIT, NIXIE_0_7_BIT, NIXIE_0_8_BIT, NIXIE_0_9_BIT};
+static const uint8_t FIRST_NIX_DIGIT_REG_ID[DIGITS_COUNT] = {NIXIE_0_0_REG_ID, NIXIE_0_1_REG_ID, NIXIE_0_2_REG_ID, NIXIE_0_3_REG_ID, NIXIE_0_4_REG_ID, NIXIE_0_5_REG_ID, NIXIE_0_6_REG_ID, NIXIE_0_7_REG_ID, NIXIE_0_8_REG_ID, NIXIE_0_9_REG_ID};
 static const uint8_t FIRST_NIX_LEFT_COMMA_MASK = NIXIE_0_LC_BIT;
 static const uint8_t FIRST_NIX_LEFT_COMMA_REG_ID = NIXIE_0_LC_REG_ID;
 static const uint8_t FIRST_NIX_RIGHT_COMMA_MASK = NIXIE_0_RC_BIT;
 static const uint8_t FIRST_NIX_RIGHT_COMMA_REG_ID = NIXIE_0_RC_REG_ID;
 
-static const uint8_t SECOND_NIX_DIGIT_MASK[10] = { NIXIE_1_0_BIT, NIXIE_1_1_BIT, NIXIE_1_2_BIT, NIXIE_1_3_BIT, NIXIE_1_4_BIT, NIXIE_1_5_BIT, NIXIE_1_6_BIT, NIXIE_1_7_BIT, NIXIE_1_8_BIT, NIXIE_1_9_BIT };
-static const uint8_t SECOND_NIX_DIGIT_REG_ID[10] = { NIXIE_1_0_REG_ID, NIXIE_1_1_REG_ID, NIXIE_1_2_REG_ID, NIXIE_1_3_REG_ID, NIXIE_1_4_REG_ID, NIXIE_1_5_REG_ID, NIXIE_1_6_REG_ID, NIXIE_1_7_REG_ID, NIXIE_1_8_REG_ID, NIXIE_1_9_REG_ID };
+static const uint8_t SECOND_NIX_DIGIT_MASK[DIGITS_COUNT] = {NIXIE_1_0_BIT, NIXIE_1_1_BIT, NIXIE_1_2_BIT, NIXIE_1_3_BIT, NIXIE_1_4_BIT, NIXIE_1_5_BIT, NIXIE_1_6_BIT, NIXIE_1_7_BIT, NIXIE_1_8_BIT, NIXIE_1_9_BIT};
+static const uint8_t SECOND_NIX_DIGIT_REG_ID[DIGITS_COUNT] = {NIXIE_1_0_REG_ID, NIXIE_1_1_REG_ID, NIXIE_1_2_REG_ID, NIXIE_1_3_REG_ID, NIXIE_1_4_REG_ID, NIXIE_1_5_REG_ID, NIXIE_1_6_REG_ID, NIXIE_1_7_REG_ID, NIXIE_1_8_REG_ID, NIXIE_1_9_REG_ID};
 static const uint8_t SECOND_NIX_LEFT_COMMA_MASK = NIXIE_1_LC_BIT;
 static const uint8_t SECOND_NIX_LEFT_COMMA_REG_ID = NIXIE_1_LC_REG_ID;
 static const uint8_t SECOND_NIX_RIGHT_COMMA_MASK = NIXIE_1_RC_BIT;
 static const uint8_t SECOND_NIX_RIGHT_COMMA_REG_ID = NIXIE_1_RC_REG_ID;
 
-static const uint8_t THIRD_NIX_DIGIT_MASK[10] = { NIXIE_2_0_BIT, NIXIE_2_1_BIT, NIXIE_2_2_BIT, NIXIE_2_3_BIT, NIXIE_2_4_BIT, NIXIE_2_5_BIT, NIXIE_2_6_BIT, NIXIE_2_7_BIT, NIXIE_2_8_BIT, NIXIE_2_9_BIT };
-static const uint8_t THIRD_NIX_DIGIT_REG_ID[10] = { NIXIE_2_0_REG_ID, NIXIE_2_1_REG_ID, NIXIE_2_2_REG_ID, NIXIE_2_3_REG_ID, NIXIE_2_4_REG_ID, NIXIE_2_5_REG_ID, NIXIE_2_6_REG_ID, NIXIE_2_7_REG_ID, NIXIE_2_8_REG_ID, NIXIE_2_9_REG_ID };
+static const uint8_t THIRD_NIX_DIGIT_MASK[DIGITS_COUNT] = {NIXIE_2_0_BIT, NIXIE_2_1_BIT, NIXIE_2_2_BIT, NIXIE_2_3_BIT, NIXIE_2_4_BIT, NIXIE_2_5_BIT, NIXIE_2_6_BIT, NIXIE_2_7_BIT, NIXIE_2_8_BIT, NIXIE_2_9_BIT};
+static const uint8_t THIRD_NIX_DIGIT_REG_ID[DIGITS_COUNT] = {NIXIE_2_0_REG_ID, NIXIE_2_1_REG_ID, NIXIE_2_2_REG_ID, NIXIE_2_3_REG_ID, NIXIE_2_4_REG_ID, NIXIE_2_5_REG_ID, NIXIE_2_6_REG_ID, NIXIE_2_7_REG_ID, NIXIE_2_8_REG_ID, NIXIE_2_9_REG_ID};
 static const uint8_t THIRD_NIX_LEFT_COMMA_MASK = NIXIE_2_LC_BIT;
 static const uint8_t THIRD_NIX_LEFT_COMMA_REG_ID = NIXIE_2_LC_REG_ID;
 static const uint8_t THIRD_NIX_RIGHT_COMMA_MASK = NIXIE_2_RC_BIT;
 static const uint8_t THIRD_NIX_RIGHT_COMMA_REG_ID = NIXIE_2_RC_REG_ID;
 
-static const uint8_t EXPANDER_ADDRESS[6] = { SLAVE_ADDR_0, SLAVE_ADDR_1, SLAVE_ADDR_2, SLAVE_ADDR_3, SLAVE_ADDR_4, SLAVE_ADDR_5 };
+static const uint8_t EXPANDER_ADDRESS[EXPANDER_COUNT] = {SLAVE_ADDR_0, SLAVE_ADDR_1, SLAVE_ADDR_2, SLAVE_ADDR_3, SLAVE_ADDR_4, SLAVE_ADDR_5};
 
-nixie_tube_state_t nixie_state[16];
-uint8_t prev_i2c_msg[5];
-static volatile bool write_display_flag = false;
-static volatile bool anti_poisoning_flag = false;
+/* Functions */
 
-/* Display modes change declarationts */
-TimerHandle_t blink_timer_h;
-static const uint8_t BLINK_LAMP_MASK[13] = { 0, 0, 1, 2, 3, 4, 5, 7, 8, 9, 10, 11, 12 };
-
-static const uint8_t BLINK_SINGLE_LAMP_MASK[26]     = { 0,  0,  2,  3,  4,  5,  7,  8,  9,  10, 11, 12, 0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  15};
-static const uint8_t BLINK_WEEKLY_LAMP_MASK[26]     = { 0,  0,  2,  3,  4,  5,  0,  0,  0,  0,  0,  0,  7,  8,  9,  10, 11, 12, 13, 0,  0,  0,  0,  0,  0,  15};
-static const uint8_t BLINK_MONTHLY_LAMP_MASK[26]    = { 0,  0,  2,  3,  4,  5,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  7,  8,  0,  0,  0,  0,  15};
-static const uint8_t BLINK_YEARLY_LAMP_MASK[26]     = { 0,  0,  2,  3,  4,  5,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  7,  8,  9,  10, 15};
-
-static bool time_change_blink_switch = true;
-
-static void blink_timer_cb( TimerHandle_t xTimer )
+/** @brief pp_nixie_display_init: Initializes nixie display.
+ * 
+ * This function sets all registers of expanders as outputs.
+ *
+ * @return
+ */
+void pp_nixie_display_init(void)
 {
-    time_change_blink_switch = !time_change_blink_switch;
-}
-/* */
+    ESP_LOGI(NIXIE_DISPLAY_TAG, "Initializing NIXIE Display");
 
-static uint32_t current_passkey[6];
+    i2c_master_bus_handle_t bus_handle;
+    ESP_ERROR_CHECK(i2c_master_get_bus_handle(0, &bus_handle));
 
-bool wait_insert_passkey_flag = false;
-
-void set_insert_passkey_flag(bool enable)
-{
-    wait_insert_passkey_flag = enable;
-}
-
-void set_display_passkey(uint32_t passkey)
-{
-    for (uint i=0; i<6; i++)
+    for(uint8_t i = 0; i < 6; ++i)
     {
-        current_passkey[5-i] = passkey % 10;
-        passkey /= 10;
+        i2c_device_config_t dev_cfg = {
+        .dev_addr_length = I2C_ADDR_BIT_LEN_7,
+        .device_address = EXPANDER_ADDRESS[i],
+        .scl_speed_hz = 100000,
+        };
+
+        ESP_ERROR_CHECK(i2c_master_bus_add_device(bus_handle, &dev_cfg, &exp_dev_handle[i]));
+    }
+
+    uint8_t conf_output_mask[EXPANDER_REG_COUNT];
+    memset(conf_output_mask, 0, EXPANDER_REG_COUNT*sizeof(conf_output_mask[0]));
+
+    for(uint8_t expander_id = 0; expander_id < EXPANDER_COUNT; expander_id++)
+    {
+        pp_pca_write_all_reg(exp_dev_handle[expander_id], IOC0_ADDR, conf_output_mask);
     }
 }
 
-static void set_nixie_state()
+/** @brief pp_display: Displays given nixie tubes state.
+ * 
+ * This function sets outputs of expanders and siplay desired digits and commas of nixie tubes.
+ * 
+ * @param[in]   nixie_state  (display_state_t*) Pointer to display_state_t structure.
+ * 
+ * @return
+ */
+void pp_display(display_state_t *display_state)
 {
-    time_t now;
-    struct tm timeinfo;
-
-    time(&now);
-    localtime_r(&now, &timeinfo);
-
-    for (uint8_t i=0; i<16; i++)
+    uint8_t i2c_msg[EXPANDER_COUNT][EXPANDER_REG_COUNT];
+    memset(i2c_msg, 0, EXPANDER_COUNT*EXPANDER_REG_COUNT*sizeof(i2c_msg[0][0]));
+    pp_nixie_display_generate_i2c_msg(display_state, &i2c_msg[0][0]);
+    
+    for(uint8_t expander_id = 0; expander_id < EXPANDER_COUNT; expander_id++)
     {
-        nixie_state[i].left_comma_enable = false;
-        nixie_state[i].right_comma_enable = false;
+        pp_pca_write_all_reg(exp_dev_handle[expander_id], OP0_ADDR, i2c_msg[expander_id]);
     }
+}
 
-    for (uint8_t i=0; i<16; i++)
+/** @brief pp_nixie_display_generate_i2c_msg: Prepares I2C message to set the registers of expanders.
+ * 
+ * This function generates I2C messages from given nixie state. 
+ *
+ * @param[in]   nixie_state  (display_state_t*) Pointer to display_state_t structure.
+ * @param[out]  i2c_msg  (uint8_t*) Pointer to I2C message table which should be i2c_msg[EXPANDER_COUNT][EXPANDER_REG_COUNT]. The result will be stored here.
+ * 
+ * @return
+ */
+static void pp_nixie_display_generate_i2c_msg(display_state_t *display_state, uint8_t *i2c_msg)
+{
+    for(uint8_t expander_id = 0; expander_id < EXPANDER_COUNT; expander_id++)
     {
-        nixie_state[i].digit_enable = true;
-    }
+        uint8_t expander_nixie_id = expander_id * 3;
+        uint8_t *msg = i2c_msg + (expander_id * EXPANDER_REG_COUNT);
 
-    nixie_state[6].digit_enable = false;
-    nixie_state[13].digit_enable = false;
-    nixie_state[14].digit_enable = false;
-    nixie_state[15].digit_enable = false;
-
-    nixie_state[0].digit = timeinfo.tm_hour / 10;
-    nixie_state[1].digit = timeinfo.tm_hour % 10;
-    nixie_state[1].right_comma_enable = true;
-    nixie_state[2].digit = timeinfo.tm_min / 10;
-    nixie_state[3].digit = timeinfo.tm_min % 10;
-    nixie_state[3].right_comma_enable = true;
-    nixie_state[4].digit = timeinfo.tm_sec / 10;
-    nixie_state[5].digit = timeinfo.tm_sec % 10;
-
-    nixie_state[7].digit = timeinfo.tm_mday / 10;
-    nixie_state[8].digit = timeinfo.tm_mday % 10;
-    nixie_state[8].right_comma_enable = true;
-    nixie_state[9].digit = (timeinfo.tm_mon + 1) / 10;
-    nixie_state[10].digit = (timeinfo.tm_mon + 1) % 10;
-    nixie_state[10].right_comma_enable = true;
-    nixie_state[11].digit = (timeinfo.tm_year - 100) / 10;
-    nixie_state[12].digit = (timeinfo.tm_year - 100) % 10;
-}
-
-static bool IRAM_ATTR pp_display_routine_timer_cb(gptimer_handle_t timer, const gptimer_alarm_event_data_t *edata, void *user_data)
-{
-    write_display_flag = true;
-    return false;
-}
-
-static bool IRAM_ATTR anti_poisoning_timer_cb(gptimer_handle_t timer, const gptimer_alarm_event_data_t *edata, void *user_data)
-{
-    anti_poisoning_flag = true;
-    return false;
-}
-
-void pp_nixie_display_main(void* arg)
-{
-    uint8_t i2c_msg[5];
-
-    while(true)
-    {
-        switch(get_device_mode())
+        if(display_state->digit_enable[expander_nixie_id])
         {
-            case DEFAULT_MODE:
+            msg[FIRST_NIX_DIGIT_REG_ID[display_state->digit[expander_nixie_id]]] |= FIRST_NIX_DIGIT_MASK[display_state->digit[expander_nixie_id]];
+        }
+
+        if(display_state->left_comma_enable[expander_nixie_id])
+        {
+            msg[FIRST_NIX_LEFT_COMMA_REG_ID] |= FIRST_NIX_LEFT_COMMA_MASK;
+        }
+
+        if(display_state->right_comma_enable[expander_nixie_id])
+        {
+            msg[FIRST_NIX_RIGHT_COMMA_REG_ID] |= FIRST_NIX_RIGHT_COMMA_MASK;
+        }
+
+        if(expander_id < 5)
+        {
+            if(display_state->digit_enable[expander_nixie_id + 1])
             {
-                if (anti_poisoning_flag)
-                {
-                    anti_poisoning_flag = false;
-
-                    for ( uint8_t digit = 0; digit < 10; digit++ )
-                    {
-                        for ( uint8_t lamp = 0; lamp < 16; lamp++ )
-                        {
-                            nixie_state[lamp].digit_enable = true;
-                            nixie_state[lamp].digit = digit;
-                            nixie_state[lamp].left_comma_enable = false;
-                            nixie_state[lamp].right_comma_enable = false;
-                        }
-                        
-                        for ( uint8_t expander = 0; expander < 6; expander++ )
-                        {
-                            memset(i2c_msg, 0, 5);
-                            pp_nixie_display_generate_i2c_msg(expander, i2c_msg);
-                            pca_write_all_reg(I2C_MASTER_NUM, EXPANDER_ADDRESS[expander], OP0_ADDR, i2c_msg);
-                        }
-
-                        vTaskDelay(100 / portTICK_PERIOD_MS);
-                    }
-
-                    for ( uint8_t lamp = 0; lamp < 16; lamp++ )
-                    {
-                        nixie_state[lamp].digit_enable = false;
-                        nixie_state[lamp].digit = 0;
-                        nixie_state[lamp].left_comma_enable = true;
-                        nixie_state[lamp].right_comma_enable = false;
-                    }
-
-                    for ( uint8_t expander = 0; expander < 6; expander++ )
-                    {
-                        memset(i2c_msg, 0, 5);
-                        pp_nixie_display_generate_i2c_msg(expander, i2c_msg);
-                        pca_write_all_reg(I2C_MASTER_NUM, EXPANDER_ADDRESS[expander], OP0_ADDR, i2c_msg);
-                    }
-
-                    vTaskDelay(100 / portTICK_PERIOD_MS);
-
-                    for ( uint8_t lamp = 0; lamp < 16; lamp++ )
-                    {
-                        nixie_state[lamp].digit_enable = false;
-                        nixie_state[lamp].digit = 0;
-                        nixie_state[lamp].left_comma_enable = false;
-                        nixie_state[lamp].right_comma_enable = true;
-                    }
-
-                    for ( uint8_t expander = 0; expander < 6; expander++ )
-                    {
-                        memset(i2c_msg, 0, 5);
-                        pp_nixie_display_generate_i2c_msg(expander, i2c_msg);
-                        pca_write_all_reg(I2C_MASTER_NUM, EXPANDER_ADDRESS[expander], OP0_ADDR, i2c_msg);
-                    }
-
-                    vTaskDelay(200 / portTICK_PERIOD_MS);
-                }
-                else if (write_display_flag)
-                {
-                    write_display_flag = false;
-                    set_nixie_state();
-
-                    for ( uint8_t expander = 0; expander < 6; expander++ )
-                    {
-                        memset(i2c_msg, 0, 5);
-                        pp_nixie_display_generate_i2c_msg(expander, i2c_msg);
-                        pca_write_all_reg(I2C_MASTER_NUM, EXPANDER_ADDRESS[expander], OP0_ADDR, i2c_msg);
-                    }
-                    
-                    vTaskDelay(pdMS_TO_TICKS(10));
-                }
-                else
-                {
-                    vTaskDelay(pdMS_TO_TICKS(10));
-                }
-                break;
+                msg[SECOND_NIX_DIGIT_REG_ID[display_state->digit[expander_nixie_id + 1]]] |= SECOND_NIX_DIGIT_MASK[display_state->digit[expander_nixie_id + 1]];
             }
 
-            case TIME_CHANGE_MODE:
+            if(display_state->left_comma_enable[expander_nixie_id + 1])
             {
-                for (uint8_t i=0; i<16; i++)
-                {
-                    nixie_state[i].left_comma_enable = false;
-                    nixie_state[i].right_comma_enable = false;
-                }
-
-                for (uint8_t i=0; i<6; i++)
-                {
-                    nixie_state[i].digit_enable = true;
-                }
-
-                for (uint8_t i=7; i<13; i++)
-                {
-                    nixie_state[i].digit_enable = true;
-                }
-
-                nixie_state[0].digit = nixie_time.hour_first;
-                nixie_state[1].digit = nixie_time.hour_second;
-                nixie_state[1].right_comma_enable = true;
-                nixie_state[2].digit = nixie_time.minute_first;
-                nixie_state[3].digit = nixie_time.minute_second;
-                nixie_state[3].right_comma_enable = true;
-                nixie_state[4].digit = nixie_time.second_first;
-                nixie_state[5].digit = nixie_time.second_second;
-
-                nixie_state[7].digit = nixie_time.day_first;
-                nixie_state[8].digit = nixie_time.day_second;
-                nixie_state[8].right_comma_enable = true;
-                nixie_state[9].digit = nixie_time.month_first;
-                nixie_state[10].digit = nixie_time.month_second;
-                nixie_state[10].right_comma_enable = true;
-                nixie_state[11].digit = nixie_time.year_first;
-                nixie_state[12].digit = nixie_time.year_second;
-
-                if (time_change_blink_switch)
-                {
-                    nixie_state[BLINK_LAMP_MASK[time_change_sm]].digit_enable = false;
-                }
-
-                for ( uint8_t expander = 0; expander < 6; expander++ )
-                {
-                    memset(i2c_msg, 0, 5);
-                    pp_nixie_display_generate_i2c_msg(expander, i2c_msg);
-                    pca_write_all_reg(I2C_MASTER_NUM, EXPANDER_ADDRESS[expander], OP0_ADDR, i2c_msg);
-                }
-
-                vTaskDelay(pdMS_TO_TICKS(30));
-
-                break;
+                msg[SECOND_NIX_LEFT_COMMA_REG_ID] |= SECOND_NIX_LEFT_COMMA_MASK;
             }
 
-            case ALARM_ADD_MODE:
+            if(display_state->right_comma_enable[expander_nixie_id + 1])
             {
-                for (uint8_t i=0; i<16; i++)
-                {
-                    nixie_state[i].left_comma_enable = false;
-                    nixie_state[i].right_comma_enable = false;
-                }
-                
-                nixie_state[3].right_comma_enable = true;
-
-                for (uint8_t i=0; i<16; i++)
-                {
-                    nixie_state[i].digit_enable = false;
-                }
-
-                nixie_state[0].digit_enable = true;
-                nixie_state[1].digit_enable = false;
-                nixie_state[2].digit_enable = true;
-                nixie_state[3].digit_enable = true;
-                nixie_state[4].digit_enable = true;
-                nixie_state[5].digit_enable = true;
-                nixie_state[6].digit_enable = false;
-                nixie_state[7].digit_enable = true;
-                nixie_state[8].digit_enable = true;
-                nixie_state[14].digit_enable = false;
-                nixie_state[15].digit_enable = true;
-
-                nixie_state[0].digit = alatm_add_digits.mode;
-                nixie_state[2].digit = alatm_add_digits.time.hour_first;
-                nixie_state[3].digit = alatm_add_digits.time.hour_second;
-                nixie_state[4].digit = alatm_add_digits.time.minute_first;
-                nixie_state[5].digit = alatm_add_digits.time.minute_second;
-                nixie_state[15].digit = alatm_add_digits.volume;
-
-                const uint8_t *blink_mask_p = BLINK_SINGLE_LAMP_MASK;
-
-                switch(alatm_add_digits.mode)
-                {
-                    case ALARM_SINGLE_MODE:
-                        nixie_state[9].digit_enable = true;
-                        nixie_state[10].digit_enable = true;
-                        nixie_state[11].digit_enable = true;
-                        nixie_state[12].digit_enable = true;
-
-                        nixie_state[8].right_comma_enable = true;
-                        nixie_state[10].right_comma_enable = true;
-
-                        nixie_state[7].digit = alatm_add_digits.time.day_first;
-                        nixie_state[8].digit = alatm_add_digits.time.day_second;
-                        nixie_state[9].digit = alatm_add_digits.time.month_first;
-                        nixie_state[10].digit = alatm_add_digits.time.month_second;
-                        nixie_state[11].digit = alatm_add_digits.time.year_first;
-                        nixie_state[12].digit = alatm_add_digits.time.year_second;
-                        blink_mask_p = BLINK_SINGLE_LAMP_MASK;
-                        break;
-
-                    case ALARM_WEEKLY_MODE:
-                        nixie_state[9].digit_enable = true;
-                        nixie_state[10].digit_enable = true;
-                        nixie_state[11].digit_enable = true;
-                        nixie_state[12].digit_enable = true;
-                        nixie_state[13].digit_enable = true;
-
-                        nixie_state[7].digit = alatm_add_digits.monday;
-                        nixie_state[8].digit = alatm_add_digits.tuesday;
-                        nixie_state[9].digit = alatm_add_digits.wednesday;
-                        nixie_state[10].digit = alatm_add_digits.thursday;
-                        nixie_state[11].digit = alatm_add_digits.friday;
-                        nixie_state[12].digit = alatm_add_digits.saturday;
-                        nixie_state[13].digit = alatm_add_digits.sunday;
-                        blink_mask_p = BLINK_WEEKLY_LAMP_MASK;
-                        break;
-
-                    case ALARM_MONTHLY_MODE:
-                        nixie_state[7].digit = alatm_add_digits.time.day_first;
-                        nixie_state[8].digit = alatm_add_digits.time.day_second;
-                        blink_mask_p = BLINK_MONTHLY_LAMP_MASK;
-                        break;
-
-                    case ALARM_YEARLY_MODE:
-                        nixie_state[9].digit_enable = true;
-                        nixie_state[10].digit_enable = true;
-
-                        nixie_state[8].right_comma_enable = true;
-
-                        nixie_state[7].digit = alatm_add_digits.time.day_first;
-                        nixie_state[8].digit = alatm_add_digits.time.day_second;
-                        nixie_state[9].digit = alatm_add_digits.time.month_first;
-                        nixie_state[10].digit = alatm_add_digits.time.month_second;
-                        blink_mask_p = BLINK_YEARLY_LAMP_MASK;
-                        break;
-
-                    default:
-                        break;
-                }
-
-                if (time_change_blink_switch)
-                {
-                    nixie_state[blink_mask_p[alarm_add_sm]].digit_enable = false;
-                }
-
-                for ( uint8_t expander = 0; expander < 6; expander++ )
-                {
-                    memset(i2c_msg, 0, 5);
-                    pp_nixie_display_generate_i2c_msg(expander, i2c_msg);
-                    pca_write_all_reg(I2C_MASTER_NUM, EXPANDER_ADDRESS[expander], OP0_ADDR, i2c_msg);
-                }
-
-                vTaskDelay(pdMS_TO_TICKS(30));
-
-                break;
+                msg[SECOND_NIX_RIGHT_COMMA_REG_ID] |= SECOND_NIX_RIGHT_COMMA_MASK;
             }
 
-            case ALARM_DELETE_MODE:
+            if(display_state->digit_enable[expander_nixie_id + 2])
             {
-                for (uint8_t i=0; i<16; i++)
-                {
-                    nixie_state[i].left_comma_enable = false;
-                    nixie_state[i].right_comma_enable = false;
-                }
-                
-                nixie_state[3].right_comma_enable = true;
-
-                for (uint8_t i=0; i<16; i++)
-                {
-                    nixie_state[i].digit_enable = false;
-                }
-
-                nixie_state[0].digit_enable = true;
-                nixie_state[1].digit_enable = false;
-                nixie_state[2].digit_enable = true;
-                nixie_state[3].digit_enable = true;
-                nixie_state[4].digit_enable = true;
-                nixie_state[5].digit_enable = true;
-                nixie_state[6].digit_enable = false;
-                nixie_state[7].digit_enable = true;
-                nixie_state[8].digit_enable = true;
-                nixie_state[14].digit_enable = false;
-                nixie_state[15].digit_enable = true;
-
-                nixie_state[0].digit = alatm_add_digits.mode;
-                nixie_state[2].digit = alatm_add_digits.time.hour_first;
-                nixie_state[3].digit = alatm_add_digits.time.hour_second;
-                nixie_state[4].digit = alatm_add_digits.time.minute_first;
-                nixie_state[5].digit = alatm_add_digits.time.minute_second;
-                nixie_state[15].digit = alatm_add_digits.volume;
-
-                switch(alatm_add_digits.mode)
-                {
-                    case ALARM_SINGLE_MODE:
-                        nixie_state[9].digit_enable = true;
-                        nixie_state[10].digit_enable = true;
-                        nixie_state[11].digit_enable = true;
-                        nixie_state[12].digit_enable = true;
-
-                        nixie_state[8].right_comma_enable = true;
-                        nixie_state[10].right_comma_enable = true;
-
-                        nixie_state[7].digit = alatm_add_digits.time.day_first;
-                        nixie_state[8].digit = alatm_add_digits.time.day_second;
-                        nixie_state[9].digit = alatm_add_digits.time.month_first;
-                        nixie_state[10].digit = alatm_add_digits.time.month_second;
-                        nixie_state[11].digit = alatm_add_digits.time.year_first;
-                        nixie_state[12].digit = alatm_add_digits.time.year_second;
-                        break;
-
-                    case ALARM_WEEKLY_MODE:
-                        nixie_state[9].digit_enable = true;
-                        nixie_state[10].digit_enable = true;
-                        nixie_state[11].digit_enable = true;
-                        nixie_state[12].digit_enable = true;
-                        nixie_state[13].digit_enable = true;
-
-                        nixie_state[7].digit = alatm_add_digits.monday;
-                        nixie_state[8].digit = alatm_add_digits.tuesday;
-                        nixie_state[9].digit = alatm_add_digits.wednesday;
-                        nixie_state[10].digit = alatm_add_digits.thursday;
-                        nixie_state[11].digit = alatm_add_digits.friday;
-                        nixie_state[12].digit = alatm_add_digits.saturday;
-                        nixie_state[13].digit = alatm_add_digits.sunday;
-                        break;
-
-                    case ALARM_MONTHLY_MODE:
-                        nixie_state[7].digit = alatm_add_digits.time.day_first;
-                        nixie_state[8].digit = alatm_add_digits.time.day_second;
-                        break;
-
-                    case ALARM_YEARLY_MODE:
-                        nixie_state[9].digit_enable = true;
-                        nixie_state[10].digit_enable = true;
-
-                        nixie_state[8].right_comma_enable = true;
-
-                        nixie_state[7].digit = alatm_add_digits.time.day_first;
-                        nixie_state[8].digit = alatm_add_digits.time.day_second;
-                        nixie_state[9].digit = alatm_add_digits.time.month_first;
-                        nixie_state[10].digit = alatm_add_digits.time.month_second;
-                        break;
-
-                    default:
-                        break;
-                }
-
-                for ( uint8_t expander = 0; expander < 6; expander++ )
-                {
-                    memset(i2c_msg, 0, 5);
-                    pp_nixie_display_generate_i2c_msg(expander, i2c_msg);
-                    pca_write_all_reg(I2C_MASTER_NUM, EXPANDER_ADDRESS[expander], OP0_ADDR, i2c_msg);
-                }
-
-                vTaskDelay(pdMS_TO_TICKS(30));
-
-                break;
+                msg[THIRD_NIX_DIGIT_REG_ID[display_state->digit[expander_nixie_id + 2]]] |= THIRD_NIX_DIGIT_MASK[display_state->digit[expander_nixie_id + 2]];
             }
 
-            case PAIRING_MODE:
+            if(display_state->left_comma_enable[expander_nixie_id + 2])
             {
-                if (wait_insert_passkey_flag)
-                {
-                    for ( uint8_t lamp = 0; lamp < 6; lamp++ )
-                    {
-                        nixie_state[lamp].digit_enable = true;
-                        nixie_state[lamp].digit = current_passkey[lamp];
-                        nixie_state[lamp].left_comma_enable = false;
-                        nixie_state[lamp].right_comma_enable = false;
-                    }
-
-                    for ( uint8_t lamp = 6; lamp < 16; lamp++ )
-                    {
-                        nixie_state[lamp].digit_enable = false;
-                        nixie_state[lamp].digit = 0;
-                        nixie_state[lamp].left_comma_enable = false;
-                        nixie_state[lamp].right_comma_enable = false;
-                    }
-
-                    for ( uint8_t expander = 0; expander < 6; expander++ )
-                    {
-                        memset(i2c_msg, 0, 5);
-                        pp_nixie_display_generate_i2c_msg(expander, i2c_msg);
-                        pca_write_all_reg(I2C_MASTER_NUM, EXPANDER_ADDRESS[expander], OP0_ADDR, i2c_msg);
-                    }
-
-                    vTaskDelay(pdMS_TO_TICKS(100));
-                }
-                else
-                {
-                    for ( uint8_t digit = 0; digit < 16; digit++ )
-                    {
-                        if (wait_insert_passkey_flag)
-                        {
-                            break;
-                        }
-
-                        for ( uint8_t lamp = 0; lamp < 16; lamp++ )
-                        {
-                            nixie_state[lamp].digit_enable = false;
-                            nixie_state[lamp].left_comma_enable = false;
-                            nixie_state[lamp].right_comma_enable = false;
-                        }
-
-                        nixie_state[digit].left_comma_enable = true;
-                        nixie_state[digit].right_comma_enable = true;
-
-                        for ( uint8_t expander = 0; expander < 6; expander++ )
-                        {
-                            memset(i2c_msg, 0, 5);
-                            pp_nixie_display_generate_i2c_msg(expander, i2c_msg);
-                            pca_write_all_reg(I2C_MASTER_NUM, EXPANDER_ADDRESS[expander], OP0_ADDR, i2c_msg);
-                        }
-
-                        vTaskDelay(pdMS_TO_TICKS(70));
-                    }
-
-                    for ( int8_t digit = 14; digit > 0; digit-- )
-                    {
-                        if (wait_insert_passkey_flag)
-                        {
-                            break;
-                        }
-
-                        for ( uint8_t lamp = 0; lamp < 16; lamp++ )
-                        {
-                            nixie_state[lamp].digit_enable = false;
-                            nixie_state[lamp].left_comma_enable = false;
-                            nixie_state[lamp].right_comma_enable = false;
-                        }
-
-                        nixie_state[digit].left_comma_enable = true;
-                        nixie_state[digit].right_comma_enable = true;
-
-                        for ( uint8_t expander = 0; expander < 6; expander++ )
-                        {
-                            memset(i2c_msg, 0, 5);
-                            pp_nixie_display_generate_i2c_msg(expander, i2c_msg);
-                            pca_write_all_reg(I2C_MASTER_NUM, EXPANDER_ADDRESS[expander], OP0_ADDR, i2c_msg);
-                        }
-
-                        vTaskDelay(pdMS_TO_TICKS(70));
-                    }
-                }
-                
-                break;
+                msg[THIRD_NIX_LEFT_COMMA_REG_ID] |= THIRD_NIX_LEFT_COMMA_MASK;
             }
 
-            case ALARM_RING_MODE:
+            if(display_state->right_comma_enable[expander_nixie_id + 2])
             {
-                static bool alarm_blink_switch = true;
-                set_nixie_state();
-
-                if (alarm_blink_switch)
-                {
-                    for ( uint8_t lamp = 0; lamp < 16; lamp++ )
-                    {
-                        nixie_state[lamp].digit_enable = false;
-                        nixie_state[lamp].left_comma_enable = false;
-                        nixie_state[lamp].right_comma_enable = false;
-                    }
-                }
-
-                alarm_blink_switch = !alarm_blink_switch;
-
-                for ( uint8_t expander = 0; expander < 6; expander++ )
-                {
-                    memset(i2c_msg, 0, 5);
-                    pp_nixie_display_generate_i2c_msg(expander, i2c_msg);
-                    pca_write_all_reg(I2C_MASTER_NUM, EXPANDER_ADDRESS[expander], OP0_ADDR, i2c_msg);
-                }
-                
-                vTaskDelay(pdMS_TO_TICKS(500));
-                break;
+                msg[THIRD_NIX_RIGHT_COMMA_REG_ID] |= THIRD_NIX_RIGHT_COMMA_MASK;
             }
         }
     }
-}
-
-esp_err_t pp_nixie_diplay_init()
-{
-    uint8_t conf_output_mask[5];
-    memset(conf_output_mask, 0, 5);
-    ESP_ERROR_CHECK(pca_write_all_reg(I2C_MASTER_NUM, SLAVE_ADDR_0, IOC0_ADDR, conf_output_mask));
-    ESP_ERROR_CHECK(pca_write_all_reg(I2C_MASTER_NUM, SLAVE_ADDR_1, IOC0_ADDR, conf_output_mask));
-    ESP_ERROR_CHECK(pca_write_all_reg(I2C_MASTER_NUM, SLAVE_ADDR_2, IOC0_ADDR, conf_output_mask));
-    ESP_ERROR_CHECK(pca_write_all_reg(I2C_MASTER_NUM, SLAVE_ADDR_3, IOC0_ADDR, conf_output_mask));
-    ESP_ERROR_CHECK(pca_write_all_reg(I2C_MASTER_NUM, SLAVE_ADDR_4, IOC0_ADDR, conf_output_mask));
-    ESP_ERROR_CHECK(pca_write_all_reg(I2C_MASTER_NUM, SLAVE_ADDR_5, IOC0_ADDR, conf_output_mask));
-
-    BaseType_t res = xTaskCreate(pp_nixie_display_main, "NIXIE DISPLAY", 4096, NULL, 1, NULL);
-    if(res != pdPASS)
-    {
-        ESP_LOGE(TAG, "Creating display task failed");
-        return res;
-    }
-
-    /* Setting display routine timer */
-    gptimer_handle_t gptimer = NULL;
-    gptimer_config_t timer_config = {
-        .clk_src = GPTIMER_CLK_SRC_DEFAULT,
-        .direction = GPTIMER_COUNT_UP,
-        .resolution_hz = 1000000, // 1000000Hz, 1 tick=1us
-    };
-
-    ESP_ERROR_CHECK(gptimer_new_timer(&timer_config, &gptimer));
-
-     gptimer_event_callbacks_t cbs = {
-        .on_alarm = pp_display_routine_timer_cb,
-    };
-
-    ESP_ERROR_CHECK(gptimer_register_event_callbacks(gptimer, &cbs, NULL));
-
-    ESP_LOGI(TAG, "Enable display routine timer");
-    ESP_ERROR_CHECK(gptimer_enable(gptimer));
-
-    gptimer_alarm_config_t alarm_config = {
-        .alarm_count = 1000000, // period = 1s
-        .reload_count = 0,
-        .flags.auto_reload_on_alarm = true
-    };
-
-    ESP_ERROR_CHECK(gptimer_set_alarm_action(gptimer, &alarm_config));
-    ESP_ERROR_CHECK(gptimer_start(gptimer));
-
-    /* Setting anti-posisoning routine timer */
-    gptimer_handle_t anti_poisoing_gptimer = NULL;
-    ESP_ERROR_CHECK(gptimer_new_timer(&timer_config, &anti_poisoing_gptimer));
-    gptimer_event_callbacks_t anti_poisoning_cbs = {
-        .on_alarm = anti_poisoning_timer_cb,
-    };
-    ESP_ERROR_CHECK(gptimer_register_event_callbacks(anti_poisoing_gptimer, &anti_poisoning_cbs, NULL));
-    ESP_LOGI(TAG, "Enable anti-poisoning routine timer");
-    ESP_ERROR_CHECK(gptimer_enable(anti_poisoing_gptimer));
-
-    gptimer_alarm_config_t anti_poisoning_alarm_config = {
-        .alarm_count = 60000000, // period = 1s
-        .reload_count = 0,
-        .flags.auto_reload_on_alarm = true
-    };
-
-    ESP_ERROR_CHECK(gptimer_set_alarm_action(anti_poisoing_gptimer, &anti_poisoning_alarm_config));
-    ESP_ERROR_CHECK(gptimer_start(anti_poisoing_gptimer));
-
-    blink_timer_h = xTimerCreate(NULL, pdMS_TO_TICKS(500), pdTRUE, NULL, blink_timer_cb);
-    xTimerStart(blink_timer_h, 1);
-
-    return ESP_OK;
-}
-
-bool pp_nixie_display_generate_i2c_msg(uint8_t expander_id, uint8_t *msg)
-{
-    uint8_t expander_nixie_id = expander_id * 3;
-
-    if (nixie_state[expander_nixie_id].digit_enable)
-    {
-        msg[FIRST_NIX_DIGIT_REG_ID[nixie_state[expander_nixie_id].digit]] |= FIRST_NIX_DIGIT_MASK[nixie_state[expander_nixie_id].digit];
-    }
-
-    if (nixie_state[expander_nixie_id].left_comma_enable)
-    {
-        msg[FIRST_NIX_LEFT_COMMA_REG_ID] |= FIRST_NIX_LEFT_COMMA_MASK;
-    }
-
-    if (nixie_state[expander_nixie_id].right_comma_enable)
-    {
-        msg[FIRST_NIX_RIGHT_COMMA_REG_ID] |= FIRST_NIX_RIGHT_COMMA_MASK;
-    }
-
-    if (expander_id < 5)
-    {
-        if (nixie_state[expander_nixie_id + 1].digit_enable)
-        {
-            msg[SECOND_NIX_DIGIT_REG_ID[nixie_state[expander_nixie_id + 1].digit]] |= SECOND_NIX_DIGIT_MASK[nixie_state[expander_nixie_id + 1].digit];
-        }
-
-        if (nixie_state[expander_nixie_id + 1].left_comma_enable)
-        {
-            msg[SECOND_NIX_LEFT_COMMA_REG_ID] |= SECOND_NIX_LEFT_COMMA_MASK;
-        }
-
-        if (nixie_state[expander_nixie_id + 1].right_comma_enable)
-        {
-            msg[SECOND_NIX_RIGHT_COMMA_REG_ID] |= SECOND_NIX_RIGHT_COMMA_MASK;
-        }
-
-
-        if (nixie_state[expander_nixie_id + 2].digit_enable)
-        {
-            msg[THIRD_NIX_DIGIT_REG_ID[nixie_state[expander_nixie_id + 2].digit]] |= THIRD_NIX_DIGIT_MASK[nixie_state[expander_nixie_id + 2].digit];
-        }
-
-        if (nixie_state[expander_nixie_id + 2].left_comma_enable)
-        {
-            msg[THIRD_NIX_LEFT_COMMA_REG_ID] |= THIRD_NIX_LEFT_COMMA_MASK;
-        }
-
-        if (nixie_state[expander_nixie_id + 2].right_comma_enable)
-        {
-            msg[THIRD_NIX_RIGHT_COMMA_REG_ID] |= THIRD_NIX_RIGHT_COMMA_MASK;
-        }
-    }
-
-    bool result = false;
-
-    for (uint8_t i=0; i<5; i++)
-    {
-        if (prev_i2c_msg[i] != msg[i])
-        {
-            result = true;
-            break;
-        }
-    }
-
-    memcpy(prev_i2c_msg, msg, 5);
-
-    return result;
 }
