@@ -1,3 +1,17 @@
+/****************************************************************************
+ * Copyright (C) 2025 by Paweł Smarkucki                                    *
+ *                                                                          *
+ *   This file is part of NIXIE B16.                                        *
+ *                                                                          *
+ *   NIXIE B16 is free software: you can redistribute it, modify it,        *
+ *   sell it and do whatever you want under no terms or conditions.         *
+ *                                                                          *
+ *   NIXIE B16 is distributed in the hope that it will be useful,           *
+ *   but WITHOUT ANY WARRANTY; without even the implied warranty of         *
+ *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.                   *
+ ****************************************************************************/
+
+/* Headers */
 #include <string.h>
 
 #include "project_defs.h"
@@ -19,7 +33,17 @@
 #include <sys/time.h>
 #include <time.h>
 
+/* Declarations */
+static void pp_blink_timer_cb(TimerHandle_t xTimer);
+static void pp_set_nixie_state();
+static bool IRAM_ATTR pp_display_routine_timer_cb(gptimer_handle_t timer, const gptimer_alarm_event_data_t *edata, void *user_data);
+static bool IRAM_ATTR pp_anti_poisoning_timer_cb(gptimer_handle_t timer, const gptimer_alarm_event_data_t *edata, void *user_data);
+static void pp_nixie_display_main(void* arg);
+static bool pp_nixie_display_generate_i2c_msg(uint8_t expander_id, uint8_t *msg);
+
+/* Variables */
 static const char *TAG = "NIXIE DISPLAY";
+
 static const uint8_t FIRST_NIX_DIGIT_MASK[10] = { NIXIE_0_0_BIT, NIXIE_0_1_BIT, NIXIE_0_2_BIT, NIXIE_0_3_BIT, NIXIE_0_4_BIT, NIXIE_0_5_BIT, NIXIE_0_6_BIT, NIXIE_0_7_BIT, NIXIE_0_8_BIT, NIXIE_0_9_BIT };
 static const uint8_t FIRST_NIX_DIGIT_REG_ID[10] = { NIXIE_0_0_REG_ID, NIXIE_0_1_REG_ID, NIXIE_0_2_REG_ID, NIXIE_0_3_REG_ID, NIXIE_0_4_REG_ID, NIXIE_0_5_REG_ID, NIXIE_0_6_REG_ID, NIXIE_0_7_REG_ID, NIXIE_0_8_REG_ID, NIXIE_0_9_REG_ID };
 static const uint8_t FIRST_NIX_LEFT_COMMA_MASK = NIXIE_0_LC_BIT;
@@ -43,31 +67,85 @@ static const uint8_t THIRD_NIX_RIGHT_COMMA_REG_ID = NIXIE_2_RC_REG_ID;
 
 static const uint8_t EXPANDER_ADDRESS[6] = { SLAVE_ADDR_0, SLAVE_ADDR_1, SLAVE_ADDR_2, SLAVE_ADDR_3, SLAVE_ADDR_4, SLAVE_ADDR_5 };
 
-nixie_tube_state_t nixie_state[16];
-uint8_t prev_i2c_msg[5];
+static nixie_tube_state_t nixie_state[16];
+static uint8_t prev_i2c_msg[5];
 static volatile bool write_display_flag = false;
 static volatile bool anti_poisoning_flag = false;
 
 /* Display modes change declarationts */
-TimerHandle_t blink_timer_h;
-static const uint8_t BLINK_LAMP_MASK[13] = { 0, 0, 1, 2, 3, 4, 5, 7, 8, 9, 10, 11, 12 };
+static TimerHandle_t blink_timer_h;
+static const uint8_t BLINK_LAMP_MASK[13] = {0, 0, 1, 2, 3, 4, 5, 7, 8, 9, 10, 11, 12};
 
-static const uint8_t BLINK_SINGLE_LAMP_MASK[26]     = { 0,  0,  2,  3,  4,  5,  7,  8,  9,  10, 11, 12, 0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  15};
-static const uint8_t BLINK_WEEKLY_LAMP_MASK[26]     = { 0,  0,  2,  3,  4,  5,  0,  0,  0,  0,  0,  0,  7,  8,  9,  10, 11, 12, 13, 0,  0,  0,  0,  0,  0,  15};
-static const uint8_t BLINK_MONTHLY_LAMP_MASK[26]    = { 0,  0,  2,  3,  4,  5,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  7,  8,  0,  0,  0,  0,  15};
-static const uint8_t BLINK_YEARLY_LAMP_MASK[26]     = { 0,  0,  2,  3,  4,  5,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  7,  8,  9,  10, 15};
+static const uint8_t BLINK_SINGLE_LAMP_MASK[26]     = {0,  0,  2,  3,  4,  5,  7,  8,  9,  10, 11, 12, 0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  15};
+static const uint8_t BLINK_WEEKLY_LAMP_MASK[26]     = {0,  0,  2,  3,  4,  5,  0,  0,  0,  0,  0,  0,  7,  8,  9,  10, 11, 12, 13, 0,  0,  0,  0,  0,  0,  15};
+static const uint8_t BLINK_MONTHLY_LAMP_MASK[26]    = {0,  0,  2,  3,  4,  5,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  7,  8,  0,  0,  0,  0,  15};
+static const uint8_t BLINK_YEARLY_LAMP_MASK[26]     = {0,  0,  2,  3,  4,  5,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  7,  8,  9,  10, 15};
 
 static bool time_change_blink_switch = true;
 
-static void pp_blink_timer_cb( TimerHandle_t xTimer )
-{
-    time_change_blink_switch = !time_change_blink_switch;
-}
-/* */
-
 static uint32_t current_passkey[6];
+static bool wait_insert_passkey_flag = false;
 
-bool wait_insert_passkey_flag = false;
+/* Functions */
+void pp_nixie_diplay_init()
+{
+    ESP_LOGI(NIXIE_DISPLAY_TAG, "Initializing NIXIE Display");
+    uint8_t conf_output_mask[5];
+    memset(conf_output_mask, 0, 5);
+    pp_pca_write_all_reg(SLAVE_ADDR_0, IOC0_ADDR, conf_output_mask);
+    pp_pca_write_all_reg(SLAVE_ADDR_1, IOC0_ADDR, conf_output_mask);
+    pp_pca_write_all_reg(SLAVE_ADDR_2, IOC0_ADDR, conf_output_mask);
+    pp_pca_write_all_reg(SLAVE_ADDR_3, IOC0_ADDR, conf_output_mask);
+    pp_pca_write_all_reg(SLAVE_ADDR_4, IOC0_ADDR, conf_output_mask);
+    pp_pca_write_all_reg(SLAVE_ADDR_5, IOC0_ADDR, conf_output_mask);
+
+    ESP_ERROR_CHECK(xTaskCreate(pp_nixie_display_main, "NIXIE DISPLAY", 4096, NULL, 1, NULL));
+
+    /* Setting display routine timer */
+    gptimer_handle_t gptimer = NULL;
+    gptimer_config_t timer_config = {.clk_src = GPTIMER_CLK_SRC_DEFAULT,
+                                     .direction = GPTIMER_COUNT_UP,
+                                     .resolution_hz = 1000000, /* 1000000Hz, 1 tick=1us */ };
+                                    
+    ESP_ERROR_CHECK(gptimer_new_timer(&timer_config, &gptimer));
+    gptimer_event_callbacks_t cbs = {.on_alarm = pp_display_routine_timer_cb};
+
+    ESP_ERROR_CHECK(gptimer_register_event_callbacks(gptimer, &cbs, NULL));
+
+    ESP_LOGI(NIXIE_DISPLAY_TAG, "Enable display routine timer");
+    ESP_ERROR_CHECK(gptimer_enable(gptimer));
+
+    gptimer_alarm_config_t alarm_config = {
+        .alarm_count = 1000000, // period = 1s
+        .reload_count = 0,
+        .flags.auto_reload_on_alarm = true
+    };
+
+    ESP_ERROR_CHECK(gptimer_set_alarm_action(gptimer, &alarm_config));
+    ESP_ERROR_CHECK(gptimer_start(gptimer));
+
+    /* Setting anti-posisoning routine timer */
+    gptimer_handle_t anti_poisoing_gptimer = NULL;
+    ESP_ERROR_CHECK(gptimer_new_timer(&timer_config, &anti_poisoing_gptimer));
+    gptimer_event_callbacks_t anti_poisoning_cbs = {
+        .on_alarm = pp_anti_poisoning_timer_cb,
+    };
+    ESP_ERROR_CHECK(gptimer_register_event_callbacks(anti_poisoing_gptimer, &anti_poisoning_cbs, NULL));
+    ESP_LOGI(NIXIE_DISPLAY_TAG, "Enable anti-poisoning routine timer");
+    ESP_ERROR_CHECK(gptimer_enable(anti_poisoing_gptimer));
+
+    gptimer_alarm_config_t anti_poisoning_alarm_config = {
+        .alarm_count = 60000000, // period = 60s
+        .reload_count = 0,
+        .flags.auto_reload_on_alarm = true
+    };
+
+    ESP_ERROR_CHECK(gptimer_set_alarm_action(anti_poisoing_gptimer, &anti_poisoning_alarm_config));
+    ESP_ERROR_CHECK(gptimer_start(anti_poisoing_gptimer));
+
+    blink_timer_h = xTimerCreate(NULL, pdMS_TO_TICKS(500), pdTRUE, NULL, pp_blink_timer_cb);
+    ESP_ERROR_CHECK(xTimerStart(blink_timer_h, 1));
+}
 
 void pp_set_insert_passkey_flag(bool enable)
 {
@@ -81,6 +159,11 @@ void pp_set_display_passkey(uint32_t passkey)
         current_passkey[5-i] = passkey % 10;
         passkey /= 10;
     }
+}
+
+static void pp_blink_timer_cb(TimerHandle_t xTimer)
+{
+    time_change_blink_switch = !time_change_blink_switch;
 }
 
 static void pp_set_nixie_state()
@@ -138,7 +221,7 @@ static bool IRAM_ATTR pp_anti_poisoning_timer_cb(gptimer_handle_t timer, const g
     return false;
 }
 
-void pp_nixie_display_main(void* arg)
+static void pp_nixie_display_main(void* arg)
 {
     uint8_t i2c_msg[5];
 
@@ -615,78 +698,7 @@ void pp_nixie_display_main(void* arg)
     }
 }
 
-esp_err_t pp_nixie_diplay_init()
-{
-    uint8_t conf_output_mask[5];
-    memset(conf_output_mask, 0, 5);
-    pp_pca_write_all_reg(SLAVE_ADDR_0, IOC0_ADDR, conf_output_mask);
-    pp_pca_write_all_reg(SLAVE_ADDR_1, IOC0_ADDR, conf_output_mask);
-    pp_pca_write_all_reg(SLAVE_ADDR_2, IOC0_ADDR, conf_output_mask);
-    pp_pca_write_all_reg(SLAVE_ADDR_3, IOC0_ADDR, conf_output_mask);
-    pp_pca_write_all_reg(SLAVE_ADDR_4, IOC0_ADDR, conf_output_mask);
-    pp_pca_write_all_reg(SLAVE_ADDR_5, IOC0_ADDR, conf_output_mask);
-
-    BaseType_t res = xTaskCreate(pp_nixie_display_main, "NIXIE DISPLAY", 4096, NULL, 1, NULL);
-    if(res != pdPASS)
-    {
-        ESP_LOGE(TAG, "Creating display task failed");
-        return res;
-    }
-
-    /* Setting display routine timer */
-    gptimer_handle_t gptimer = NULL;
-    gptimer_config_t timer_config = {
-        .clk_src = GPTIMER_CLK_SRC_DEFAULT,
-        .direction = GPTIMER_COUNT_UP,
-        .resolution_hz = 1000000, // 1000000Hz, 1 tick=1us
-    };
-
-    ESP_ERROR_CHECK(gptimer_new_timer(&timer_config, &gptimer));
-
-     gptimer_event_callbacks_t cbs = {
-        .on_alarm = pp_display_routine_timer_cb,
-    };
-
-    ESP_ERROR_CHECK(gptimer_register_event_callbacks(gptimer, &cbs, NULL));
-
-    ESP_LOGI(TAG, "Enable display routine timer");
-    ESP_ERROR_CHECK(gptimer_enable(gptimer));
-
-    gptimer_alarm_config_t alarm_config = {
-        .alarm_count = 1000000, // period = 1s
-        .reload_count = 0,
-        .flags.auto_reload_on_alarm = true
-    };
-
-    ESP_ERROR_CHECK(gptimer_set_alarm_action(gptimer, &alarm_config));
-    ESP_ERROR_CHECK(gptimer_start(gptimer));
-
-    /* Setting anti-posisoning routine timer */
-    gptimer_handle_t anti_poisoing_gptimer = NULL;
-    ESP_ERROR_CHECK(gptimer_new_timer(&timer_config, &anti_poisoing_gptimer));
-    gptimer_event_callbacks_t anti_poisoning_cbs = {
-        .on_alarm = pp_anti_poisoning_timer_cb,
-    };
-    ESP_ERROR_CHECK(gptimer_register_event_callbacks(anti_poisoing_gptimer, &anti_poisoning_cbs, NULL));
-    ESP_LOGI(TAG, "Enable anti-poisoning routine timer");
-    ESP_ERROR_CHECK(gptimer_enable(anti_poisoing_gptimer));
-
-    gptimer_alarm_config_t anti_poisoning_alarm_config = {
-        .alarm_count = 60000000, // period = 1s
-        .reload_count = 0,
-        .flags.auto_reload_on_alarm = true
-    };
-
-    ESP_ERROR_CHECK(gptimer_set_alarm_action(anti_poisoing_gptimer, &anti_poisoning_alarm_config));
-    ESP_ERROR_CHECK(gptimer_start(anti_poisoing_gptimer));
-
-    blink_timer_h = xTimerCreate(NULL, pdMS_TO_TICKS(500), pdTRUE, NULL, pp_blink_timer_cb);
-    xTimerStart(blink_timer_h, 1);
-
-    return ESP_OK;
-}
-
-bool pp_nixie_display_generate_i2c_msg(uint8_t expander_id, uint8_t *msg)
+static bool pp_nixie_display_generate_i2c_msg(uint8_t expander_id, uint8_t *msg)
 {
     uint8_t expander_nixie_id = expander_id * 3;
 
