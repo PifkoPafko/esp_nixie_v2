@@ -1982,14 +1982,9 @@ void app_main(void)
     pp_nvs_init();
     pp_i2c_init();
     pp_rtc_init();
+    pp_nixie_diplay_init();
 
-    esp_err_t ret = pp_nixie_diplay_init();
-    if (ret) {
-        ESP_LOGE(MAIN_TAG, "nixie display failed, err: %x", ret);
-        return;
-    }
-
-    ret = pp_object_manager_init();
+    esp_err_t ret = pp_object_manager_init();
     if (ret) {
         ESP_LOGE(MAIN_TAG, "Object Manager failed, err: %x", ret);
         return;

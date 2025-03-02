@@ -23,6 +23,7 @@
  */
 static void pp_rtc_main(void* arg)
 {
+    // TODO: move this to alarm handling
     while (true)
     {
         struct tm timeinfo;

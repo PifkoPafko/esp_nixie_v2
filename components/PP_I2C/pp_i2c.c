@@ -63,6 +63,7 @@ static void pp_i2c_give_mutex(void)
  */
 void pp_i2c_init(void) 
 {
+    ESP_LOGI(I2C_TAG, "Initializing I2C");
     uint32_t freq = I2C_FREQ;
 	if(freq < I2C_FREQ_MIN) freq = I2C_FREQ_MIN;
 	if(freq > I2C_FREQ_MAX) freq = I2C_FREQ_MAX;
