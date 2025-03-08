@@ -11,24 +11,18 @@
  *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.                   *
  ****************************************************************************/
 
-/* Headers */
-#include "freertos/FreeRTOS.h"
-#include "freertos/task.h"
-#include "freertos/semphr.h"
-#include "project_defs.h"
-
 /* Macros */
 #define NIXIE_DISPLAY_TAG "NIXIE DISPLAY"
 
-#define MESSAGE_QUEUE_LEGNTH 10
+#define TUBES_COUNT 16
+#define EXPANDER_COUNT 6
+#define EXPANDER_REG_COUNT 5
+#define DIGITS_COUNT 10
+#define TUBES_PER_EXPANDER 3
 
 #define NIXIE_FIRST_ID  0
 #define NIXIE_SECOND_ID 1
 #define NIXIE_THIRD_ID  2
-
-#define NIXIE_0_ID   NIXIE_FIRST_ID
-#define NIXIE_1_ID   NIXIE_SECOND_ID
-#define NIXIE_2_ID   NIXIE_THIRD_ID
 
 #define NIXIE_0_0_BIT   (1<<3)
 #define NIXIE_0_1_BIT   (1<<6)
@@ -108,31 +102,30 @@
 #define NIXIE_2_LC_REG_ID   3
 #define NIXIE_2_RC_REG_ID   3
 
-/* Variables */
-extern QueueHandle_t mess_queue_hdl;
-
-extern time_change_sm_t time_change_sm;
-extern nixie_time_t nixie_time;
-
-extern alarm_add_sm_t alarm_add_sm;
-extern alarm_add_digits_t alatm_add_digits;
-
 /* Structures */
 typedef struct nixie_tube_state
 {
-    bool digit_enable;
-    uint8_t digit;
-    uint8_t left_comma_enable;
-    uint8_t right_comma_enable;
-} nixie_tube_state_t;
-
-typedef struct display_mess
-{
-    nixie_tube_state_t nixie[16];
-}display_mess_t;
+    bool digit_enable[TUBES_COUNT];
+    uint8_t digit[TUBES_COUNT];
+    uint8_t left_comma_enable[TUBES_COUNT];
+    uint8_t right_comma_enable[TUBES_COUNT];
+} display_state_t;
 
 /* Functions */
-void pp_nixie_diplay_init();
-void pp_set_display_passkey(uint32_t passkey);
-void pp_set_ble_pairing_flag(bool enable);
-void pp_set_insert_passkey_flag(bool enable);
+/** @brief pp_nixie_display_init: Initializes nixie display.
+ * 
+ * This function sets all registers of expanders as outputs.
+ *
+ * @return
+ */
+void pp_nixie_display_init(void);
+
+/** @brief pp_display: Displays given nixie tubes state.
+ * 
+ * This function sets outputs of expanders and siplay desired digits and commas of nixie tubes.
+ *
+ * @param[in]   nixie_state  (nixie_tube_state_t*) Pointer to nixie_state structure.
+ * 
+ * @return
+ */
+void pp_display(nixie_tube_state_t *nixie_state);

@@ -1,3 +1,3 @@
-idf_component_register( SRCS "pp_nixie_display.c"
+idf_component_register( SRCS "."
 	INCLUDE_DIRS "."
-	REQUIRES main PP_I2C PP_PCA9698)
+	REQUIRES main PP_NIXIE_DISPLAY)

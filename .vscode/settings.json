@@ -97,7 +97,8 @@
     "pp_sd_card.h": "c",
     "pp_gpio.h": "c",
     "pp_filter_order.h": "c",
-    "gptimer.h": "c"
+    "gptimer.h": "c",
+    "pp_nixie_display_manager.h": "c"
   },
   "idf.flashType": "UART",
   "idf.portWin": "COM5",
