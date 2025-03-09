@@ -41,18 +41,18 @@ static uint8_t passkey[PASSKEY_SIZE];
 static TaskHandle_t display_main_h;
 static TimerHandle_t timer_h;
 static TimerHandle_t timer_anti_poison_h;
-bool anti_poisoning_ongoing = false;
+static bool anti_poisoning_ongoing = false;
 
 /* Functions */
 
-/** @brief pp_nixie_diplay_manager_init: Initializes display manager and calls init function for display.
+/** @brief pp_display_manager_init: Initializes display manager and calls init function for display.
  *
  * @param[in]   device_mode  (device_mode_t*) Pointer to device_mode_t structure.
  * @param[in]   display_digits  (nixie_tube_state_t*) Pointer to nixie_tube_state_t structure.
  * 
  * @return
  */
-void pp_nixie_diplay_manager_init(device_mode_t *device_mode, nixie_tube_state_t *display_digits)
+void pp_display_manager_init(device_mode_t *device_mode, nixie_tube_state_t *display_digits)
 {
     ESP_LOGI(NIXIE_DISPLAY_MANAGER_TAG, "Initializing NIXIE Display Manager");
     device_mode_p = device_mode;
@@ -154,7 +154,7 @@ static void pp_display_main(void* arg)
     while(true)
     {
         uint32_t notify_value;
-        ESP_ERROR_CHECK(xTaskNotifyWait(0, 0, &notify_value, portMAX_DELAY));
+        if(xTaskNotifyWait(0, 0, &notify_value, portMAX_DELAY) != pdTRUE) continue;
 
         if(notify_value == NOTIFY_TIMER_ANTI_POISONING_VAL)
         {
