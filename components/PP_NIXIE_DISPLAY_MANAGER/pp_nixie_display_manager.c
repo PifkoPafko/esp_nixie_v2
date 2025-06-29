@@ -14,6 +14,9 @@
 /* Headers */
 #include "pp_nixie_display_manager.h"
 
+/* Macros */
+#define NIXIE_DISPLAY_MANAGER_TAG "NIXIE_DISPLAY_MANAGER"
+
 /* Declarations */
 static static void pp_timer_cb(TimerHandle_t xTimer);
 static static void pp_timer_anti_poison_cb(TimerHandle_t xTimer);
@@ -33,12 +36,11 @@ static void pp_nixie_display_main(void* arg);
 
 /* Variables */
 static display_state_t display_state;
-static device_mode_t *device_mode_p;
 static display_digits_t *display_digits_p;
 
 static uint8_t passkey[PASSKEY_SIZE];
 
-static TaskHandle_t display_main_h;
+
 static TimerHandle_t timer_h;
 static TimerHandle_t timer_anti_poison_h;
 static bool anti_poisoning_ongoing = false;
@@ -47,15 +49,13 @@ static bool anti_poisoning_ongoing = false;
 
 /** @brief pp_display_manager_init: Initializes display manager and calls init function for display.
  *
- * @param[in]   device_mode  (device_mode_t*) Pointer to device_mode_t structure.
  * @param[in]   display_digits  (nixie_tube_state_t*) Pointer to nixie_tube_state_t structure.
  * 
  * @return
  */
-void pp_display_manager_init(device_mode_t *device_mode, nixie_tube_state_t *display_digits)
+void pp_display_manager_init(nixie_tube_state_t *display_digits)
 {
     ESP_LOGI(NIXIE_DISPLAY_MANAGER_TAG, "Initializing NIXIE Display Manager");
-    device_mode_p = device_mode;
     display_digits_p = display_digits;
 
     pp_nixie_display_init();
@@ -104,7 +104,7 @@ void pp_update_display()
         }
     }
 
-    UPDATE_DISPLAY(main_task_h, NOTIFY_NORMAL_VAL);
+    NOTIFY_TASK(display_main_h, NOTIFY_NORMAL_VAL);
 }
 
 /** @brief pp_set_display_passkey: Set bluetooth passkey to display afterwards
@@ -172,7 +172,7 @@ static void pp_display_main(void* arg)
         }
         else
         {
-            switch(*device_mode_p)
+            switch(device_mode)
             {
                 case DEFAULT_MODE:
                 {
@@ -269,13 +269,13 @@ static void pp_display_main(void* arg)
  */
 static void pp_timer_cb(TimerHandle_t xTimer)
 {
-    if(*device_mode_p == TIME_CHANGE_MODE || *device_mode_p == ALARM_ADD_MODE)
+    if(device_mode == TIME_CHANGE_MODE || device_mode == ALARM_ADD_MODE)
     {
-        UPDATE_DISPLAY(main_task_h, NOTIFY_TIMER_BLINK_VAL);
+        NOTIFY_TASK(display_main_h, NOTIFY_TIMER_BLINK_VAL);
     }
     else
     {
-        UPDATE_DISPLAY(main_task_h, NOTIFY_TIMER_VAL);
+        NOTIFY_TASK(display_main_h, NOTIFY_TIMER_VAL);
     }
 }
 
@@ -292,7 +292,7 @@ static void pp_timer_cb(TimerHandle_t xTimer)
  */
 static void pp_timer_anti_poison_cb(TimerHandle_t xTimer)
 {
-    UPDATE_DISPLAY(main_task_h, NOTIFY_TIMER_ANTI_POISONING_VAL);
+    NOTIFY_TASK(display_main_h, NOTIFY_TIMER_ANTI_POISONING_VAL);
 }
 
 

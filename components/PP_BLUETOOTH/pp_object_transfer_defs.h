@@ -2,12 +2,14 @@
 #define __OBJECT_TRANSFER_DEFS_H__
 
 //ATTRIBUTE GENERAL ERROR CODES
-#define STATUS_OK                       ((uint8_t)0x00)
-#define INVALID_ATTR_VAL_LENGTH         ((uint8_t)0x0D)
-#define ERROR_INSUFFICIENT_RESOURCES    ((uint8_t)0x11)
-#define WRITE_REQUEST_REJECTED          ((uint8_t)0x80)
-#define ERROR_OBJECT_NOT_SELECTED       ((uint8_t)0x81)
-#define ALARM_NOT_CONFIGURED            ((uint8_t)0x82)
+typedef enum {
+    STATUS_OK                       = 0x00,
+    INVALID_ATTR_VAL_LENGTH         = 0x0D,
+    ERROR_INSUFFICIENT_RESOURCES    = 0x11,
+    WRITE_REQUEST_REJECTED          = 0x80,
+    ERROR_OBJECT_NOT_SELECTED       = 0x81,
+    ALARM_NOT_CONFIGURED            = 0x82
+}otp_rsp_status_t;
 
 //OACP RESULT CODES
 typedef enum{
@@ -33,7 +35,6 @@ typedef enum{
     OLCP_RES_NO_OBJECT,
     OLCP_RES_OBJECT_NOT_FOUND
 }olcp_op_code_result_t;
-
 
 //OACP OP CODES
 #define OACP_OP_CODE_CREATE                  ((uint8_t)0x01)
@@ -71,6 +72,7 @@ typedef enum{
 #define CURRENT_SIZE_BETWEEN            0x08
 #define ALLOC_SIZE_BETWEEN              0x09
 #define MARKED_OBJECTS                  0x0A
+#define FILTER_RANGE                    0x0B
 
 //Order op codes
 #define NAME_ASC                        0x01
@@ -79,5 +81,6 @@ typedef enum{
 #define NAME_DESC                       0x11
 #define TYPE_DESC                       0x12
 #define CURRENT_SIZE_DESC               0x13
+#define ORDER_RANGE                     0x14
 
 #endif

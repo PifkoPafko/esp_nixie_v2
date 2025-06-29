@@ -14,6 +14,9 @@
 /* Headers */
 #include "pp_i2c.h"
 
+/* Macros */
+#define I2C_TAG "I2C"
+
 /* Variables */
 static SemaphoreHandle_t i2c_mutex;
 

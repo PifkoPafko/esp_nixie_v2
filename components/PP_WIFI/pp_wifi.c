@@ -1,25 +1,21 @@
-#include "freertos/FreeRTOS.h"
-#include "freertos/task.h"
-#include "freertos/event_groups.h"
-#include "esp_wifi.h"
-#include "esp_log.h"
-#include "pp_object_transfer_metadata_write.h"
-
-#include "pp_rtc.h"
-#include "pp_alarm.h"
-#include "esp_sntp.h"
-#include "driver/gpio.h"
-
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
+/****************************************************************************
+ * Copyright (C) 2025 by Paweł Smarkucki                                    *
+ *                                                                          *
+ *   This file is part of NIXIE B16.                                        *
+ *                                                                          *
+ *   NIXIE B16 is free software: you can redistribute it, modify it,        *
+ *   sell it and do whatever you want under no terms or conditions.         *
+ *                                                                          *
+ *   NIXIE B16 is distributed in the hope that it will be useful,           *
+ *   but WITHOUT ANY WARRANTY; without even the implied warranty of         *
+ *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.                   *
+ ****************************************************************************/
 
 #include "pp_wifi.h"
 
-static const char* TAG = "WIFI";
+#define TAG = "WIFI"
 
 static TaskFunction_t wifi_search_main_fun;
-static TaskHandle_t wifi_main_hdl;
 
 #define WIFI_CONNECTED_BIT BIT0
 #define WIFI_FAIL_BIT      BIT1
@@ -28,6 +24,58 @@ static my_wifi_t my_wifi;
 bool isConnected = false;
 
 static void pp_sntp_init( char * sntp_srv );
+
+static esp_err_t pp_wifi_init()
+{
+    esp_err_t ret = esp_netif_init();
+    if (ret){
+        ESP_LOGE(MAIN_TAG, "esp_netif_init, error code = %x", ret);
+        return ret;
+    }
+
+    esp_event_loop_create_default();
+    if (ret){
+        ESP_LOGE(MAIN_TAG, "esp_event_loop_create_default, error code = %x", ret);
+        return ret;
+    }
+
+    esp_netif_create_default_wifi_sta();
+    if (ret){
+        ESP_LOGE(MAIN_TAG, "esp_netif_create_default_wifi_sta, error code = %x", ret);
+        return ret;
+    }
+
+    wifi_init_config_t cfg = WIFI_INIT_CONFIG_DEFAULT();
+    esp_wifi_init(&cfg);
+    if (ret){
+        ESP_LOGE(MAIN_TAG, "esp_wifi_init, error code = %x", ret);
+        return ret;
+    }
+
+    esp_wifi_set_mode(WIFI_MODE_STA);
+    if (ret){
+        ESP_LOGE(MAIN_TAG, "esp_wifi_set_mode, error code = %x", ret);
+        return ret;
+    }
+
+    esp_event_handler_instance_t instance_any_id;
+    esp_event_handler_instance_t instance_got_ip;
+
+    ESP_ERROR_CHECK(esp_event_handler_instance_register(WIFI_EVENT,
+                                                        ESP_EVENT_ANY_ID,
+                                                        &pp_wifi_event_handler,
+                                                        NULL,
+                                                        &instance_any_id));
+    ESP_ERROR_CHECK(esp_event_handler_instance_register(IP_EVENT,
+                                                        IP_EVENT_STA_GOT_IP,
+                                                        &pp_wifi_event_handler,
+                                                        NULL,
+                                                        &instance_got_ip));
+
+    pp_wifi_sta_init();
+
+    return ESP_OK;
+}
 
 void pp_wifi_event_handler(void* arg, esp_event_base_t event_base,
                                 int32_t event_id, void* event_data)
@@ -73,13 +121,13 @@ void pp_search_wifi_task(void* arg)
     pp_object_transfer_send_simple_wifi_ind(0);
 
     ESP_LOGI(TAG, "Wifi search task end");
-    vTaskDelete(wifi_main_hdl);
+    vTaskDelete(wifi_main_h);
 }
 
 esp_err_t pp_start_search_task()
 {
     wifi_search_main_fun = pp_search_wifi_task;
-    BaseType_t res = xTaskCreate(wifi_search_main_fun, "Wifi_Search", 4096, NULL, 1, &wifi_main_hdl);
+    BaseType_t res = xTaskCreate(wifi_search_main_fun, "Wifi_Search", 4096, NULL, 1, &wifi_main_h);
     if(res != pdPASS)
     {
         ESP_ERROR_CHECK(ESP_FAIL);

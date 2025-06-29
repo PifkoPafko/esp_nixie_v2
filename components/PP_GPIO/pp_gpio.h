@@ -19,8 +19,6 @@
 #include "driver/gpio.h"
 
 /* Macros */
-#define GPIO_TAG "GPIO"
-
 #define GPIO_OUTPUT_OE          GPIO_NUM_3
 #define GPIO_OUTPUT_RED         GPIO_NUM_47
 #define GPIO_OUTPUT_BLUE        GPIO_NUM_21

@@ -20,8 +20,6 @@
 #include "esp_log.h"
 
 /* Macros */
-#define I2C_TAG "I2C"
-
 #define I2C_MASTER_NUM  0
 
 #define I2C_SDA_IO      GPIO_NUM_8

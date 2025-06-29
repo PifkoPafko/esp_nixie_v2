@@ -24,8 +24,6 @@
 #include "freertos/semphr.h"
 
 /* Macros */
-#define RTC_TAG "RTC"
-
 #define CENTRAL_EUROPEAN_TIME_ZONE	"CET-1CEST,M3.5.0/2,M10.5.0/3"  // for Poland
 
 #define WRITE_BIT_MASK(x)   (((x) << 1) & 0xFE)

@@ -1,55 +1,49 @@
+/****************************************************************************
+ * Copyright (C) 2025 by Paweł Smarkucki                                    *
+ *                                                                          *
+ *   This file is part of NIXIE B16.                                        *
+ *                                                                          *
+ *   NIXIE B16 is free software: you can redistribute it, modify it,        *
+ *   sell it and do whatever you want under no terms or conditions.         *
+ *                                                                          *
+ *   NIXIE B16 is distributed in the hope that it will be useful,           *
+ *   but WITHOUT ANY WARRANTY; without even the implied warranty of         *
+ *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.                   *
+ ****************************************************************************/
+
 #ifndef __ALARM_H__
 #define __ALARM_H__
 
+/* Headers */
 #include "project_defs.h"
 #include "ctype.h"
 #include "stdlib.h"
 #include "string.h"
 #include  <stdbool.h>
 
+#include "pp_object_manager.h"
+#include "pp_object_transfer_attr_ids.h"
+#include "pp_object_transfer_defs.h"
+#include "pp_wave_player.h"
+
+#include "freertos/FreeRTOS.h"
+#include "freertos/task.h"
+#include "freertos/semphr.h"
+
+#include "esp_err.h"
+#include "esp_log.h"
+#include "stdlib.h"
+#include <sys/time.h>
+#include <time.h>
+
+#include "driver/gptimer.h"
+#include "driver/gpio.h"
+#include "driver/i2s_std.h" // i2s setup
+
 #include "esp_err.h"
 
-typedef struct
-{
-    uint8_t day;
-    uint8_t month;
-    uint8_t year;
-}alarm_single_args_t;
-
-typedef struct
-{
-    uint8_t day;
-    uint8_t month;
-}alarm_yearly_args_t;
-
-typedef struct 
-{
-    uint8_t mode;
-    uint8_t enable;
-    uint8_t desc_len;
-    char desc[40];
-    uint8_t hour;
-    uint8_t minute;
-
-    union {
-        alarm_single_args_t single_alarm_args;
-        uint8_t days;
-        uint8_t day;
-        alarm_yearly_args_t yearly_alarm_args;
-    } args;
-
-    uint8_t volume;
-}alarm_mode_args_t;
-
-esp_err_t pp_alarm_init();
-uint8_t pp_set_alarm_values(uint8_t *payload, uint16_t payload_len);
-alarm_mode_args_t pp_get_alarm_values();
-alarm_mode_args_t* pp_get_alarm_pointer();
-void pp_set_next_alarm();
-void pp_disable_current_alarm();
-uint64_t pp_get_current_active_alarm_id();
-bool pp_get_alarm_state();
-void pp_set_timer_for_playing_alarm();
+/* Macros */
+// #define ALARM_LOG
 
 #define ALARM_SINGLE_MODE   0
 #define ALARM_WEEKLY_MODE   1
@@ -85,5 +79,85 @@ void pp_set_timer_for_playing_alarm();
 
 #define ONE_WEEK_IN_SEC     604800
 #define DAYS_TO_SEC(x)     ( (x) * 24ll * 60ll * 60ll )
+
+#define AUDIO_BUFFER 2048           // buffer size for reading the wav file and sending to i2s
+#define WAV_FILE "/sdcard/ringtone0.wav" // wav file to play
+
+#define ALARM_TIMER_NOTIFICATION    0
+#define ALARM_START_NOTIFICATION    1
+#define ALARM_STOP_NOTIFICATION     2
+
+/* Structures */
+typedef enum {
+    WAIT_FOR_START_PLAY,
+    SET_RINGTONE,
+    SET_DATA_POSITION,
+    ALARM_PLAY,
+    SET_NEXT_ALARM,
+}alarm_play_sm_t;
+
+typedef struct
+{
+    uint8_t day;
+    uint8_t month;
+    uint8_t year;
+}alarm_single_args_t;
+
+typedef struct
+{
+    uint8_t day;
+    uint8_t month;
+}alarm_yearly_args_t;
+
+typedef struct 
+{
+    bool is_set;
+    uint8_t mode;
+    uint8_t enable;
+    uint8_t desc_len;
+    char desc[40];
+    uint8_t hour;
+    uint8_t minute;
+
+    union {
+        alarm_single_args_t single_alarm_args;
+        uint8_t days;
+        uint8_t day;
+        alarm_yearly_args_t yearly_alarm_args;
+    } args;
+
+    uint8_t volume;
+}alarm_mode_args_t;
+
+/** @brief pp_alarm_init: Alarm player initialization function
+ * 
+ * This functions initializes i2s functionality and creates a task that manages alarm playing. It also initializes
+ * the timer used to measure interval to next alarm or current playing alarm remaining playing time.
+ * The timer is set to notify the alarm task when the next alarm should be played.
+ * 
+ * @return
+ */
+void pp_alarm_init(void);
+
+/** @brief pp_set_alarm_values: Set the current alarm values.
+ * 
+ * This functions sets the values of the current alarm global variable with the bluetooth payload data stream.
+ * 
+ * @param[in]   payload      (uint8_t *) Write bluetooth payload.
+ * @param[in]   payload_len  (uint16_t)  Payload length.
+ * 
+ * @return (otp_rsp_status_t) Operation result code.
+ */
+otp_rsp_status_t pp_set_alarm_values(uint8_t *payload, uint16_t payload_len);
+
+/** @brief pp_set_next_alarm: Set the timer for the next alarm.
+ * 
+ * This function checks all the alarm objects and calculate the time to the nearest alarm. This function
+ * takes into consideratation the mode of the alarm (single, weekly, monthly and yearly). This function sets the Timer
+ * with the interval to the next alarm. The Timer is disabled if there is no alarm enabled.
+ * 
+ * @return (void)
+ */
+void pp_set_next_alarm(void);
 
 #endif

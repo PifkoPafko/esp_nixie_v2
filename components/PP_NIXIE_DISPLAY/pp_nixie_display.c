@@ -14,6 +14,9 @@
 /* Headers */
 #include "pp_nixie_display.h"
 
+/* Macros */
+#define NIXIE_DISPLAY_TAG "NIXIE DISPLAY"
+
 /* Declarations */
 static void pp_nixie_display_generate_i2c_msg(nixie_tube_state_t *nixie_state, uint8_t *i2c_msg);
 

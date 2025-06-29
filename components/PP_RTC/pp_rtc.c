@@ -14,6 +14,9 @@
  /* Headers */
 #include "pp_rtc.h"
 
+/* Macros */
+#define RTC_TAG "RTC"
+
 /* Functions */
 
 /** @brief pp_rtc_main: RTC Task main function
@@ -51,7 +54,7 @@ void pp_rtc_init()
     
     uint8_t regVal = 0x1C;
     pp_i2c_dev_write_reg(DS_RTC_ADDR, DS_RTC_CONTROL_REG_ADDR, &regVal, 1);
-    ESP_ERROR_CHECK(xTaskCreate(pp_rtc_main, "RTC", 3072, NULL, 2, NULL));
+    ESP_ERROR_CHECK(xTaskCreate(pp_rtc_main, "RTC", 3072, NULL, 2, rtc_main_h));
 }
 
 /** @brief pp_rtc_set_time: Sets time to RTC

@@ -18,9 +18,6 @@
 #include "esp_log.h"
 #include "nvs_flash.h"
 
-/* Macros */
-#define NVS_TAG "NVS"
-
 /* Functions */
 
 /** @brief nvs_init: Initializes nvs flash memory.

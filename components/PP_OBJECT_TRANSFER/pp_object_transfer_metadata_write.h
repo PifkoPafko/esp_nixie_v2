@@ -9,4 +9,11 @@ esp_err_t pp_object_transfer_metadata_write_event(esp_gatt_if_t gatts_if, esp_bl
 esp_err_t pp_object_transfer_send_found_wifi_ind(wifi_ap_record_t *wifi_record);
 esp_err_t pp_object_transfer_send_simple_wifi_ind(uint8_t val);
 
+typedef struct{
+    bool need_attr_set = false,
+    uint16_t length = 0,
+    uint8_t value[32],
+    bool need_ind = false
+}otp_write_attr_t;
+
 #endif

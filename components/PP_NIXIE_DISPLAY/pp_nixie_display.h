@@ -11,9 +11,10 @@
  *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.                   *
  ****************************************************************************/
 
-/* Macros */
-#define NIXIE_DISPLAY_TAG "NIXIE DISPLAY"
+#ifndef __NIXIE_DISPLAY_H__
+#define __NIXIE_DISPLAY_H__
 
+/* Macros */
 #define TUBES_COUNT 16
 #define EXPANDER_COUNT 6
 #define EXPANDER_REG_COUNT 5
@@ -129,3 +130,5 @@ void pp_nixie_display_init(void);
  * @return
  */
 void pp_display(nixie_tube_state_t *nixie_state);
+
+#endif

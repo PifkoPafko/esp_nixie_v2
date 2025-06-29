@@ -11,6 +11,9 @@
  *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.                   *
  ****************************************************************************/
 
+#ifndef __NIXIE_DISPLAY_MANAGER_H__
+#define __NIXIE_DISPLAY_MANAGER_H__
+
 /* Headers */
 #include "freertos/FreeRTOS.h"
 #include "freertos/timers.h"
@@ -18,15 +21,10 @@
 #include "pp_nixie_display.h"
 
 /* Macros */
-#define NIXIE_DISPLAY_MANAGER_TAG "NIXIE DISPLAY MANAGER"
-
 #define NOTIFY_NORMAL_VAL 0
 #define NOTIFY_TIMER_VAL 1
 #define NOTIFY_TIMER_BLINK_VAL 2
 #define NOTIFY_TIMER_ANTI_POISONING_VAL 3
-
-#define UPDATE_DISPLAY(x, y) (xTaskNotify(x, y, eSetValueWithOverwrite))
-#define UPDATE_DISPLAY_FROM_ISR(x, y) (xTaskNotifyFromISR(x, y, eSetValueWithOverwrite, NULL))
 
 #define DEFAULT_PERIOD pdMS_TO_TICKS(1000)
 #define BLINK_PERIOD pdMS_TO_TICKS(500)
@@ -37,12 +35,11 @@
 
 /** @brief pp_display_manager_init: Initializes display manager and calls init function for display.
  *
- * @param[in]   device_mode  (device_mode_t*) Pointer to device_mode_t structure.
  * @param[in]   display_digits  (nixie_tube_state_t*) Pointer to nixie_tube_state_t structure.
  * 
  * @return
  */
-void pp_display_manager_init(device_mode_t *device_mode, nixie_tube_state_t *display_digits);
+void pp_display_manager_init(nixie_tube_state_t *display_digits);
 
 /** @brief pp_update_display: Update state of the display.
  * 
@@ -65,3 +62,5 @@ void pp_set_display_passkey(uint32_t key);
  * @return (Bool) True if display ready to change, false - display is not ready to change
  */
 bool pp_check_display_ready(void);
+
+#endif

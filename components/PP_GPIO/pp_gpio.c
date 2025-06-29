@@ -14,6 +14,9 @@
 /* Headers */
 #include "pp_gpio.h"
 
+/* Macros */
+#define GPIO_TAG "GPIO"
+
 /* Variables */
 static QueueHandle_t gpio_evt_queue;
 static QueueHandle_t button_action_queue;
@@ -71,7 +74,7 @@ void pp_gpio_init(QueueHandle_t queue)
     gpio_evt_queue = xQueueCreate(10, sizeof(button_queue_msg_t));
     button_action_queue = queue;
 
-    ESP_ERROR_CHECK(xTaskCreate(pp_button_main, "BUTTON_MAIN", 3072, NULL, 1, NULL));
+    ESP_ERROR_CHECK(xTaskCreate(pp_button_main, "BUTTON_MAIN", 3072, NULL, 1, button_main_h));
 }
 
 /** @brief pp_led_enable: Enables or disables chosen LED
