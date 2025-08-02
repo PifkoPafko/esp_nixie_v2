@@ -11,101 +11,115 @@
  *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.                   *
  ****************************************************************************/
 
+ /* Headers */
 #include "pp_wifi.h"
 
+ /* Declarations */
+static void pp_wifi_event_handler(void* arg, esp_event_base_t event_base, int32_t event_id, void* event_data);
+static void pp_search_wifi_task(void* arg);
+static void pp_sntp_cb(struct timeval *tv);
+
+/* Macros */
 #define TAG = "WIFI"
 
+/* Variables */
 static TaskFunction_t wifi_search_main_fun;
-
-#define WIFI_CONNECTED_BIT BIT0
-#define WIFI_FAIL_BIT      BIT1
-
 static my_wifi_t my_wifi;
-bool isConnected = false;
+static bool isConnected = false;
 
-static void pp_sntp_init( char * sntp_srv );
+/* Functions */
 
-static esp_err_t pp_wifi_init()
+/** @brief pp_wifi_init: Wifi features initialization function.
+ *
+ * @return
+ */
+void pp_wifi_init(void)
 {
-    esp_err_t ret = esp_netif_init();
-    if (ret){
-        ESP_LOGE(MAIN_TAG, "esp_netif_init, error code = %x", ret);
-        return ret;
-    }
-
-    esp_event_loop_create_default();
-    if (ret){
-        ESP_LOGE(MAIN_TAG, "esp_event_loop_create_default, error code = %x", ret);
-        return ret;
-    }
-
-    esp_netif_create_default_wifi_sta();
-    if (ret){
-        ESP_LOGE(MAIN_TAG, "esp_netif_create_default_wifi_sta, error code = %x", ret);
-        return ret;
-    }
+    ESP_ERROR_CHECK(esp_netif_init())
+    ESP_ERROR_CHECK(esp_event_loop_create_default())
+    ESP_ERROR_CHECK(esp_netif_create_default_wifi_sta())
 
     wifi_init_config_t cfg = WIFI_INIT_CONFIG_DEFAULT();
-    esp_wifi_init(&cfg);
-    if (ret){
-        ESP_LOGE(MAIN_TAG, "esp_wifi_init, error code = %x", ret);
-        return ret;
-    }
-
-    esp_wifi_set_mode(WIFI_MODE_STA);
-    if (ret){
-        ESP_LOGE(MAIN_TAG, "esp_wifi_set_mode, error code = %x", ret);
-        return ret;
-    }
+    ESP_ERROR_CHECK(esp_wifi_init(&cfg))
+    ESP_ERROR_CHECK(esp_wifi_set_mode(WIFI_MODE_STA))
 
     esp_event_handler_instance_t instance_any_id;
     esp_event_handler_instance_t instance_got_ip;
 
-    ESP_ERROR_CHECK(esp_event_handler_instance_register(WIFI_EVENT,
-                                                        ESP_EVENT_ANY_ID,
-                                                        &pp_wifi_event_handler,
-                                                        NULL,
-                                                        &instance_any_id));
-    ESP_ERROR_CHECK(esp_event_handler_instance_register(IP_EVENT,
-                                                        IP_EVENT_STA_GOT_IP,
-                                                        &pp_wifi_event_handler,
-                                                        NULL,
-                                                        &instance_got_ip));
+    ESP_ERROR_CHECK(esp_event_handler_instance_register(WIFI_EVENT, ESP_EVENT_ANY_ID, &pp_wifi_event_handler, NULL, &instance_any_id));
+    ESP_ERROR_CHECK(esp_event_handler_instance_register(IP_EVENT, IP_EVENT_STA_GOT_IP, &pp_wifi_event_handler, NULL, &instance_got_ip));
 
-    pp_wifi_sta_init();
+    esp_wifi_get_config(WIFI_IF_STA, &my_wifi.wifi_config);
+    my_wifi.my_ssid_len = strlen((char*)my_wifi.wifi_config.sta.ssid);
+    my_wifi.my_password_len = strlen((char*)my_wifi.wifi_config.sta.password);
 
-    return ESP_OK;
+    ESP_ERROR_CHECK(esp_wifi_start());
+    ESP_ERROR_CHECK(esp_wifi_connect());
+
+    return;
 }
 
-void pp_wifi_event_handler(void* arg, esp_event_base_t event_base,
-                                int32_t event_id, void* event_data)
+/** @brief pp_wifi_event_handler: wifi event handler function
+ *
+ * @param[in]   arg         (void*) User data (unused)
+ * @param[in]   event_base  (esp_event_base_t) Wifi event type
+ * @param[in]   event_id    (int32_t) Event action type
+ * @param[in]   event_data  (void*) Event data
+ * 
+ * @return
+ */
+static void pp_wifi_event_handler(void* arg, esp_event_base_t event_base, int32_t event_id, void* event_data)
 {
     if (event_base == WIFI_EVENT && event_id == WIFI_EVENT_STA_DISCONNECTED) 
     {
-        // TODO: gpio_set_level(GPIO_OUTPUT_GREEN, 0);
+        gpio_set_level(GPIO_OUTPUT_GREEN, 0);
         isConnected = false;
-        pp_object_transfer_send_simple_wifi_ind(3);
+        pp_object_transfer_send_simple_wifi_ind(WIFI_DISCONNECTED);
         ESP_LOGI(TAG,"connect to the AP fail");
     } 
     else if (event_base == IP_EVENT && event_id == IP_EVENT_STA_GOT_IP) 
     {
-        // TODO: gpio_set_level(GPIO_OUTPUT_GREEN, 1);
+        gpio_set_level(GPIO_OUTPUT_GREEN, 1);
         isConnected = true;
         ip_event_got_ip_t* event = (ip_event_got_ip_t*) event_data;
         ESP_LOGI(TAG, "got ip:" IPSTR, IP2STR(&event->ip_info.ip));
-        pp_object_transfer_send_simple_wifi_ind(2);
-        pp_sntp_init(NULL);
+        pp_object_transfer_send_simple_wifi_ind(WIFI_CONNECTED);
+
+        esp_sntp_stop();
+
+        ESP_LOGI(TAG, "Initializing SNTP");
+        esp_sntp_setoperatingmode( SNTP_OPMODE_POLL );
+        esp_sntp_set_time_sync_notification_cb(pp_sntp_cb);
+
+        if( sntp_srv ) esp_sntp_setservername(0, NULL);
+        else 
+        {
+            esp_sntp_setservername(0, DEFAULT_NTP_SERVER_0);
+            esp_sntp_setservername(1, DEFAULT_NTP_SERVER_1);
+            esp_sntp_setservername(2, DEFAULT_NTP_SERVER_2);
+            esp_sntp_setservername(3, DEFAULT_NTP_SERVER_3);
+            esp_sntp_setservername(4, DEFAULT_NTP_SERVER_4);
+            esp_sntp_setservername(5, DEFAULT_NTP_SERVER_5);
+        }
+
+        esp_sntp_init();
     }
 }
 
-void pp_search_wifi_task(void* arg)
+/** @brief pp_search_wifi_task: wifi search networks function
+ *
+ * @param[in]   arg         (void*) User data (unused)
+ * 
+ * @return
+ */
+static void pp_search_wifi_task(void* arg)
 {
     ESP_ERROR_CHECK(esp_wifi_scan_start(NULL, true));
 
     uint16_t record_num = 20;
     wifi_ap_record_t record[20];
 
-    esp_wifi_scan_get_ap_records(&record_num, record);
+    ESP_ERROR_CHECK(esp_wifi_scan_get_ap_records(&record_num, record))
 
     for (int i = 0; i < record_num; i++)
     {
@@ -118,26 +132,36 @@ void pp_search_wifi_task(void* arg)
         vTaskDelay(100 / portTICK_PERIOD_MS);
     }
 
-    pp_object_transfer_send_simple_wifi_ind(0);
+    pp_object_transfer_send_simple_wifi_ind(WIFI_SEARCH_END);
 
     ESP_LOGI(TAG, "Wifi search task end");
     vTaskDelete(wifi_main_h);
 }
 
-esp_err_t pp_start_search_task()
+/** @brief pp_start_search_task: Creates wifi searching task
+ * 
+ * @return
+ */
+void pp_start_search_task(void)
 {
     wifi_search_main_fun = pp_search_wifi_task;
     BaseType_t res = xTaskCreate(wifi_search_main_fun, "Wifi_Search", 4096, NULL, 1, &wifi_main_h);
     if(res != pdPASS)
     {
         ESP_ERROR_CHECK(ESP_FAIL);
-        return res;
     }
-
-    return ESP_OK;
 }
 
-esp_err_t pp_connect_wifi(const uint8_t *ssid, const uint8_t ssid_len, const uint8_t *password, const uint8_t pass_len)
+/** @brief pp_connect_wifi: Connects to specified wifi network
+ *
+ * @param[in]   ssid        (const uint8_t*) Wifi SSID
+ * @param[in]   ssid_len    (const uint8_t) Wifi SSID length
+ * @param[in]   password    (const uint8_t*) Wifi password
+ * @param[in]   pass_len    (const uint8_t) Wifi password length
+ * 
+ * @return
+ */
+void pp_connect_wifi(const uint8_t *ssid, const uint8_t ssid_len, const uint8_t *password, const uint8_t pass_len)
 {
     ESP_ERROR_CHECK(esp_wifi_stop());
     memcpy((uint8_t*)my_wifi.wifi_config.sta.ssid, ssid, ssid_len);
@@ -151,31 +175,33 @@ esp_err_t pp_connect_wifi(const uint8_t *ssid, const uint8_t ssid_len, const uin
     ESP_ERROR_CHECK(esp_wifi_set_config(WIFI_IF_STA, &my_wifi.wifi_config) );    
     ESP_ERROR_CHECK(esp_wifi_start());
     ESP_ERROR_CHECK(esp_wifi_connect());
-
-    return ESP_OK;
 }
 
-void pp_wifi_sta_init()
-{
-    esp_wifi_get_config(WIFI_IF_STA, &my_wifi.wifi_config);
-    my_wifi.my_ssid_len = strlen((char*)my_wifi.wifi_config.sta.ssid);
-    my_wifi.my_password_len = strlen((char*)my_wifi.wifi_config.sta.password);
-
-    ESP_ERROR_CHECK(esp_wifi_start());
-    ESP_ERROR_CHECK(esp_wifi_connect());
-}
-
+/** @brief pp_get_wifi_connect_status: Returns WiFi connection status
+ * 
+ * @return  (bool) WiFi connection status
+ */
 bool pp_get_wifi_connect_status()
 {
     return isConnected;
 }
 
+/** @brief pp_get_current_wifi: Returns WiFi descriptions structure pointer
+ * 
+ * @return  (my_wifi_t*) WiFi descriptions structure pointer
+ */
 my_wifi_t* pp_get_current_wifi()
 {
     return &my_wifi;
 }
 
-void pp_sntp_cb(struct timeval *tv)
+/** @brief pp_sntp_cb: Server SNTP feature callback function
+ * 
+ * @param[in]   tv  (struct timeval*) Obtained timestamp
+ * 
+ * @return
+ */
+static void pp_sntp_cb(struct timeval *tv)
 {
     ESP_LOGI(TAG, "SNTP Syncro Done, time: %lld", tv->tv_sec);
 
@@ -189,26 +215,4 @@ void pp_sntp_cb(struct timeval *tv)
 
     pp_rtc_set_time(&timeinfo);
     pp_set_next_alarm();
-}
-
-static void pp_sntp_init( char * sntp_srv ) {
-
-	esp_sntp_stop();
-
-    ESP_LOGI(TAG, "Initializing SNTP");
-    esp_sntp_setoperatingmode( SNTP_OPMODE_POLL );
-    esp_sntp_set_time_sync_notification_cb(pp_sntp_cb);
-
-    if( sntp_srv ) esp_sntp_setservername(0, sntp_srv);
-    else 
-    {
-        esp_sntp_setservername(0, DEFAULT_NTP_SERVER_0);
-        esp_sntp_setservername(1, DEFAULT_NTP_SERVER_1);
-        esp_sntp_setservername(2, DEFAULT_NTP_SERVER_2);
-        esp_sntp_setservername(3, DEFAULT_NTP_SERVER_3);
-        esp_sntp_setservername(4, DEFAULT_NTP_SERVER_4);
-        esp_sntp_setservername(5, DEFAULT_NTP_SERVER_5);
-    }
-
-    esp_sntp_init();
 }

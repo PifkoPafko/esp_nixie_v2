@@ -105,7 +105,11 @@
     "pp_object_transfer_defs.h": "c",
     "pp_i2c.h": "c",
     "pp_alarm.h": "c",
-    "i2s_std.h": "c"
+    "i2s_std.h": "c",
+    "pp_wifi.h": "c",
+    "pp_object_transfer_metadata_write.h": "c",
+    "pp_object_transfer_metadata_read.h": "c",
+    "pp_bluetooth.h": "c"
   },
   "idf.flashType": "UART",
   "idf.portWin": "COM5",

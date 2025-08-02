@@ -18,8 +18,6 @@
 static void gap_event_handler(esp_gap_ble_cb_event_t event, esp_ble_gap_cb_param_t *param);
 static void gatts_profile_event_handler(esp_gatts_cb_event_t event, esp_gatt_if_t gatts_if, esp_ble_gatts_cb_param_t *param);
 static void gatts_event_handler(esp_gatts_cb_event_t event, esp_gatt_if_t gatts_if, esp_ble_gatts_cb_param_t *param);
-static char* esp_key_type_to_str(esp_ble_key_type_t key_type);
-static char* esp_auth_req_to_str(esp_ble_auth_req_t auth_req);
 
 /* Variables */
 static const uint16_t GATTS_OTP_SRV                     = 0x1825;
@@ -33,7 +31,7 @@ static const uint16_t GATTS_CHAR_OBJECT_OACP            = 0x2AC5;
 static const uint16_t GATTS_CHAR_OBJECT_OLCP            = 0x2AC6;
 static const uint16_t GATTS_CHAR_OBJECT_LIST_FILTER     = 0x2AC7;
 static uint8_t GATTS_CHAR_ALARM_ACTION[16]              = {0x26, 0xab, 0x57, 0xe0, 0x57, 0xab, 0x45, 0x98, 0xaf, 0xf2, 0x06, 0xe5, 0x27, 0x3f, 0x91, 0x9e};
-// static uint8_t GATTS_CHAR_RINGTONE_ACTION[16]           = {0x26, 0xab, 0x57, 0xe0, 0x57, 0xab, 0x45, 0x98, 0xaf, 0xf2, 0x06, 0xe5, 0x27, 0x5c, 0xe5, 0x40};
+// static uint8_t GATTS_CHAR_RINGTONE_ACTION[16]           = {0x26, 0xab, 0x57, 0xe0, 0x57, 0xab, 0x45, 0x98, 0xaf, 0xf2, 0x06, 0xe5, 0x27, 0x5c, 0xe5, 0x40};      TBD
 static uint8_t GATTS_CHAR_WIFI_ACTION[16]               = {0x26, 0xab, 0x57, 0xe0, 0x57, 0xab, 0x45, 0x98, 0xaf, 0xf2, 0x06, 0xe5, 0x27, 0x2a, 0x14, 0x80};
 
 static const uint16_t primary_service_uuid          = ESP_GATT_UUID_PRI_SERVICE;
@@ -172,7 +170,8 @@ static const esp_gatts_attr_db_t gatt_db[OPT_IDX_NB] =
     [OPT_IDX_CHAR_OBJECT_ALARM_ACTION_VAL] =
     {{ESP_GATT_RSP_BY_APP}, {ESP_UUID_LEN_128, GATTS_CHAR_ALARM_ACTION, ESP_GATT_PERM_READ | ESP_GATT_PERM_WRITE,
       GATTS_DEMO_CHAR_VAL_LEN_MAX, 0, NULL}},
-
+    
+    // TBD
     // /* Object Ringstone Action Characteristic Declaration */
     // [OPT_IDX_CHAR_OBJECT_RINGTONE_ACTION]     =
     // {{ESP_GATT_AUTO_RSP}, {ESP_UUID_LEN_16, (uint8_t *)&char_declaration_uuid, ESP_GATT_PERM_READ,
@@ -322,7 +321,7 @@ static void gap_event_handler(esp_gap_ble_cb_event_t event, esp_ble_gap_cb_param
         {
             ESP_LOGI(GATTS_TAG, "ESP_GAP_BLE_KEY_EVT");
             //shows the ble key info share with peer device to the user.
-            ESP_LOGI(GATTS_TAG, "key type = %s", esp_key_type_to_str(param->ble_security.ble_key.key_type));
+            ESP_LOGI(GATTS_TAG, "key type = %d", (uint8_t)param->ble_security.ble_key.key_type);
             break;
         }
 
@@ -343,7 +342,7 @@ static void gap_event_handler(esp_gap_ble_cb_event_t event, esp_ble_gap_cb_param
             } 
             else 
             {
-                ESP_LOGI(GATTS_TAG, "auth mode = %s",esp_auth_req_to_str(param->ble_security.auth_cmpl.auth_mode));
+                ESP_LOGI(GATTS_TAG, "auth mode = %d",(uint8_t)param->ble_security.auth_cmpl.auth_mode);
             }
 
             if (param->ble_security.auth_cmpl.success && device_mode == PAIRING_MODE)
@@ -443,14 +442,14 @@ static void gatts_profile_event_handler(esp_gatts_cb_event_t event, esp_gatt_if_
         {
             ESP_LOGI(GATTS_TAG, "ESP_GATTS_CONNECT_EVT, conn_id = %d", param->connect.conn_id);
             esp_ble_set_encryption(param->connect.remote_bda, ESP_BLE_SEC_ENCRYPT_MITM);
-            // TODO: gpio_set_level(GPIO_OUTPUT_BLUE, 1);
+            gpio_set_level(GPIO_OUTPUT_BLUE, 1);
             break;
         }
         case ESP_GATTS_DISCONNECT_EVT:
         {
             ESP_LOGI(GATTS_TAG, "ESP_GATTS_DISCONNECT_EVT, reason = 0x%x", param->disconnect.reason);
             esp_ble_gap_ext_adv_start(NUM_EXT_ADV_SET, &ext_adv);
-            // TODO: gpio_set_level(GPIO_OUTPUT_BLUE, 0);
+            gpio_set_level(GPIO_OUTPUT_BLUE, 0);
             break;
         }
         case ESP_GATTS_CREAT_ATTR_TAB_EVT:
@@ -501,79 +500,4 @@ static void gatts_event_handler(esp_gatts_cb_event_t event, esp_gatt_if_t gatts_
             OPT_profile_tab[PROFILE_APP_IDX].gatts_cb(event, gatts_if, param);
         }
     }
-}
-
-static char* esp_key_type_to_str(esp_ble_key_type_t key_type)
-{
-   char *key_str = NULL;
-   switch(key_type) {
-    case ESP_LE_KEY_NONE:
-        key_str = "ESP_LE_KEY_NONE";
-        break;
-    case ESP_LE_KEY_PENC:
-        key_str = "ESP_LE_KEY_PENC";
-        break;
-    case ESP_LE_KEY_PID:
-        key_str = "ESP_LE_KEY_PID";
-        break;
-    case ESP_LE_KEY_PCSRK:
-        key_str = "ESP_LE_KEY_PCSRK";
-        break;
-    case ESP_LE_KEY_PLK:
-        key_str = "ESP_LE_KEY_PLK";
-        break;
-    case ESP_LE_KEY_LLK:
-        key_str = "ESP_LE_KEY_LLK";
-        break;
-    case ESP_LE_KEY_LENC:
-        key_str = "ESP_LE_KEY_LENC";
-        break;
-    case ESP_LE_KEY_LID:
-        key_str = "ESP_LE_KEY_LID";
-        break;
-    case ESP_LE_KEY_LCSRK:
-        key_str = "ESP_LE_KEY_LCSRK";
-        break;
-    default:
-        key_str = "INVALID BLE KEY TYPE";
-        break;
-   }
-
-   return key_str;
-}
-
-static char* esp_auth_req_to_str(esp_ble_auth_req_t auth_req)
-{
-   char *auth_str = NULL;
-   switch(auth_req) {
-    case ESP_LE_AUTH_NO_BOND:
-        auth_str = "ESP_LE_AUTH_NO_BOND";
-        break;
-    case ESP_LE_AUTH_BOND:
-        auth_str = "ESP_LE_AUTH_BOND";
-        break;
-    case ESP_LE_AUTH_REQ_MITM:
-        auth_str = "ESP_LE_AUTH_REQ_MITM";
-        break;
-    case ESP_LE_AUTH_REQ_BOND_MITM:
-        auth_str = "ESP_LE_AUTH_REQ_BOND_MITM";
-        break;
-    case ESP_LE_AUTH_REQ_SC_ONLY:
-        auth_str = "ESP_LE_AUTH_REQ_SC_ONLY";
-        break;
-    case ESP_LE_AUTH_REQ_SC_BOND:
-        auth_str = "ESP_LE_AUTH_REQ_SC_BOND";
-        break;
-    case ESP_LE_AUTH_REQ_SC_MITM:
-        auth_str = "ESP_LE_AUTH_REQ_SC_MITM";
-        break;
-    case ESP_LE_AUTH_REQ_SC_MITM_BOND:
-        auth_str = "ESP_LE_AUTH_REQ_SC_MITM_BOND";
-        break;
-    default:
-        auth_str = "INVALID BLE AUTH REQ";
-        break;
-   }
-
-   return auth_str;
 }

@@ -1,55 +1,49 @@
+/****************************************************************************
+ * Copyright (C) 2025 by Paweł Smarkucki                                    *
+ *                                                                          *
+ *   This file is part of NIXIE B16.                                        *
+ *                                                                          *
+ *   NIXIE B16 is free software: you can redistribute it, modify it,        *
+ *   sell it and do whatever you want under no terms or conditions.         *
+ *                                                                          *
+ *   NIXIE B16 is distributed in the hope that it will be useful,           *
+ *   but WITHOUT ANY WARRANTY; without even the implied warranty of         *
+ *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.                   *
+ ****************************************************************************/
+
+/* Headers */
 #include "pp_object_transfer_metadata_write.h"
-#include "pp_object_manager.h"
-#include "pp_object_transfer_attr_ids.h"
-#include "pp_object_transfer_defs.h"
-#include "pp_object_manager_id_list.h"
-#include "pp_filter_order.h"
-#include "esp_err.h"
-#include "esp_gatts_api.h"
-#include "esp_log.h"
-#include "esp_wifi.h"
-#include "pp_wifi.h"
-#include "pp_alarm.h"
 
-#include "stdlib.h"
-
+/* Macros */
 #define TAG "WRITE_EVENT"
 
+/* Variable declarations */
 static esp_gatt_if_t gatts_interface;
-uint16_t handle_wifi;
-uint16_t connection_id;
+static uint16_t handle_wifi;
+static uint16_t connection_id;
 
-static esp_err_t pp_object_transfer_write_name(esp_gatt_if_t gatts_if, esp_ble_gatts_cb_param_t *param, uint16_t *handle_table);
-static esp_err_t pp_object_transfer_write_properties(esp_gatt_if_t gatts_if, esp_ble_gatts_cb_param_t *param, uint16_t *handle_table);
-static esp_err_t pp_object_transfer_write_list_filter(esp_gatt_if_t gatts_if, esp_ble_gatts_cb_param_t *param, uint16_t *handle_table);
-
-static esp_err_t pp_object_transfer_write_OACP(esp_gatt_if_t gatts_if, esp_ble_gatts_cb_param_t *param, uint16_t *handle_table);
-static esp_err_t pp_object_transfer_write_OACP_CCC(esp_gatt_if_t gatts_if, esp_ble_gatts_cb_param_t *param, uint16_t *handle_table);
-static esp_err_t pp_object_transfer_write_OACP_Create(esp_gatt_if_t gatts_if, esp_ble_gatts_cb_param_t *param, uint16_t *handle_table);
-static esp_err_t pp_object_transfer_write_OACP_Delete(esp_gatt_if_t gatts_if, esp_ble_gatts_cb_param_t *param, uint16_t *handle_table);
-static esp_err_t pp_object_transfer_write_OACP_OP_NS(esp_gatt_if_t gatts_if, esp_ble_gatts_cb_param_t *param, uint16_t *handle_table);
-
-static esp_err_t pp_object_transfer_write_OLCP(esp_gatt_if_t gatts_if, esp_ble_gatts_cb_param_t *param, uint16_t *handle_table);
-static esp_err_t pp_object_transfer_write_OLCP_CCC(esp_gatt_if_t gatts_if, esp_ble_gatts_cb_param_t *param, uint16_t *handle_table);
-static esp_err_t pp_object_transfer_write_OLCP_First(esp_gatt_if_t gatts_if, esp_ble_gatts_cb_param_t *param, uint16_t *handle_table);
-static esp_err_t pp_object_transfer_write_OLCP_Last(esp_gatt_if_t gatts_if, esp_ble_gatts_cb_param_t *param, uint16_t *handle_table);
-static esp_err_t pp_object_transfer_write_OLCP_Next(esp_gatt_if_t gatts_if, esp_ble_gatts_cb_param_t *param, uint16_t *handle_table);
-static esp_err_t pp_object_transfer_write_OLCP_Previous(esp_gatt_if_t gatts_if, esp_ble_gatts_cb_param_t *param, uint16_t *handle_table);
-static esp_err_t pp_object_transfer_write_OLCP_Last(esp_gatt_if_t gatts_if, esp_ble_gatts_cb_param_t *param, uint16_t *handle_table);
-static esp_err_t pp_object_transfer_write_OLCP_Goto(esp_gatt_if_t gatts_if, esp_ble_gatts_cb_param_t *param, uint16_t *handle_table);
-static esp_err_t pp_object_transfer_write_OLCP_Order(esp_gatt_if_t gatts_if, esp_ble_gatts_cb_param_t *param, uint16_t *handle_table);
-static esp_err_t pp_object_transfer_write_OLCP_Request_Num(esp_gatt_if_t gatts_if, esp_ble_gatts_cb_param_t *param, uint16_t *handle_table);
-static esp_err_t pp_object_transfer_write_OLCP_Clear_Marking(esp_gatt_if_t gatts_if, esp_ble_gatts_cb_param_t *param, uint16_t *handle_table);
-static esp_err_t pp_object_transfer_write_OLCP_OP_NS(esp_gatt_if_t gatts_if, esp_ble_gatts_cb_param_t *param, uint16_t *handle_table);
-
-static esp_err_t pp_object_transfer_write_Alarm_Action(esp_gatt_if_t gatts_if, esp_ble_gatts_cb_param_t *param, uint16_t *handle_table);
-// static esp_err_t pp_object_transfer_write_Ringtone_Action(esp_gatt_if_t gatts_if, esp_ble_gatts_cb_param_t *param, uint16_t *handle_table);
-
-static esp_err_t pp_object_transfer_write_wifi_action(esp_gatt_if_t gatts_if, esp_ble_gatts_cb_param_t *param, uint16_t *handle_table);
-static esp_err_t pp_object_transfer_write_wifi_CCC(esp_gatt_if_t gatts_if, esp_ble_gatts_cb_param_t *param, uint16_t *handle_table);
-static esp_err_t pp_object_transfer_write_wifi_search(esp_gatt_if_t gatts_if, esp_ble_gatts_cb_param_t *param, uint16_t *handle_table);
-static esp_err_t pp_object_transfer_write_wifi_connect(esp_gatt_if_t gatts_if, esp_ble_gatts_cb_param_t *param, uint16_t *handle_table);
-
+/** @brief pp_object_transfer_write_event: Object Transfer Write handler function
+ * 
+ * This function should be called when Bluetooth GATT Profile got a write request for Object Transfer profile.
+ * This function, based on input argument, recognize which characteristic the request is for
+ * and prepares, takes action based on the type and prepares a response data.
+ * 
+ * Support OTP characteristics:
+ *  -   Object Name             - name of the current object
+ *  -   Object Type             - type of the current object
+ *  -   Object Size             - size of the current object
+ *  -   Object ID               - ID of the current object
+ *  -   Object Properties       - properties of the current object
+ *  -   Object List Filter      - Current filter option
+ *  -   Object Alarm Action     - Alarm properties of the current object
+ *  -   Object Wifi Action      - Wifi properties of the device
+ *
+ * @param[in]   handle        (uint16_t) Characteristic handle
+ * @param[in]   handle_table  (uint16_t*) Characteristics handle table
+ * @param[out]  rsp           (esp_gatt_rsp_t*) Pointer to the GATT response data
+ * 
+ * @return  (esp_gatt_status_t) GATT status of the operation.
+ */
 esp_gatt_status_t pp_object_transfer_write_event(esp_ble_gatts_cb_param_t *param, uint16_t *handle_table, otp_write_attr_t *write_params, esp_gatt_rsp_t *rsp)
 {
     uint16_t handle = param->write.handle;
@@ -551,6 +545,33 @@ esp_gatt_status_t pp_object_transfer_write_event(esp_ble_gatts_cb_param_t *param
     return (esp_gatt_status_t)rsp_status;
 }
 
+/** @brief pp_object_transfer_write_event_indication: Object Transfer Write Indication function
+ * 
+ * This function should be called when Bluetooth GATT Profile got a write request for OTP that needs additional
+ * indication to be send. This function, based on input arguments, recognize which characteristic
+ * the request is for, takes action based on the operation type and prepares a response data for indication.
+ * 
+ * Support operation types:
+ *  -   Object OACP
+ *      -   OACP_OP_CODE_CREATE - Create new object and set it as current
+ *      -   OACP_OP_CODE_DELETE - Delete current object
+ * 
+ *  -   Object OLCP
+ *      -   OLCP_OP_CODE_FIRST          - Sets the first object as current
+ *      -   OLCP_OP_CODE_LAST           - Sets the last object as current
+ *      -   OLCP_OP_CODE_PREVIOUS       - Sets the previous object as current
+ *      -   OLCP_OP_CODE_NEXT           - Sets the next object as current
+ *      -   OLCP_OP_CODE_GOTO           - Sets the requested by ID object as current
+ *      -   OLCP_OP_CODE_ORDER          - Sets order of the objects
+ *      -   OLCP_OP_CODE_REQ_NUM_OF_OBJ - Provides number of objects
+ *      -   OLCP_OP_CODE_CLEAR_MARING   - Clear markings on objects
+ *
+ * @param[in]   param           (esp_ble_gatts_cb_param_t *) GATT handler parameter
+ * @param[in]   handle_table    (uint16_t) Characteristics handle table
+ * @param[out]  write_params    (otp_write_attr_t*) Reponse data
+ * 
+ * @return
+ */
 void pp_object_transfer_write_event_indication(esp_ble_gatts_cb_param_t *param, uint16_t *handle_table, otp_write_attr_t *write_params)
 {
     uint16_t handle = param->write.handle;
@@ -755,8 +776,16 @@ void pp_object_transfer_write_event_indication(esp_ble_gatts_cb_param_t *param, 
 //     return ESP_OK;
 // }
 
-
-esp_err_t pp_object_transfer_send_found_wifi_ind(wifi_ap_record_t *wifi_record)
+/** @brief pp_object_transfer_send_found_wifi_ind: Sends found WiFi networks by indication
+ * 
+ * This function should sends indication to connected Bluetooth device with discovered WiFi
+ * network information.
+ *
+ * @param[in]   wifi_record     (wifi_ap_record_t*) Pointer to discovered WiFi network record
+ * 
+ * @return
+ */
+void pp_object_transfer_send_found_wifi_ind(wifi_ap_record_t *wifi_record)
 {
     uint8_t indicate_data[37];
     indicate_data[0] = 1;
@@ -775,13 +804,25 @@ esp_err_t pp_object_transfer_send_found_wifi_ind(wifi_ap_record_t *wifi_record)
 
     *payload_ptr = (uint8_t)wifi_record->authmode;
 
-
-    esp_err_t ret = esp_ble_gatts_send_indicate(gatts_interface, connection_id, handle_wifi, indicate_data_len, indicate_data, true);
+    esp_ble_gatts_send_indicate(gatts_interface, connection_id, handle_wifi, indicate_data_len, indicate_data, true);
     return ret;
 }
 
-esp_err_t pp_object_transfer_send_simple_wifi_ind(uint8_t val)
+/** @brief pp_object_transfer_send_found_wifi_ind: Sends found WiFi networks by indication
+ * 
+ * This function should sends indication to connected Bluetooth device with information
+ * about current WIFI state.
+ * 
+ *  WiFi status description:
+ *      - WIFI_SEARCH_END:      Discovering of WiFi network ended
+ *      - WIFI_RESERVED:        RESERVED
+ *      - WIFI_CONNECTED:       Got IP/Connected
+ *      - WIFI_DISCONNECTED:    Disconnected
+ * @param[in]   type    (uint8_t*) Pointer to discovered WiFi network record
+ * 
+ * @return
+ */
+void pp_object_transfer_send_simple_wifi_ind(my_wifi_status_t type)
 {
-    esp_err_t ret = esp_ble_gatts_send_indicate(gatts_interface, connection_id, handle_wifi, 1, &val, true);
-    return ret;
+    esp_ble_gatts_send_indicate(gatts_interface, connection_id, handle_wifi, 1, &type, true);
 }

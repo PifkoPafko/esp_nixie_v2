@@ -1,7 +1,22 @@
+/****************************************************************************
+ * Copyright (C) 2025 by Paweł Smarkucki                                    *
+ *                                                                          *
+ *   This file is part of NIXIE B16.                                        *
+ *                                                                          *
+ *   NIXIE B16 is free software: you can redistribute it, modify it,        *
+ *   sell it and do whatever you want under no terms or conditions.         *
+ *                                                                          *
+ *   NIXIE B16 is distributed in the hope that it will be useful,           *
+ *   but WITHOUT ANY WARRANTY; without even the implied warranty of         *
+ *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.                   *
+ ****************************************************************************/
+
 #ifndef __OBJECT_TRANSFER_DEFS_H__
 #define __OBJECT_TRANSFER_DEFS_H__
 
-//ATTRIBUTE GENERAL ERROR CODES
+/* Structures */
+
+/* ATTRIBUTE GENERAL ERROR CODES */
 typedef enum {
     STATUS_OK                       = 0x00,
     INVALID_ATTR_VAL_LENGTH         = 0x0D,
@@ -11,7 +26,7 @@ typedef enum {
     ALARM_NOT_CONFIGURED            = 0x82
 }otp_rsp_status_t;
 
-//OACP RESULT CODES
+/* OTP OACP RESULT CODES */
 typedef enum{
     OACP_RES_SUCCESS = 0x01,
     OACP_RES_OP_CODE_NOT_SUPPORTED,
@@ -25,6 +40,7 @@ typedef enum{
     OACP_RES_OPERATION_FAILED
 }oacp_op_code_result_t;
 
+/* OTP OLCP RESULT CODES */
 typedef enum{
     OLCP_RES_SUCCESS = 0x01,
     OLCP_RES_OP_CODE_NOT_SUPPORTED,
@@ -36,7 +52,7 @@ typedef enum{
     OLCP_RES_OBJECT_NOT_FOUND
 }olcp_op_code_result_t;
 
-//OACP OP CODES
+/* OACP OP CODES */
 #define OACP_OP_CODE_CREATE                  ((uint8_t)0x01)
 #define OACP_OP_CODE_DELETE                  ((uint8_t)0x02)
 #define OACP_OP_CODE_CALC_SUM                ((uint8_t)0x03)
@@ -46,7 +62,7 @@ typedef enum{
 #define OACP_OP_CODE_ABORT                   ((uint8_t)0x07)
 #define OACP_OP_CODE_RESPONSE                ((uint8_t)0x60)
 
-//OLCP OP CODES
+/* OLCP OP CODES */
 #define OLCP_OP_CODE_FIRST                   ((uint8_t)0x01)
 #define OLCP_OP_CODE_LAST                    ((uint8_t)0x02)
 #define OLCP_OP_CODE_PREVIOUS                ((uint8_t)0x03)
@@ -57,12 +73,12 @@ typedef enum{
 #define OLCP_OP_CODE_CLEAR_MARING            ((uint8_t)0x08)
 #define OLCP_OP_CODE_RESPONSE                ((uint8_t)0x70)
 
-//Object Type Create data length
+/* Object Type Create data length */
 #define DATA_LEN_UUID16                 7
 #define DATA_LEN_UUID32                 9
 #define DATA_LEN_UUID128                21
 
-//Filter OP CODES
+/* Filter OP CODES */
 #define NO_FILTER                       0x00
 #define NAME_STARTS_WITH                0x01
 #define NAME_ENDS_WITH                  0x02
@@ -74,7 +90,7 @@ typedef enum{
 #define MARKED_OBJECTS                  0x0A
 #define FILTER_RANGE                    0x0B
 
-//Order op codes
+/* Order op codes */
 #define NAME_ASC                        0x01
 #define TYPE_ASC                        0x02
 #define CURRENT_SIZE_ASC                0x03

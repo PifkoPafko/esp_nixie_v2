@@ -11,11 +11,7 @@
  *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.                   *
  ****************************************************************************/
 
-#include "pp_object_transfer_gatt_server.h"
 #include "pp_object_manager.h"
-#include "pp_wave_player.h"
-#include "pp_gpio.h"
-#include "pp_sd_card.h"
 #include "pp_nvs.h"
 #include "pp_wifi.h"
 #include "pp_i2c.h"

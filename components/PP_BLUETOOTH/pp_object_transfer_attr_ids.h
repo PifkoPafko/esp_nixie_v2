@@ -1,18 +1,18 @@
-/*
-   This example code is in the Public Domain (or CC0 licensed, at your option.)
-
-   Unless required by applicable law or agreed to in writing, this
-   software is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR
-   CONDITIONS OF ANY KIND, either express or implied.
-*/
+/****************************************************************************
+ * Copyright (C) 2025 by Paweł Smarkucki                                    *
+ *                                                                          *
+ *   This file is part of NIXIE B16.                                        *
+ *                                                                          *
+ *   NIXIE B16 is free software: you can redistribute it, modify it,        *
+ *   sell it and do whatever you want under no terms or conditions.         *
+ *                                                                          *
+ *   NIXIE B16 is distributed in the hope that it will be useful,           *
+ *   but WITHOUT ANY WARRANTY; without even the implied warranty of         *
+ *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.                   *
+ ****************************************************************************/
 
 #ifndef __OBJECT_TRANSFER_ATTR_IDS_H__
 #define __OBJECT_TRANSFER_ATTR_IDS_H__
-
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-
 
 /* Attributes State Machine */
 enum
@@ -61,6 +61,5 @@ enum
 
     OPT_IDX_NB,
 };
-
 
 #endif
