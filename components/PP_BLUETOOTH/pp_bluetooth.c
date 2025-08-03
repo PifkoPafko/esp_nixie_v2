@@ -317,6 +317,8 @@ static void gap_event_handler(esp_gap_ble_cb_event_t event, esp_ble_gap_cb_param
                 uint32_t passkey = esp_random() / 4832 + 100000;    // /4295 to convert uint32 value to 0-999999 value
                 esp_ble_gap_set_security_param(ESP_BLE_SM_SET_STATIC_PASSKEY, &passkey, sizeof(uint32_t));
                 pp_set_display_passkey(passkey);
+                device_mode = PAIRING_PASSKEY_MODE;
+                NOTIFY_TASK(display_main_h, NOTIFY_NORMAL_VAL);
             }
             break;
         }
@@ -330,9 +332,9 @@ static void gap_event_handler(esp_gap_ble_cb_event_t event, esp_ble_gap_cb_param
             break;
         }
 
-        case ESP_GAP_BLE_PASSKEY_NOTIF_EVT:  ///the app will receive this evt when the IO  has Output capability and the peer device IO has Input capability.
+        case ESP_GAP_BLE_PASSKEY_NOTIF_EVT:  ///the app will receive this evt when the IO has Output capability and the peer device IO has Input capability.
         {
-            if (device_mode == PAIRING_MODE)
+            if (device_mode == PAIRING_MODE || device_mode == PAIRING_PASSKEY_MODE)
             {
                 ESP_LOGI(GATTS_TAG, "The passkey Notify number: %06" PRIu32, param->ble_security.key_notif.passkey);
             }
@@ -372,9 +374,10 @@ static void gap_event_handler(esp_gap_ble_cb_event_t event, esp_ble_gap_cb_param
                 ESP_LOGI(GATTS_TAG, "auth mode = %d",(uint8_t)param->ble_security.auth_cmpl.auth_mode);
             }
 
-            if (param->ble_security.auth_cmpl.success && device_mode == PAIRING_MODE)
+            if (param->ble_security.auth_cmpl.success && (device_mode == PAIRING_MODE || device_mode == PAIRING_PASSKEY_MODE))
             {
                 device_mode = DEFAULT_MODE;
+                NOTIFY_TASK(display_main_h, NOTIFY_NORMAL_VAL);
             }
             
             break;

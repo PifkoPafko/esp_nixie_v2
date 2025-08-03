@@ -15,7 +15,7 @@
 #include "pp_gpio.h"
 
 /* Declarations */
-static void IRAM_ATTR pp_button_isr_handler(void* arg);
+static void pp_button_isr_handler(void* arg);
 static void pp_btn_timer_cb(TimerHandle_t xTimer);
 static void pp_button_main(void* arg);
 
@@ -24,7 +24,6 @@ static void pp_button_main(void* arg);
 
 /* Variables */
 static QueueHandle_t gpio_evt_queue;
-static QueueHandle_t button_action_queue;
 static TimerHandle_t btn_timer_h[3];
 static gpio_sm_t button_sm[3];
 
@@ -34,6 +33,25 @@ static gpio_sm_t button_sm[3];
  * 
  * @return
  */
+
+/** @brief pp_button_isr_handler: Interruption callback for buttons (any edge)
+ * 
+ *  Sends message to the button main task using queue 
+ * 
+ *  @param[in]  arg (void*) Pointer GPIO number by which interrupt was called
+ * 
+ * @return
+ */
+static void IRAM_ATTR pp_button_isr_handler(void* arg)
+{
+    button_queue_msg_t msg;
+    msg.type = ISR;
+    msg.enable = !gpio_get_level((uint32_t) arg);;
+    msg.gpio_num = (uint32_t) arg;
+    
+    ESP_ERROR_CHECK(xQueueSendFromISR(gpio_evt_queue, &msg, NULL));
+}
+
 void pp_gpio_init(void)
 {
     ESP_LOGI(GPIO_TAG, "Initializing gpio");
@@ -75,9 +93,9 @@ void pp_gpio_init(void)
     btn_timer_h[2] = xTimerCreate(NULL, pdMS_TO_TICKS(100), pdFALSE, NULL, pp_btn_timer_cb);
 
     gpio_evt_queue = xQueueCreate(10, sizeof(button_queue_msg_t));
-    button_action_queue = xQueueCreate(3, sizeof(button_action_t));
+    button_action_queue = xQueueCreate(10, sizeof(button_action_t));
 
-    ESP_ERROR_CHECK(xTaskCreate(pp_button_main, "BUTTON_MAIN", 3072, NULL, 1, button_main_h));
+    ESP_ERROR_CHECK(xTaskCreate(pp_button_main, "BUTTON_MAIN", 3072, NULL, 1, &button_main_h));
 }
 
 /** @brief pp_led_enable: Enables or disables chosen LED
@@ -93,24 +111,6 @@ void pp_led_enable(uint8_t led, bool enable)
     {
         ESP_ERROR_CHECK_WITHOUT_ABORT(gpio_set_level(led, enable ? 1 : 0));
     }
-}
-
-/** @brief pp_button_isr_handler: Interruption callback for buttons (any edge)
- * 
- *  Sends message to the button main task using queue 
- * 
- *  @param[in]  arg (void*) Pointer GPIO number by which interrupt was called
- * 
- * @return
- */
-static void IRAM_ATTR pp_button_isr_handler(void* arg)
-{
-    button_queue_msg_t msg;
-    msg.type = ISR;
-    msg.enable = !gpio_get_level((uint32_t) arg);;
-    msg.gpio_num = (uint32_t) arg;
-    
-    ESP_ERROR_CHECK(xQueueSendFromISR(gpio_evt_queue, &msg, NULL));
 }
 
 /** @brief pp_btn_timer_cb: Timer callback for buttons
@@ -166,7 +166,7 @@ static void pp_button_main(void* arg)
                 {
                     if(xTimerChangePeriod(btn_timer_h[button_id], pdMS_TO_TICKS(100), 1))
                     {
-                        ESP_LOGV(MAIN_TAG, "BTN %d IDLE -> WAIT_ENABLE_CONTACT_VIBRATION", button_id);
+                        ESP_LOGV(GPIO_TAG, "BTN %d IDLE -> WAIT_ENABLE_CONTACT_VIBRATION", button_id);
                         button_sm[button_id].state = WAIT_ENABLE_CONTACT_VIBRATION;  
                     }
                 }
@@ -185,12 +185,12 @@ static void pp_button_main(void* arg)
                             action_handler.button = button_id;
                             action_handler.action = HOLDING_SHORT;
 
-                            ESP_LOGV(MAIN_TAG, "BTN %d WAIT_ENABLE_CONTACT_VIBRATION -> WAIT_LONG_PRESS", button_id);
+                            ESP_LOGV(GPIO_TAG, "BTN %d WAIT_ENABLE_CONTACT_VIBRATION -> WAIT_LONG_PRESS", button_id);
                             button_sm[button_id].state = WAIT_LONG_PRESS;  
                         }
                         else
                         {
-                            ESP_LOGV(MAIN_TAG, "BTN %d WAIT_ENABLE_CONTACT_VIBRATION -> IDLE", button_id);
+                            ESP_LOGV(GPIO_TAG, "BTN %d WAIT_ENABLE_CONTACT_VIBRATION -> IDLE", button_id);
                             button_sm[button_id].state = IDLE;
                         }                 
                     }
@@ -202,12 +202,12 @@ static void pp_button_main(void* arg)
 
                         if (xTimerChangePeriod(btn_timer_h[button_id], pdMS_TO_TICKS(100), 1))
                         {
-                            ESP_LOGV(MAIN_TAG, "BTN %d WAIT_ENABLE_CONTACT_VIBRATION -> WAIT_DISABLE_CONTACT_VIBRATION", button_id);
+                            ESP_LOGV(GPIO_TAG, "BTN %d WAIT_ENABLE_CONTACT_VIBRATION -> WAIT_DISABLE_CONTACT_VIBRATION", button_id);
                             button_sm[button_id].state = WAIT_DISABLE_CONTACT_VIBRATION;
                         }
                         else
                         {
-                            ESP_LOGV(MAIN_TAG, "BTN %d WAIT_ENABLE_CONTACT_VIBRATION -> IDLE", button_id);
+                            ESP_LOGV(GPIO_TAG, "BTN %d WAIT_ENABLE_CONTACT_VIBRATION -> IDLE", button_id);
                             button_sm[button_id].state = IDLE;
                         }
                     }
@@ -226,7 +226,7 @@ static void pp_button_main(void* arg)
                         action_handler.button = button_id;
                         action_handler.action = LONG_PRESS;
 
-                        ESP_LOGV(MAIN_TAG, "BTN %d WAIT_LONG_PRESS -> WAIT_DISABLE", button_id);
+                        ESP_LOGV(GPIO_TAG, "BTN %d WAIT_LONG_PRESS -> WAIT_DISABLE", button_id);
                         button_sm[button_id].state = WAIT_DISABLE;
                     }
                     else
@@ -237,12 +237,12 @@ static void pp_button_main(void* arg)
 
                         if (xTimerChangePeriod(btn_timer_h[button_id], pdMS_TO_TICKS(100), 1))
                         {
-                            ESP_LOGV(MAIN_TAG, "BTN %d WAIT_LONG_PRESS -> WAIT_DISABLE_CONTACT_VIBRATION", button_id);
+                            ESP_LOGV(GPIO_TAG, "BTN %d WAIT_LONG_PRESS -> WAIT_DISABLE_CONTACT_VIBRATION", button_id);
                             button_sm[button_id].state = WAIT_DISABLE_CONTACT_VIBRATION;
                         }
                         else
                         {
-                            ESP_LOGV(MAIN_TAG, "BTN %d WAIT_LONG_PRESS -> IDLE", button_id);
+                            ESP_LOGV(GPIO_TAG, "BTN %d WAIT_LONG_PRESS -> IDLE", button_id);
                             button_sm[button_id].state = IDLE;
                         }
                     }
@@ -257,12 +257,12 @@ static void pp_button_main(void* arg)
 
                         if (xTimerChangePeriod(btn_timer_h[button_id], pdMS_TO_TICKS(100), 1))
                         {
-                            ESP_LOGV(MAIN_TAG, "BTN %d WAIT_LONG_PRESS -> WAIT_DISABLE_CONTACT_VIBRATION", button_id);
+                            ESP_LOGV(GPIO_TAG, "BTN %d WAIT_LONG_PRESS -> WAIT_DISABLE_CONTACT_VIBRATION", button_id);
                             button_sm[button_id].state = WAIT_DISABLE_CONTACT_VIBRATION;
                         }
                         else
                         {
-                            ESP_LOGV(MAIN_TAG, "BTN %d WAIT_LONG_PRESS -> IDLE", button_id);
+                            ESP_LOGV(GPIO_TAG, "BTN %d WAIT_LONG_PRESS -> IDLE", button_id);
                             button_sm[button_id].state = IDLE;
                         }
                     }
@@ -277,12 +277,12 @@ static void pp_button_main(void* arg)
                 {
                     if (xTimerChangePeriod(btn_timer_h[button_id], pdMS_TO_TICKS(100), 1))
                     {
-                        ESP_LOGV(MAIN_TAG, "BTN %d WAIT_DISABLE -> WAIT_DISABLE_CONTACT_VIBRATION", button_id);
+                        ESP_LOGV(GPIO_TAG, "BTN %d WAIT_DISABLE -> WAIT_DISABLE_CONTACT_VIBRATION", button_id);
                         button_sm[button_id].state = WAIT_DISABLE_CONTACT_VIBRATION;
                     }
                     else
                     {
-                        ESP_LOGV(MAIN_TAG, "BTN %d WAIT_DISABLE -> IDLE", button_id);
+                        ESP_LOGV(GPIO_TAG, "BTN %d WAIT_DISABLE -> IDLE", button_id);
                         button_sm[button_id].state = IDLE;
                     }
                 }
@@ -294,7 +294,7 @@ static void pp_button_main(void* arg)
             {
                 if(msg.type == TIMER)
                 {
-                    ESP_LOGV(MAIN_TAG, "BTN %d WAIT_DISABLE_CONTACT_VIBRATION -> IDLE", button_id);
+                    ESP_LOGV(GPIO_TAG, "BTN %d WAIT_DISABLE_CONTACT_VIBRATION -> IDLE", button_id);
                     button_sm[button_id].state = IDLE; 
                 }
                 
@@ -309,7 +309,7 @@ static void pp_button_main(void* arg)
 
         if (action_happened)
         {
-            ESP_ERROR_CHECK(xQueueSend(button_action_queue, &action_handler, NULL));
+            ESP_ERROR_CHECK(xQueueSend(button_action_queue, &action_handler, 1));
         }
     }
 }

@@ -41,12 +41,11 @@
  */
 esp_gatt_status_t pp_object_transfer_read_event(uint16_t handle, uint16_t *handle_table, esp_gatt_rsp_t *rsp)
 {
-    otp_rsp_status_t rsp_status;
+    otp_rsp_status_t rsp_status = STATUS_OK;
 
-    switch(handle)
+    if(handle == handle_table[OPT_IDX_CHAR_OBJECT_NAME_VAL])
     {
-        case handle_table[OPT_IDX_CHAR_OBJECT_NAME_VAL]:
-        {
+        do {
             ESP_LOGI(TAG, "Object Name READ EVENT");
             object_t* object = pp_object_manager_get_object();
             if(object == NULL)
@@ -58,16 +57,17 @@ esp_gatt_status_t pp_object_transfer_read_event(uint16_t handle, uint16_t *handl
             }
 
             memcpy(rsp->attr_value.value, object->name, object->name_len);
-            rsp->attr_value.handle = handle
+            rsp->attr_value.handle = handle;
             rsp->attr_value.offset = 0;
             rsp->attr_value.len = object->name_len;
             rsp->attr_value.auth_req = ESP_GATT_AUTH_REQ_NONE;
             rsp_status = STATUS_OK;
-            break;
-        }
 
-        case handle_table[OPT_IDX_CHAR_OBJECT_TYPE_VAL]:
-        {
+        } while(0);
+    }
+    else if(handle == handle_table[OPT_IDX_CHAR_OBJECT_TYPE_VAL])
+    {
+        do {
             ESP_LOGI(TAG, "Object Type READ EVENT");
             object_t *object = pp_object_manager_get_object();
             if(object == NULL)
@@ -84,11 +84,12 @@ esp_gatt_status_t pp_object_transfer_read_event(uint16_t handle, uint16_t *handl
             rsp->attr_value.len = object->type.len;
             rsp->attr_value.auth_req = ESP_GATT_AUTH_REQ_NONE;
             rsp_status = STATUS_OK;
-            break;
-        }
 
-        case handle_table[OPT_IDX_CHAR_OBJECT_SIZE_VAL]:
-        {
+        } while(0);
+    }
+    else if(handle == handle_table[OPT_IDX_CHAR_OBJECT_SIZE_VAL])
+    {
+        do {
             ESP_LOGI(TAG, "Object Size READ EVENT");
             object_t *object = pp_object_manager_get_object();
             if(object == NULL)
@@ -108,11 +109,12 @@ esp_gatt_status_t pp_object_transfer_read_event(uint16_t handle, uint16_t *handl
             rsp->attr_value.len = 8;
             rsp->attr_value.auth_req = ESP_GATT_AUTH_REQ_NONE;
             rsp_status = STATUS_OK;
-            break;
-        }
 
-        case handle_table[OPT_IDX_CHAR_OBJECT_ID_VAL]:
-        {
+        } while(0);
+    }
+    else if(handle == handle_table[OPT_IDX_CHAR_OBJECT_ID_VAL])
+    {
+        do {
             ESP_LOGI(TAG, "Object ID READ EVENT");
             object_t* object = pp_object_manager_get_object();
             if(object == NULL)
@@ -130,11 +132,12 @@ esp_gatt_status_t pp_object_transfer_read_event(uint16_t handle, uint16_t *handl
             rsp->attr_value.len = 6;
             rsp->attr_value.auth_req = ESP_GATT_AUTH_REQ_NONE;
             rsp_status = STATUS_OK;
-            break;
-        }
 
-        case handle_table[OPT_IDX_CHAR_OBJECT_PROPERTIES_VAL]:
-        {
+        } while(0);
+    }
+    else if(handle == handle_table[OPT_IDX_CHAR_OBJECT_PROPERTIES_VAL])
+    {
+        do {
             ESP_LOGI(TAG, "Object Properties READ EVENT");
             object_t* object = pp_object_manager_get_object();
             if(object == NULL)
@@ -151,11 +154,12 @@ esp_gatt_status_t pp_object_transfer_read_event(uint16_t handle, uint16_t *handl
             rsp->attr_value.len = 4;
             rsp->attr_value.auth_req = ESP_GATT_AUTH_REQ_NONE;
             rsp_status = STATUS_OK;
-            break;
-        }
 
-        case handle_table[OPT_IDX_CHAR_OBJECT_LIST_FILTER_VAL]:
-        {
+        } while(0);
+    }
+    else if(handle == handle_table[OPT_IDX_CHAR_OBJECT_LIST_FILTER_VAL])
+    {
+        do {
             ESP_LOGD(TAG, "Object List Filter READ EVENT");
             ListFilter_t *filter = pp_object_list_get_filter();
             rsp->attr_value.value[0] = filter->type;
@@ -165,11 +169,12 @@ esp_gatt_status_t pp_object_transfer_read_event(uint16_t handle, uint16_t *handl
             rsp->attr_value.len = filter->par_length + 1;
             rsp->attr_value.auth_req = ESP_GATT_AUTH_REQ_NONE;
             rsp_status = STATUS_OK;
-            break;
-        }
 
-        case handle_table[OPT_IDX_CHAR_OBJECT_ALARM_ACTION_VAL]:
-        {
+        } while(0);
+    }
+    else if(handle == handle_table[OPT_IDX_CHAR_OBJECT_ALARM_ACTION_VAL])
+    {
+        do {
             ESP_LOGI(TAG, "Object alarm data READ EVENT");
 
             object_t* object = pp_object_manager_get_object();
@@ -275,11 +280,11 @@ esp_gatt_status_t pp_object_transfer_read_event(uint16_t handle, uint16_t *handl
             rsp->attr_value.offset = 0;
             rsp->attr_value.auth_req = ESP_GATT_AUTH_REQ_NONE;
             rsp_status = STATUS_OK;
-            break;
-        }
-
-        case handle_table[OPT_IDX_CHAR_OBJECT_WIFI_ACTION_VAL]:
-        {
+        } while(0);
+    }
+    else if(handle == handle_table[OPT_IDX_CHAR_OBJECT_WIFI_ACTION_VAL])
+    {
+        do {
             ESP_LOGI(TAG, "Object wifi data READ EVENT");
             rsp->attr_value.handle = handle;
 
@@ -302,8 +307,8 @@ esp_gatt_status_t pp_object_transfer_read_event(uint16_t handle, uint16_t *handl
             rsp->attr_value.auth_req = ESP_GATT_AUTH_REQ_NONE;
 
             rsp_status = STATUS_OK;
-            break;
-        }
+
+        } while(0);
     }
 
     return (esp_gatt_status_t)rsp_status;

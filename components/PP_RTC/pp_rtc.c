@@ -54,7 +54,7 @@ void pp_rtc_init(void);
     
     uint8_t regVal = 0x1C;
     pp_i2c_dev_write_reg(DS_RTC_ADDR, DS_RTC_CONTROL_REG_ADDR, &regVal, 1);
-    ESP_ERROR_CHECK(xTaskCreate(pp_rtc_main, "RTC", 3072, NULL, 2, rtc_main_h));
+    ESP_ERROR_CHECK(xTaskCreate(pp_rtc_main, "RTC", 3072, NULL, 2, &rtc_main_h));
 }
 
 /** @brief pp_rtc_set_time: Sets time to RTC

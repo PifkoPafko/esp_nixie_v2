@@ -90,7 +90,7 @@ void pp_alarm_init(void)
     ESP_ERROR_CHECK(i2s_channel_init_std_mode(tx_handle, &std_cfg));
 
     ESP_LOGI(TAG, "Initializing wave player");
-    ESP_ERROR_CHECK(xTaskCreate(pp_alarm_main, "WAV PLAYER", 2048, NULL, 1, alarm_main_h));
+    ESP_ERROR_CHECK(xTaskCreate(pp_alarm_main, "WAV PLAYER", 2048, NULL, 1, &alarm_main_h));
 
     current_alarm.is_set = false;
 

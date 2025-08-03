@@ -24,10 +24,12 @@
 #include "esp_gatts_api.h"
 #include "esp_wifi.h"
 
-// #include "pp_object_manager.h"
-// #include "pp_object_transfer_attr_ids.h"
-// #include "pp_object_transfer_defs.h"
+#include "pp_global.h"
+#include "pp_object_manager.h"
+#include "pp_object_transfer_attr_ids.h"
+#include "pp_object_transfer_defs.h"
 #include "pp_wifi.h"
+#include "pp_alarm.h"
 // #include "pp_alarm.h"
 
 /* Structures */
@@ -118,6 +120,6 @@ void pp_object_transfer_send_found_wifi_ind(wifi_ap_record_t *wifi_record);
  * 
  * @return
  */
-void pp_object_transfer_send_simple_wifi_ind(my_wifi_status_t type);
+void pp_object_transfer_send_simple_wifi_ind(uint8_t type);
 
 #endif

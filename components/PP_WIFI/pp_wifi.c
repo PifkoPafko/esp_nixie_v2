@@ -20,7 +20,7 @@ static void pp_search_wifi_task(void* arg);
 static void pp_sntp_cb(struct timeval *tv);
 
 /* Macros */
-#define TAG = "WIFI"
+#define TAG     "WIFI"
 
 /* Variables */
 static TaskFunction_t wifi_search_main_fun;
@@ -35,13 +35,13 @@ static bool isConnected = false;
  */
 void pp_wifi_init(void)
 {
-    ESP_ERROR_CHECK(esp_netif_init())
-    ESP_ERROR_CHECK(esp_event_loop_create_default())
-    ESP_ERROR_CHECK(esp_netif_create_default_wifi_sta())
+    ESP_ERROR_CHECK(esp_netif_init());
+    ESP_ERROR_CHECK(esp_event_loop_create_default());
+    esp_netif_create_default_wifi_sta();
 
     wifi_init_config_t cfg = WIFI_INIT_CONFIG_DEFAULT();
-    ESP_ERROR_CHECK(esp_wifi_init(&cfg))
-    ESP_ERROR_CHECK(esp_wifi_set_mode(WIFI_MODE_STA))
+    ESP_ERROR_CHECK(esp_wifi_init(&cfg));
+    ESP_ERROR_CHECK(esp_wifi_set_mode(WIFI_MODE_STA));
 
     esp_event_handler_instance_t instance_any_id;
     esp_event_handler_instance_t instance_got_ip;
@@ -74,7 +74,7 @@ static void pp_wifi_event_handler(void* arg, esp_event_base_t event_base, int32_
     {
         gpio_set_level(GPIO_OUTPUT_GREEN, 0);
         isConnected = false;
-        pp_object_transfer_send_simple_wifi_ind(WIFI_DISCONNECTED);
+        pp_object_transfer_send_simple_wifi_ind((uint8_t)WIFI_DISCONNECTED);
         ESP_LOGI(TAG,"connect to the AP fail");
     } 
     else if (event_base == IP_EVENT && event_id == IP_EVENT_STA_GOT_IP) 
@@ -83,7 +83,7 @@ static void pp_wifi_event_handler(void* arg, esp_event_base_t event_base, int32_
         isConnected = true;
         ip_event_got_ip_t* event = (ip_event_got_ip_t*) event_data;
         ESP_LOGI(TAG, "got ip:" IPSTR, IP2STR(&event->ip_info.ip));
-        pp_object_transfer_send_simple_wifi_ind(WIFI_CONNECTED);
+        pp_object_transfer_send_simple_wifi_ind((uint8_t)WIFI_CONNECTED);
 
         esp_sntp_stop();
 
@@ -91,16 +91,12 @@ static void pp_wifi_event_handler(void* arg, esp_event_base_t event_base, int32_
         esp_sntp_setoperatingmode( SNTP_OPMODE_POLL );
         esp_sntp_set_time_sync_notification_cb(pp_sntp_cb);
 
-        if( sntp_srv ) esp_sntp_setservername(0, NULL);
-        else 
-        {
-            esp_sntp_setservername(0, DEFAULT_NTP_SERVER_0);
-            esp_sntp_setservername(1, DEFAULT_NTP_SERVER_1);
-            esp_sntp_setservername(2, DEFAULT_NTP_SERVER_2);
-            esp_sntp_setservername(3, DEFAULT_NTP_SERVER_3);
-            esp_sntp_setservername(4, DEFAULT_NTP_SERVER_4);
-            esp_sntp_setservername(5, DEFAULT_NTP_SERVER_5);
-        }
+        esp_sntp_setservername(0, DEFAULT_NTP_SERVER_0);
+        esp_sntp_setservername(1, DEFAULT_NTP_SERVER_1);
+        esp_sntp_setservername(2, DEFAULT_NTP_SERVER_2);
+        esp_sntp_setservername(3, DEFAULT_NTP_SERVER_3);
+        esp_sntp_setservername(4, DEFAULT_NTP_SERVER_4);
+        esp_sntp_setservername(5, DEFAULT_NTP_SERVER_5);
 
         esp_sntp_init();
     }
@@ -116,23 +112,23 @@ static void pp_search_wifi_task(void* arg)
 {
     ESP_ERROR_CHECK(esp_wifi_scan_start(NULL, true));
 
-    uint16_t record_num = 20;
-    wifi_ap_record_t record[20];
+    uint16_t record_num = WIFI_RECORD_NUM;
+    wifi_ap_record_t record[WIFI_RECORD_NUM];
 
-    ESP_ERROR_CHECK(esp_wifi_scan_get_ap_records(&record_num, record))
+    ESP_ERROR_CHECK(esp_wifi_scan_get_ap_records(&record_num, record));
 
-    for (int i = 0; i < record_num; i++)
+    for (uint8_t i = 0; i < WIFI_RECORD_NUM; ++i)
     {
         ESP_LOGI(TAG, "Found Wi-Fi: %s", (char*)record[i].ssid);
     }
 
-    for(uint8_t i=0; i<record_num; i++)
+    for(uint8_t i = 0; i < WIFI_RECORD_NUM; ++i)
     {
         pp_object_transfer_send_found_wifi_ind(&record[i]);
         vTaskDelay(100 / portTICK_PERIOD_MS);
     }
 
-    pp_object_transfer_send_simple_wifi_ind(WIFI_SEARCH_END);
+    pp_object_transfer_send_simple_wifi_ind((uint8_t)WIFI_SEARCH_END);
 
     ESP_LOGI(TAG, "Wifi search task end");
     vTaskDelete(wifi_main_h);

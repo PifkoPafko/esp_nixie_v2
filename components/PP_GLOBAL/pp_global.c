@@ -23,10 +23,10 @@ TaskHandle_t alarm_main_h;
 TaskHandle_t wifi_main_h;
 
 /* Device Mode */
-volatile device_mode_t device_mode = DEFAULT_MODE;
+device_mode_t device_mode = DEFAULT_MODE;
 
 /* Current Alarm */
-volatile alarm_mode_args_t current_alarm;
+alarm_mode_args_t current_alarm;
 
 /* Custom UUIDS */
 const uint8_t alarm_type_uuid[ESP_UUID_LEN_128] = {0x02, 0x00, 0x12, 0xAC, 0x42, 0x02, 0x61, 0xA2, 0xED, 0x11, 0xBA, 0x29, 0xB8, 0x13, 0x08, 0xCC};

@@ -15,15 +15,18 @@
 #define __OBJECT_TRANSFER_METADATA_READ_H__
 
 /* Headers */
+#include <string.h>
+
 // #include "esp_err.h"
-// #include "esp_log.h"
+#include "esp_log.h"
 
 #include "esp_gatts_api.h"
 
-// #include "pp_object_transfer_attr_ids.h"
-// #include "pp_object_transfer_defs.h"
-// #include "pp_object_manager.h"
-// #include "pp_wifi.h"
+#include "pp_object_transfer_defs.h"
+#include "pp_object_transfer_attr_ids.h"
+#include "pp_object_manager.h"
+#include "pp_alarm.h"
+#include "pp_wifi.h"
 
 
 /** @brief pp_object_transfer_read_event: Object Transfer Read handler function

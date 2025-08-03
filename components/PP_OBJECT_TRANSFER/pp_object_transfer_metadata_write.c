@@ -47,12 +47,11 @@ static uint16_t connection_id;
 esp_gatt_status_t pp_object_transfer_write_event(esp_ble_gatts_cb_param_t *param, uint16_t *handle_table, otp_write_attr_t *write_params, esp_gatt_rsp_t *rsp)
 {
     uint16_t handle = param->write.handle;
-    otp_rsp_status_t rsp_status;
+    otp_rsp_status_t rsp_status = STATUS_OK;
 
-    switch(handle)
+    if(handle == handle_table[OPT_IDX_CHAR_OBJECT_NAME_VAL])
     {
-        case handle_table[OPT_IDX_CHAR_OBJECT_NAME_VAL]:
-        {
+        do {
             ESP_LOGI(TAG, "Object Name WRITE EVENT");
             object_t *object;
             object = pp_object_manager_get_object();
@@ -92,11 +91,12 @@ esp_gatt_status_t pp_object_transfer_write_event(esp_ble_gatts_cb_param_t *param
 
             rsp->handle = handle;
             rsp_status = STATUS_OK;
-            break;
-        }
 
-        case handle_table[OPT_IDX_CHAR_OBJECT_PROPERTIES_VAL]:
-        {
+        } while (0);
+    }
+    else if(handle == handle_table[OPT_IDX_CHAR_OBJECT_PROPERTIES_VAL])
+    {
+        do {
             ESP_LOGI(TAG, "Object Properties WRITE EVENT");
             rsp->handle = handle;
 
@@ -134,11 +134,12 @@ esp_gatt_status_t pp_object_transfer_write_event(esp_ble_gatts_cb_param_t *param
             memcpy(write_params->value, (uint8_t*)&object->properties, 4);
 
             rsp_status = STATUS_OK;
-            break;
-        }
 
-        case handle_table[OPT_IDX_CHAR_OBJECT_OACP_VAL]:
-        {
+        } while(0);
+    }
+    else if(handle == handle_table[OPT_IDX_CHAR_OBJECT_OACP_VAL])
+    {
+        do {
             ESP_LOGE(TAG, "Object OACP WRITE EVENT");
             rsp->handle = handle;
 
@@ -169,7 +170,8 @@ esp_gatt_status_t pp_object_transfer_write_event(esp_ble_gatts_cb_param_t *param
                     if(param->write.len != 1)
                     {
                         ESP_LOGE(TAG, "INVALID ATTR VAL LENGTH = %d", param->write.len);
-                        status = INVALID_ATTR_VAL_LENGTH;
+                        rsp_status = INVALID_ATTR_VAL_LENGTH;
+                        break;
                     }
 
                     rsp_status = STATUS_OK;
@@ -185,13 +187,14 @@ esp_gatt_status_t pp_object_transfer_write_event(esp_ble_gatts_cb_param_t *param
 
             if(rsp_status == STATUS_OK)
             {
-                write_params.need_ind = true;
+                write_params->need_ind = true;
             }
-            break;
-        }
 
-        case handle_table[OPT_IDX_CHAR_OBJECT_OACP_IND_CFG]:
-        {
+        } while(0);
+    }
+    else if(handle == handle_table[OPT_IDX_CHAR_OBJECT_OACP_IND_CFG])
+    {
+        do {
             if(param->write.len == 2)
             {
                 uint16_t descr_value = param->write.value[1]<<8 | param->write.value[0];
@@ -208,11 +211,12 @@ esp_gatt_status_t pp_object_transfer_write_event(esp_ble_gatts_cb_param_t *param
                     ESP_LOGE(TAG, "unknown descr value");;
                 }
             }
-            break;
-        }
 
-        case handle_table[OPT_IDX_CHAR_OBJECT_OLCP_VAL]:
-        {
+        } while(0);
+    }
+    else if(handle == handle_table[OPT_IDX_CHAR_OBJECT_OLCP_VAL])
+    {
+        do {
             ESP_LOGI(TAG, "Object OLCP WRITE EVENT");
             rsp->handle = handle;
 
@@ -275,13 +279,15 @@ esp_gatt_status_t pp_object_transfer_write_event(esp_ble_gatts_cb_param_t *param
 
             if(rsp_status == STATUS_OK)
             {
-                write_params.need_ind = true;
+                write_params->need_ind = true;
             }
-            break;
-        }
 
-        case handle_table[OPT_IDX_CHAR_OBJECT_OLCP_IND_CFG]:
-        {
+        } while(0);
+    }
+
+    else if(handle == handle_table[OPT_IDX_CHAR_OBJECT_OLCP_IND_CFG])
+    {
+        do {
             if(param->write.len == 2)
             {
                 uint16_t descr_value = param->write.value[1]<<8 | param->write.value[0];
@@ -298,11 +304,12 @@ esp_gatt_status_t pp_object_transfer_write_event(esp_ble_gatts_cb_param_t *param
                     ESP_LOGE(TAG, "unknown descr value");;
                 }
             }
-            break;
-        }
 
-        case handle_table[OPT_IDX_CHAR_OBJECT_LIST_FILTER_VAL]:
-        {
+        } while(0);
+    }
+    else if(handle == handle_table[OPT_IDX_CHAR_OBJECT_LIST_FILTER_VAL])
+    {
+        do {
             ESP_LOGE(TAG, "Object Properties WRITE EVENT");
             rsp->handle = handle;
 
@@ -391,20 +398,21 @@ esp_gatt_status_t pp_object_transfer_write_event(esp_ble_gatts_cb_param_t *param
                 } 
             }
 
-            ListFilter_t *filter = pp_filter_order_get_filter();
+            ListFilter_t *filter = pp_object_list_get_filter();
             filter->type = param->write.value[0];
             memcpy(filter->parameter, &param->write.value[1], param->write.len-1);
             //if(filter->type >= 0x01 && filter->type <= 0x04) filter->parameter[param->write.len-1] = '\0';
             filter->par_length = param->write.len-1;
 
-            pp_filter_order_make_list();
+            pp_object_list_make_list();
 
             rsp_status = STATUS_OK;
-            break;
-        }
 
-        case handle_table[OPT_IDX_CHAR_OBJECT_ALARM_ACTION_VAL]:
-        {
+        } while(0);
+    }
+    else if(handle == handle_table[OPT_IDX_CHAR_OBJECT_ALARM_ACTION_VAL])
+    {
+        do {
             ESP_LOGI(TAG, "Object Alarm Action WRITE EVENT, payload length: %u", param->write.len);
             rsp->handle = handle;
             
@@ -437,11 +445,12 @@ esp_gatt_status_t pp_object_transfer_write_event(esp_ble_gatts_cb_param_t *param
             pp_set_next_alarm();
             rsp_status = STATUS_OK;
 
-            break;
-        }
+        } while(0);
 
-        case handle_table[OPT_IDX_CHAR_OBJECT_WIFI_ACTION_VAL]:
-        {
+    }
+    else if(handle == handle_table[OPT_IDX_CHAR_OBJECT_WIFI_ACTION_VAL])
+    {
+        do {
             ESP_LOGI(TAG, "Object Wifi Action WRITE EVENT");
             rsp->handle = handle;
 
@@ -517,11 +526,11 @@ esp_gatt_status_t pp_object_transfer_write_event(esp_ble_gatts_cb_param_t *param
                 }
             }
 
-            break;
-        }
-
-        case handle_table[OPT_IDX_CHAR_OBJECT_WIFI_ACTION_CFG]:
-        {
+        } while(0);
+    }
+    else if(handle == handle_table[OPT_IDX_CHAR_OBJECT_WIFI_ACTION_CFG])
+    {
+        do {
             if(param->write.len == 2)
             {
                 uint16_t descr_value = param->write.value[1]<<8 | param->write.value[0];
@@ -538,8 +547,7 @@ esp_gatt_status_t pp_object_transfer_write_event(esp_ble_gatts_cb_param_t *param
                     ESP_LOGE(TAG, "unknown descr value");;
                 }
             }
-            break;
-        }
+        } while(0);
     }
 
     return (esp_gatt_status_t)rsp_status;
@@ -575,184 +583,168 @@ esp_gatt_status_t pp_object_transfer_write_event(esp_ble_gatts_cb_param_t *param
 void pp_object_transfer_write_event_indication(esp_ble_gatts_cb_param_t *param, uint16_t *handle_table, otp_write_attr_t *write_params)
 {
     uint16_t handle = param->write.handle;
-    otp_rsp_status_t rsp_status;
 
-    switch(handle)
+    if(handle == handle_table[OPT_IDX_CHAR_OBJECT_OACP_VAL])
     {
-        case handle_table[OPT_IDX_CHAR_OBJECT_OACP_VAL]:
+        switch(param->write.value[0])
         {
-            switch(param->write.value[0])
+            case OACP_OP_CODE_CREATE:
             {
-                case OACP_OP_CODE_CREATE:
+                uint32_t size;
+                memcpy(&size, &param->write.value[1], 4);
+
+                esp_bt_uuid_t type;
+
+                if(param->write.len == DATA_LEN_UUID16)
                 {
-                    uint32_t size;
-                    memcpy(&size, &param->write.value[1], 4);
-
-                    esp_bt_uuid_t type;
-
-                    if(param->write.len == DATA_LEN_UUID16)
-                    {
-                        type.len = ESP_UUID_LEN_16;
-                        memcpy(&type.uuid.uuid16, &param->write.value[5], ESP_UUID_LEN_16);
-                    }
-                    else if(param->write.len == DATA_LEN_UUID128)
-                    {
-                        type.len = ESP_UUID_LEN_128;
-                        memcpy(type.uuid.uuid128, &param->write.value[5], ESP_UUID_LEN_128);
-                    }
-
-                    oacp_op_code_result_t result;
-                    pp_object_manager_create_object(size, type, &result);
-
-                    write_params->length = 2;
-                    write_params->value[0] = OACP_OP_CODE_RESPONSE;
-                    write_params->value[1] = result;
-                    break;
+                    type.len = ESP_UUID_LEN_16;
+                    memcpy(&type.uuid.uuid16, &param->write.value[5], ESP_UUID_LEN_16);
+                }
+                else if(param->write.len == DATA_LEN_UUID128)
+                {
+                    type.len = ESP_UUID_LEN_128;
+                    memcpy(type.uuid.uuid128, &param->write.value[5], ESP_UUID_LEN_128);
                 }
 
-                case OACP_OP_CODE_DELETE:
-                {
-                    uint32_t size;
-                    memcpy(&size, &param->write.value[1], 4);
+                oacp_op_code_result_t result = pp_object_manager_create_object(size, type);
 
-                    oacp_op_code_result_t result;
-                    pp_object_manager_delete_object(&result);
-
-                    write_params->length = 2;
-                    write_params->value[0] = OACP_OP_CODE_RESPONSE;
-                    write_params->value[1] = result;
-                    pp_set_next_alarm();
-                    break;
-                }
-
-                default:
-                {
-                    write_params->length = 3;
-                    write_params->value[0] = OACP_OP_CODE_RESPONSE;
-                    write_params->value[1] = param->write.value[0];
-                    write_params->value[2] = OACP_RES_OP_CODE_NOT_SUPPORTED;
-                    break;
-                }
+                write_params->length = 2;
+                write_params->value[0] = OACP_OP_CODE_RESPONSE;
+                write_params->value[1] = result;
+                break;
             }
 
-            break;
-        }
-
-        case handle_table[OPT_IDX_CHAR_OBJECT_OLCP_VAL]:
-        {
-            switch(param->write.value[0])
+            case OACP_OP_CODE_DELETE:
             {
-                case OLCP_OP_CODE_FIRST:
+                uint32_t size;
+                memcpy(&size, &param->write.value[1], 4);
+
+                oacp_op_code_result_t result = pp_object_manager_delete_object();
+
+                write_params->length = 2;
+                write_params->value[0] = OACP_OP_CODE_RESPONSE;
+                write_params->value[1] = result;
+                pp_set_next_alarm();
+                break;
+            }
+
+            default:
+            {
+                write_params->length = 3;
+                write_params->value[0] = OACP_OP_CODE_RESPONSE;
+                write_params->value[1] = param->write.value[0];
+                write_params->value[2] = OACP_RES_OP_CODE_NOT_SUPPORTED;
+                break;
+            }
+        }
+    }
+    else if(handle == handle_table[OPT_IDX_CHAR_OBJECT_OLCP_VAL])
+    {
+        switch(param->write.value[0])
+        {
+            case OLCP_OP_CODE_FIRST:
+            {
+                olcp_op_code_result_t result = pp_object_manager_first_object();
+
+                write_params->length = 2;
+                write_params->value[0] = OLCP_OP_CODE_RESPONSE;
+                write_params->value[1] = result;
+                break;
+            }
+
+            case OLCP_OP_CODE_LAST:
+            {
+                olcp_op_code_result_t result = pp_object_manager_last_object();
+
+                write_params->length = 2;
+                write_params->value[0] = OLCP_OP_CODE_RESPONSE;
+                write_params->value[1] = result;
+                break;
+            }
+
+            case OLCP_OP_CODE_PREVIOUS:
+            {
+                olcp_op_code_result_t result = pp_object_manager_previous_object();
+
+                write_params->length = 2;
+                write_params->value[0] = OLCP_OP_CODE_RESPONSE;
+                write_params->value[1] = result;
+                break;
+            }
+
+            case OLCP_OP_CODE_NEXT:
+            {
+                olcp_op_code_result_t result = pp_object_manager_next_object();
+
+                write_params->length = 2;
+                write_params->value[0] = OLCP_OP_CODE_RESPONSE;
+                write_params->value[1] = result;
+                break;
+            }
+
+            case OLCP_OP_CODE_GOTO:
+            {
+                uint64_t id = 0;
+                memcpy(&id, &param->write.value[1], 6);
+                ESP_LOGI(TAG, "Searching for ID: %llx", id);
+                
+                olcp_op_code_result_t result = pp_object_manager_goto_object(id);
+
+                write_params->length = 2;
+                write_params->value[0] = OLCP_OP_CODE_RESPONSE;
+                write_params->value[1] = result;
+                break;
+            }
+
+            case OLCP_OP_CODE_ORDER:
+            {
+                uint8_t type = param->write.value[1];
+                olcp_op_code_result_t result = pp_object_manager_order_object(type);
+
+                write_params->length = 2;
+                write_params->value[0] = OLCP_OP_CODE_RESPONSE;
+                write_params->value[1] = result;
+                break;
+            }
+
+            case OLCP_OP_CODE_REQ_NUM_OF_OBJ:
+            {
+                uint32_t number_of_objects = 0;
+                olcp_op_code_result_t result = pp_object_manager_request_number(&number_of_objects);
+                
+                write_params->value[0] = OLCP_OP_CODE_RESPONSE;
+                write_params->value[1] = param->write.value[0];
+                write_params->value[2] = result;
+
+                if(result == OLCP_RES_SUCCESS)
                 {
-                    olcp_op_code_result_t result;
-                    pp_object_manager_first_object(&result);
-
-                    write_params->length = 2;
-                    write_params->value[0] = OLCP_OP_CODE_RESPONSE;
-                    write_params->value[1] = result;
-                    break;
+                    write_params->length = 7;
+                    memcpy(&write_params->value[3], &number_of_objects, sizeof(number_of_objects));
                 }
-
-                case OLCP_OP_CODE_LAST:
-                {
-                    olcp_op_code_result_t result;
-                    pp_object_manager_last_object(&result);
-
-                    write_params->length = 2;
-                    write_params->value[0] = OLCP_OP_CODE_RESPONSE;
-                    write_params->value[1] = result;
-                    break;
-                }
-
-                case OLCP_OP_CODE_PREVIOUS:
-                {
-                    olcp_op_code_result_t result;
-                    pp_object_manager_previous_object(&result);
-
-                    write_params->length = 2;
-                    write_params->value[0] = OLCP_OP_CODE_RESPONSE;
-                    write_params->value[1] = result;
-                    break;
-                }
-
-                case OLCP_OP_CODE_NEXT:
-                {
-                    olcp_op_code_result_t result;
-                    pp_object_manager_next_object(&result);
-
-                    write_params->length = 2;
-                    write_params->value[0] = OLCP_OP_CODE_RESPONSE;
-                    write_params->value[1] = result;
-                    break;
-                }
-
-                case OLCP_OP_CODE_GOTO:
-                {
-                    uint64_t id = 0;
-                    memcpy(&id, &param->write.value[1], 6);
-                    ESP_LOGI(TAG, "Searching for ID: %llx", id);
-                    
-                    olcp_op_code_result_t result;
-                    pp_object_manager_goto_object(id, &result);
-
-                    write_params->length = 2;
-                    write_params->value[0] = OLCP_OP_CODE_RESPONSE;
-                    write_params->value[1] = result;
-                    break;
-                }
-
-                case OLCP_OP_CODE_ORDER:
-                {
-                    uint8_t type = param->write.value[1];
-                    olcp_op_code_result_t result = pp_object_manager_order_object(type)
-
-                    write_params->length = 2;
-                    write_params->value[0] = OLCP_OP_CODE_RESPONSE;
-                    write_params->value[1] = result;
-                    break;
-                }
-
-                case OLCP_OP_CODE_REQ_NUM_OF_OBJ:
-                {
-                    olcp_op_code_result_t result;
-                    uint32_t number_of_objects = 0;
-                    pp_object_manager_request_number(&number_of_objects, &result);
-                    
-                    write_params->value[0] = OLCP_OP_CODE_RESPONSE;
-                    write_params->value[1] = param->write.value[0];
-                    write_params->value[2] = result;
-
-                    if(result == OLCP_RES_SUCCESS)
-                    {
-                        write_params->length = 7;
-                        memcpy(&write_params->value[3], &number_of_objects, sizeof(number_of_objects));
-                    }
-                    else
-                    {
-                        write_params->length = 3;
-                    }
-                    break;
-                }
-
-                case OLCP_OP_CODE_CLEAR_MARING:
-                {
-                    olcp_op_code_result_t result;
-                    pp_object_manager_clear_marking(&result);
-
-                    write_params->length = 2;
-                    write_params->value[0] = OLCP_OP_CODE_RESPONSE;
-                    write_params->value[1] = result;
-                    break;
-                }
-
-                default:
+                else
                 {
                     write_params->length = 3;
-                    write_params->value[0] = OLCP_OP_CODE_RESPONSE;
-                    write_params->value[1] = param->write.value[0];
-                    write_params->value[2] = OLCP_RES_OP_CODE_NOT_SUPPORTED;
-                    break;
                 }
+                break;
+            }
+
+            case OLCP_OP_CODE_CLEAR_MARING:
+            {
+                olcp_op_code_result_t result = pp_object_manager_clear_marking();
+
+                write_params->length = 2;
+                write_params->value[0] = OLCP_OP_CODE_RESPONSE;
+                write_params->value[1] = result;
+                break;
+            }
+
+            default:
+            {
+                write_params->length = 3;
+                write_params->value[0] = OLCP_OP_CODE_RESPONSE;
+                write_params->value[1] = param->write.value[0];
+                write_params->value[2] = OLCP_RES_OP_CODE_NOT_SUPPORTED;
+                break;
             }
         }
     }
@@ -805,7 +797,6 @@ void pp_object_transfer_send_found_wifi_ind(wifi_ap_record_t *wifi_record)
     *payload_ptr = (uint8_t)wifi_record->authmode;
 
     esp_ble_gatts_send_indicate(gatts_interface, connection_id, handle_wifi, indicate_data_len, indicate_data, true);
-    return ret;
 }
 
 /** @brief pp_object_transfer_send_found_wifi_ind: Sends found WiFi networks by indication
@@ -822,7 +813,7 @@ void pp_object_transfer_send_found_wifi_ind(wifi_ap_record_t *wifi_record)
  * 
  * @return
  */
-void pp_object_transfer_send_simple_wifi_ind(my_wifi_status_t type)
+void pp_object_transfer_send_simple_wifi_ind(uint8_t type)
 {
     esp_ble_gatts_send_indicate(gatts_interface, connection_id, handle_wifi, 1, &type, true);
 }

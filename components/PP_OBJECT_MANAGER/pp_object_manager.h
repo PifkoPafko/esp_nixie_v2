@@ -255,7 +255,7 @@ void pp_object_manager_change_properties_in_file(void);
  * 
  * @return
  */
-void pp_object_manager_change_alarm_data_in_file(alarm_mode_args_t alarm);
+void pp_object_manager_change_alarm_data_in_file(alarm_mode_args_t *alarm);
 
 /** @brief pp_object_manager_get_alarm_data_from_file: Get alarm data from object file.
  * 

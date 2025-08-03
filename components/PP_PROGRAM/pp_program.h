@@ -12,13 +12,15 @@
  ****************************************************************************/
 
 /* Headers */
-#include "pp_nixie_display_manager.h"
-
 // #include <stdbool.h>
 // #include <stdint.h>
 // #include <sys/time.h>
 // #include <time.h>
 // #include "driver/gpio.h"
+
+#include "pp_nixie_display_manager.h"
+#include "pp_gpio.h"
+#include "pp_bluetooth.h"
 
 /* Macros */
 #define ALARM_FILE_TYPE ".txt"
