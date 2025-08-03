@@ -13,7 +13,6 @@
 
 /* Headers */
 #include "pp_pca9698.h"
-#include "pp_i2c.h"
 
 /* Functions */
 

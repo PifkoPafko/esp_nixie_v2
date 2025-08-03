@@ -26,12 +26,10 @@ static gpio_sm_t button_sm[3];
 /* Functions */
 
 /** @brief pp_gpio_init: Initializes and sets gpio configuration for OE line, leds and buttons.
- *  
- *  @param[in]  action_queue (QueueHandle_t) Queue handle to button actions
  * 
  * @return
  */
-void pp_gpio_init(QueueHandle_t queue)
+void pp_gpio_init(void)
 {
     ESP_LOGI(GPIO_TAG, "Initializing gpio");
 
@@ -62,7 +60,7 @@ void pp_gpio_init(QueueHandle_t queue)
         button_sm[i].last_enable = false;
     }
 
-    ESP_ERROR_CHECK(gpio_install_isr_service(ESP_INTR_FLAG_DEFAULT));
+    ESP_ERROR_CHECK(gpio_install_isr_service(ESP_INTR_FLAG_EDGE));
     ESP_ERROR_CHECK(gpio_isr_handler_add(GPIO_INPUT_IO_LEFT, pp_button_isr_handler, (void*) GPIO_INPUT_IO_LEFT));
     ESP_ERROR_CHECK(gpio_isr_handler_add(GPIO_INPUT_IO_CENTER, pp_button_isr_handler, (void*) GPIO_INPUT_IO_CENTER));
     ESP_ERROR_CHECK(gpio_isr_handler_add(GPIO_INPUT_IO_RIGHT, pp_button_isr_handler, (void*) GPIO_INPUT_IO_RIGHT));

@@ -15,25 +15,25 @@
 #define __WIFI_H__
 
 /* Headers */
-#include "esp_log.h"
-#include "esp_event.h"
-#include "esp_wifi.h"
+// #include "esp_log.h"
+// #include "esp_event.h"
+// #include "esp_wifi.h"
 
-#include "freertos/FreeRTOS.h"
-#include "freertos/task.h"
-#include "freertos/event_groups.h"
-#include "esp_wifi.h"
-#include "esp_log.h"
-#include "pp_object_transfer_metadata_write.h"
+// #include "freertos/FreeRTOS.h"
+// #include "freertos/task.h"
+// #include "freertos/event_groups.h"
+// #include "esp_wifi.h"
+// #include "esp_log.h"
+// #include "pp_object_transfer_metadata_write.h"
 
-#include "pp_rtc.h"
-#include "pp_alarm.h"
-#include "esp_sntp.h"
-#include "driver/gpio.h"
+// #include "pp_rtc.h"
+// #include "pp_alarm.h"
+// #include "esp_sntp.h"
+// #include "driver/gpio.h"
 
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
+// #include <stdio.h>
+// #include <stdlib.h>
+// #include <string.h>
 
 /* Macros */
 #define DEFAULT_NTP_SERVER_0			"0.pl.pool.ntp.org"

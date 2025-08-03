@@ -15,9 +15,24 @@
 #define __OBJECT_MANAGER_H__
 
 /* Headers */
-#include "esp_err.h"
-#include "esp_gatts_api.h"
-#include "pp_alarm.h"
+// #include "esp_err.h"
+// #include "esp_gatts_api.h"
+// #include "pp_alarm.h"
+
+// #include "pp_object_transfer_defs.h"
+
+// #include "driver/sdmmc_host.h"
+// #include "esp_vfs_fat.h"
+
+// #include <string.h>
+// #include <stdlib.h>
+// #include <inttypes.h>
+// #include "esp_log.h"
+
+// #include <sys/stat.h>
+// #include <dirent.h>
+// #include <unistd.h>
+// #include "ctype.h"
 
 /* Macros */
 #define MOUNT_POINT                 "/sdcard"

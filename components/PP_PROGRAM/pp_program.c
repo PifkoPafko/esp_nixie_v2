@@ -14,30 +14,50 @@
 /* Headers */
 #include "pp_program.h"
 
+/* Headers */
+static void pp_program_main(void);
+static void pp_button_functions(button_action_t action_handler);
+static void pp_time_change_mode(button_action_t action_handler, bool start);
+static void pp_alarm_add_mode(button_action_t action_handler, bool start);
+static void pp_alarm_delete_mode(button_action_t action_handler);
+static void pp_set_current_alarm_digits(void);
+
 /* Macros */
 #define PROGRAM_TAG "PROGRAM"
 
-static QueueHandle_t button_action_queue;
+/* Variables declarations */
+static pairing_sm_t pairing_sm = WAIT_FOR_LEFT;             // Pairing State Machine
+static time_change_sm_t time_change_sm = IDLE_TIME_CHANGE;  // Time chnage State Machine
+static alarm_add_sm_t alarm_add_sm = IDLE_ALARM_ADD;        // Alarm Adding State Machine
 
-static pairing_sm_t pairing_sm = WAIT_FOR_LEFT;
-static time_change_sm_t time_change_sm = IDLE_TIME_CHANGE;
-static alarm_add_sm_t alarm_add_sm = IDLE_ALARM_ADD;
+static alarm_mode_args_t alarm_add;         // Alarm description when in process of adding it
 
-static display_digits_t display_digits;
-static alarm_mode_args_t alarm_add;
+/* Functions */
 
-extern uint8_t alarm_type_uuid[ESP_UUID_LEN_128];
-
+/** @brief pp_program_init: Program initialization function
+ *
+ * Initializes Button action queue, display manager and gpio.
+ * After required initialization it goes to the pp_program_main loop and stays there forever.
+ * 
+ * @return
+ */
 void pp_program_init(void)
 {
     ESP_LOGI(PROGRAM_TAG, "Initializing program");
     button_action_queue = xQueueCreate(10, sizeof(button_action_t));
-    pp_gpio_init(button_action_queue);
-    pp_display_manager_init(&display_digits);
+    pp_gpio_init();
+    pp_display_manager_init();
     pp_program_main();
 }
 
-void pp_program_main(void)
+/** @brief pp_program_main: Program loop
+ * 
+ * This function is a anchor for all the user actions.
+ * This function waits for a button action and redirect the operation to pp_button_functions.
+ * 
+ * @return
+ */
+static void pp_program_main(void)
 {
     while(true)
     {
@@ -48,6 +68,26 @@ void pp_program_main(void)
     }
 }
 
+/** @brief pp_button_functions: Reacts to the button actions.
+ * 
+ * This function is controls the main user logic based on received buttons actions.
+ * This function controls Pairing mode state machine and redirects other modes to destined
+ * functions for further actions.
+ * 
+ * The functionality differs based on the current device mode.
+ * Device modes:
+ *  - DEFAULT_MODE          - Waiting for action
+ *  - TIME_CHANGE_MODE      - User time change
+ *  - ALARM_ADD_MODE        - User creating/modifying alarm
+ *  - ALARM_DELETE_MODE     - User deleting alarm
+ *  - PAIRING_MODE          - User turning on the pairing mode
+ *  - PAIRING_PASSKEY_MODE  - User entering pairing code
+ *  - ALARM_RING_MODE       - Alarm ringing mode
+ * 
+ * @param[in]   action_handler  (button_action_t) Buton action
+ * 
+ * @return
+ */
 static void pp_button_functions(button_action_t action_handler)
 {
     switch(device_mode)
@@ -219,7 +259,34 @@ static void pp_button_functions(button_action_t action_handler)
     }
 }
 
-void pp_time_change_mode(button_action_t action_handler, bool start)
+/** @brief pp_time_change_mode: Time change mode action handler
+ * 
+ * This function controls the Time Change mode State Machine.
+ * This function takes action based on the current state and received button action.
+ * 
+ * Time change State Machine description:
+ * Device modes:
+ *  - IDLE_TIME_CHANGE      - Waiting for action
+ *  - SET_HOUR_FIRST        - Setting tens part of the hour     (X_:__:__)
+ *  - SET_HOUR_SECOND       - Setting ones part of the hour     (_X:__:__)
+ *  - SET_MINUTE_FIRST      - Setting tens part of the minute   (__:X_:__)
+ *  - SET_MINUTE_SECOND     - Setting ones part of the minute   (__:_X:__)
+ *  - SET_SECOND_FIRST      - Setting tens part of the seconds  (__:__:X_)
+ *  - SET_SECOND_SECOND     - Setting ones part of the seconds  (__:__:_X)
+ *  - SET_DAY_FIRST         - Setting tens part of the day      (X_.__.__)
+ *  - SET_DAY_SECOND        - Setting ones part of the day      (_X.__.__)
+ *  - SET_MONTH_FIRST       - Setting tens part of the month    (__.X_.__)
+ *  - SET_MONTH_SECOND      - Setting ones part of the month    (__._X.__)
+ *  - SET_YEAR_FIRST        - Setting tens part of the year     (__.__.X_)
+ *  - SET_YEAR_SECOND       - Setting ones part of the year     (__.__._X)
+ * 
+ * @param[in]   action_handler  (button_action_t) Buton action
+ * @param[in]   start           (bool)  True - Start of the Time change procedure
+ *                                      False - continuation of the Time change procedure
+ * 
+ * @return
+ */
+static void pp_time_change_mode(button_action_t action_handler, bool start)
 {
     if (action_handler.action == SHORT_PRESS && action_handler.button == BUTTON_RIGHT)
     {
@@ -600,7 +667,46 @@ void pp_time_change_mode(button_action_t action_handler, bool start)
     }
 }
 
-void pp_alarm_add_mode(button_action_t action_handler, bool start)
+/** @brief pp_alarm_add_mode: Alarm Add mode action handler
+ * 
+ * This function controls the Alarm Add mode State Machine.
+ * This function takes action based on the current state and received button action.
+ * 
+ * Alarm Add State Machine description:
+ *  - IDLE_ALARM_ADD        - Waiting for action
+ *  - SET_MODE
+ *  - SET_ALARM_HOUR_FIRST      - Setting tens part of the hour     (X_:__)
+ *  - SET_ALARM_HOUR_SECOND     - Setting ones part of the hour     (_X:__)
+ *  - SET_ALARM_MINUTE_FIRST    - Setting tens part of the minute   (__:X_)
+ *  - SET_ALARM_MINUTE_SECOND   - Setting ones part of the minute   (__:_X)
+ *  - SET_ALARM_DAY_FIRST       - Setting tens part of the day      (X_.__.__)
+ *  - SET_ALARM_DAY_SECOND      - Setting ones part of the day      (_X.__.__)
+ *  - SET_ALARM_MONTH_FIRST     - Setting tens part of the month    (__.X_.__)
+ *  - SET_ALARM_MONTH_SECOND    - Setting ones part of the month    (__._X.__)
+ *  - SET_ALARM_YEAR_FIRST      - Setting tens part of the year     (__.__.X_)
+ *  - SET_ALARM_YEAR_SECOND     - Setting ones part of the year     (__.__._X)
+ *  - SET_WEEKLY_MONDAY         - Setting weekdays options - Weekly Mode (Monday)
+ *  - SET_WEEKLY_TUESDAY        - Setting weekdays options - Weekly Mode (Tuesday)
+ *  - SET_WEEKLY_WEDNESDAY      - Setting weekdays options - Weekly Mode (Wednesday)
+ *  - SET_WEEKLY_THURSDAY       - Setting weekdays options - Weekly Mode (Thursday)
+ *  - SET_WEEKLY_FRIDAY         - Setting weekdays options - Weekly Mode (Friday)
+ *  - SET_WEEKLY_SATURDAY       - Setting weekdays options - Weekly Mode (Saturday)
+ *  - SET_WEEKLY_SUNDAY         - Setting weekdays options - Weekly Mode (Sunday)
+ *  - SET_MONTHLY_DAY_FIRST     - Setting tens part of the day - Monthly mode   (X_.__.__)
+ *  - SET_MONTHLY_DAY_SECOND    - Setting ones part of the day - Monthly mode   (_X.__.__)
+ *  - SET_YEARLY_DAY_FIRST      - Setting tens part of the day - Yearly mode    (X_.__.__)
+ *  - SET_YEARLY_DAY_SECOND     - Setting ones part of the day - Yearly mode    (_X.__.__)
+ *  - SET_YEARLY_MONTH_FIRST    - Setting tens part of the month - Yearly mode  (__.X_.__)
+ *  - SET_YEARLY_MONTH_SECOND   - Setting ones part of the month - Yearly mode  (__._X.__)
+ *  - SET_VOLUME                - Setting volume level
+ * 
+ * @param[in]   action_handler  (button_action_t) Button action
+ * @param[in]   start           (bool)  True - Start of the Alarm Add procedure
+ *                                      False - continuation of the Alarm Add procedure
+ * 
+ * @return
+ */
+static void pp_alarm_add_mode(button_action_t action_handler, bool start)
 {
     if (action_handler.action == SHORT_PRESS && action_handler.button == BUTTON_RIGHT)
     {
@@ -1417,7 +1523,15 @@ void pp_alarm_add_mode(button_action_t action_handler, bool start)
     }
 }
 
-void pp_alarm_delete_mode(button_action_t action_handler)
+/** @brief pp_alarm_delete_mode: Alarm Delete action handler
+ * 
+ * This function takes action based on the received button action.
+ * 
+ * @param[in]   action_handler  (button_action_t) Button action
+ * 
+ * @return
+ */
+static void pp_alarm_delete_mode(button_action_t action_handler)
 {
     if (action_handler.action == SHORT_PRESS)
     {
@@ -1499,6 +1613,12 @@ void pp_alarm_delete_mode(button_action_t action_handler)
     }  
 }
 
+/** @brief pp_set_current_alarm_digits: Sets alarm digits on be display during Alarm Delete mode.
+ * 
+ * Reads current alarm parameters, calculates digits to be displayed and stores them in the structure.
+ * 
+ * @return
+ */
 static void pp_set_current_alarm_digits(void)
 {
     alatm_add_digits.mode = current_alarm.mode;

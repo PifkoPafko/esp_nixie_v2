@@ -13,20 +13,6 @@
 
 /* Headers */
 #include "pp_object_manager.h"
-#include "pp_object_transfer_defs.h"
-
-#include "driver/sdmmc_host.h"
-#include "esp_vfs_fat.h"
-
-#include <string.h>
-#include <stdlib.h>
-#include <inttypes.h>
-#include "esp_log.h"
-
-// #include <sys/stat.h>
-// #include <dirent.h>
-// #include <unistd.h>
-// #include "ctype.h"
 
 /* Macros */
 #define TAG "OBJECT_MANAGER"
@@ -71,9 +57,6 @@ static file_transfer_t file_transfer = {
     .bytes_done = 0,
     .status = WAIT_FOR_ACTION,
 };
-
-const uint8_t alarm_type_uuid[ESP_UUID_LEN_128] = {0x02, 0x00, 0x12, 0xAC, 0x42, 0x02, 0x61, 0xA2, 0xED, 0x11, 0xBA, 0x29, 0xB8, 0x13, 0x08, 0xCC};
-const uint8_t ringtone_type_uuid[ESP_UUID_LEN_128] = {0x03, 0x00, 0x12, 0xAC, 0x42, 0x02, 0x61, 0xA2, 0xED, 0x11, 0xBA, 0x29, 0xB8, 0x13, 0x08, 0xCC};
 
 /** @brief filter_func_table: Filter decision table
  * 

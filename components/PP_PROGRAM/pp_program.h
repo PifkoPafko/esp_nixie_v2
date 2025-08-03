@@ -14,11 +14,11 @@
 /* Headers */
 #include "pp_nixie_display_manager.h"
 
-#include <stdbool.h>
-#include <stdint.h>
-#include <sys/time.h>
-#include <time.h>
-#include "driver/gpio.h"
+// #include <stdbool.h>
+// #include <stdint.h>
+// #include <sys/time.h>
+// #include <time.h>
+// #include "driver/gpio.h"
 
 /* Macros */
 #define ALARM_FILE_TYPE ".txt"
@@ -28,13 +28,7 @@
 #define BUTTON_CENTER    1
 #define BUTTON_RIGHT     2
 
-#define ESP_INTR_FLAG_DEFAULT ESP_INTR_FLAG_EDGE
-
-#define ALARM_SINGLE_MODE   0
-#define ALARM_WEEKLY_MODE   1
-#define ALARM_MONTHLY_MODE  2
-#define ALARM_YEARLY_MODE   3
-
+/* Structures */
 typedef enum {
     WAIT_FOR_LEFT,
     WAIT_FOR_CENTER,
@@ -160,6 +154,13 @@ typedef struct {
     } display_mode;
 }display_digits_t;
 
-void pp_time_change_mode(button_action_t action_handler, bool start);
-void pp_alarm_add_mode(button_action_t action_handler, bool start);
-void pp_alarm_delete_mode(button_action_t action_handler);
+/* Functions */
+
+/** @brief pp_program_init: Program initialization function
+ *
+ * Initializes Button action queue, display manager and gpio.
+ * After required initialization it goes to the pp_program_main loop and stays there forever.
+ * 
+ * @return
+ */
+void pp_program_init(void);

@@ -12,7 +12,8 @@
  ****************************************************************************/
 
 /* Headers */
-#include "esp_err.h"
+// #include "pp_i2c.h"
+// #include "esp_err.h"
 
 /* Macros */
 #define WRITE_BIT_MASK(x) (((x) << 1) & 0xFE)

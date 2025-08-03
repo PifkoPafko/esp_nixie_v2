@@ -17,9 +17,6 @@
 /* Headers */
  
 /* Macros */
-#define BLUETOOTH_TAG "BLUETOOTH"
-#define GATTS_TAG "GATTS"
-
 #define ESP_APP_ID     0x55
 #define MTU_SIZE       512
 
@@ -37,6 +34,7 @@
 #define EXT_ADV_DURATION            0
 #define EXT_ADV_MAX_EVENTS          0
 
+/* Structures */
 struct gatts_profile_inst {
     esp_gatts_cb_t gatts_cb;
     uint16_t gatts_if;
@@ -50,20 +48,4 @@ struct gatts_profile_inst {
     esp_gatt_char_prop_t property;
     uint16_t descr_handle;
     esp_bt_uuid_t descr_uuid;
-};
-
-esp_ble_gap_ext_adv_params_t ext_adv_params = {
-    .type = ESP_BLE_GAP_SET_EXT_ADV_PROP_CONNECTABLE,
-    .interval_min = 0x20,
-    .interval_max = 0x20,
-    .channel_map = ADV_CHNL_ALL,
-    .filter_policy = ADV_FILTER_ALLOW_SCAN_WLST_CON_ANY,
-    .primary_phy = ESP_BLE_GAP_PHY_1M,
-    .max_skip = 0,
-    .secondary_phy = ESP_BLE_GAP_PHY_2M,
-    .sid = 0,
-    .scan_req_notif = false,
-    .own_addr_type = BLE_ADDR_TYPE_PUBLIC,
-    .peer_addr_type = BLE_ADDR_TYPE_PUBLIC,
-    .tx_power = EXT_ADV_TX_PWR_NO_PREFERENCE,
 };

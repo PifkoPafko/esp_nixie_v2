@@ -48,12 +48,10 @@ static bool anti_poisoning_ongoing = false;
 /* Functions */
 
 /** @brief pp_display_manager_init: Initializes display manager and calls init function for display.
- *
- * @param[in]   display_digits  (nixie_tube_state_t*) Pointer to nixie_tube_state_t structure.
  * 
  * @return
  */
-void pp_display_manager_init(nixie_tube_state_t *display_digits)
+void pp_display_manager_init(void)
 {
     ESP_LOGI(NIXIE_DISPLAY_MANAGER_TAG, "Initializing NIXIE Display Manager");
     display_digits_p = display_digits;

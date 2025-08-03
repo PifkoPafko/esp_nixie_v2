@@ -15,10 +15,10 @@
 #define __NIXIE_DISPLAY_MANAGER_H__
 
 /* Headers */
-#include "freertos/FreeRTOS.h"
-#include "freertos/timers.h"
+// #include "freertos/FreeRTOS.h"
+// #include "freertos/timers.h"
 
-#include "pp_nixie_display.h"
+// #include "pp_nixie_display.h"
 
 /* Macros */
 #define NOTIFY_NORMAL_VAL 0
@@ -34,12 +34,10 @@
 /* Functions */
 
 /** @brief pp_display_manager_init: Initializes display manager and calls init function for display.
- *
- * @param[in]   display_digits  (nixie_tube_state_t*) Pointer to nixie_tube_state_t structure.
  * 
  * @return
  */
-void pp_display_manager_init(nixie_tube_state_t *display_digits);
+void pp_display_manager_init(void)
 
 /** @brief pp_update_display: Update state of the display.
  * 

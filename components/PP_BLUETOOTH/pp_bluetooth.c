@@ -14,6 +14,10 @@
 /* Headers */
 #include "pp_bluetooth.h"
 
+/* Macros */
+#define BLUETOOTH_TAG "BLUETOOTH"
+#define GATTS_TAG "GATTS"
+
 /* Declarations */
 static void gap_event_handler(esp_gap_ble_cb_event_t event, esp_ble_gap_cb_param_t *param);
 static void gatts_profile_event_handler(esp_gatts_cb_event_t event, esp_gatt_if_t gatts_if, esp_ble_gatts_cb_param_t *param);
@@ -211,14 +215,34 @@ static struct gatts_profile_inst OPT_profile_tab[PROFILE_NUM] = {
     },
 };
 
+/* Extended Advertising Descriptor */
 static esp_ble_gap_ext_adv_t ext_adv = {EXT_ADV_HANDLE, EXT_ADV_DURATION, EXT_ADV_MAX_EVENTS};
 
+/* Extended Advertising Parameters */
+static esp_ble_gap_ext_adv_params_t ext_adv_params = {
+    .type = ESP_BLE_GAP_SET_EXT_ADV_PROP_CONNECTABLE,
+    .interval_min = 0x20,
+    .interval_max = 0x20,
+    .channel_map = ADV_CHNL_ALL,
+    .filter_policy = ADV_FILTER_ALLOW_SCAN_WLST_CON_ANY,
+    .primary_phy = ESP_BLE_GAP_PHY_1M,
+    .max_skip = 0,
+    .secondary_phy = ESP_BLE_GAP_PHY_2M,
+    .sid = 0,
+    .scan_req_notif = false,
+    .own_addr_type = BLE_ADDR_TYPE_PUBLIC,
+    .peer_addr_type = BLE_ADDR_TYPE_PUBLIC,
+    .tx_power = EXT_ADV_TX_PWR_NO_PREFERENCE,
+};
+
+/* Extended Advertising Raw Data */
 static uint8_t ext_adv_raw_data[] = {
     0x02, 0x01, 0x06,
     0x02, 0x0a, 0xeb, 0x03, 0x03, 0xab, 0xcd,
     0x0a, 0X09, 'N', 'I', 'X', 'I', 'E', ' ', 'B', '1', '6',
 };
 
+/* OTP handle table */
 static uint16_t OPT_HANDLE_TABLE[OPT_IDX_NB];
 
 
@@ -262,6 +286,10 @@ void pp_bluetooth_init(void)
     esp_ble_gap_set_security_param(ESP_BLE_SM_SET_RSP_KEY, &rsp_key, sizeof(uint8_t));
 }
 
+/** @brief gap_event_handler: GAP Event handler
+ * 
+ * @return
+ */
 static void gap_event_handler(esp_gap_ble_cb_event_t event, esp_ble_gap_cb_param_t *param)
 {
     switch (event) 
@@ -376,6 +404,10 @@ static void gap_event_handler(esp_gap_ble_cb_event_t event, esp_ble_gap_cb_param
     }
 }
 
+/** @brief gatts_profile_event_handler: GATTS Profile Event handler
+ * 
+ * @return
+ */
 static void gatts_profile_event_handler(esp_gatts_cb_event_t event, esp_gatt_if_t gatts_if, esp_ble_gatts_cb_param_t *param)
 {
     switch (event) 
@@ -477,6 +509,10 @@ static void gatts_profile_event_handler(esp_gatts_cb_event_t event, esp_gatt_if_
     }
 }
 
+/** @brief gatts_event_handler: GATTS Event handler
+ * 
+ * @return
+ */
 static void gatts_event_handler(esp_gatts_cb_event_t event, esp_gatt_if_t gatts_if, esp_ble_gatts_cb_param_t *param)
 {
     /* If event is register event, store the gatts_if for each profile */

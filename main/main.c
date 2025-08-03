@@ -11,26 +11,39 @@
  *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.                   *
  ****************************************************************************/
 
-#include "pp_object_manager.h"
+/* Headers */
 #include "pp_nvs.h"
-#include "pp_wifi.h"
 #include "pp_i2c.h"
 #include "pp_rtc.h"
-#include "pp_nixie_display_manager.h"
+#include "pp_bluetooth.h"
+#include "pp_object_manager.h"
+#include "pp_alarm.h"
+#include "pp_wifi.h"
+#include "pp_program.h"
 
+/* Macros */
 #define MAIN_TAG    "MAIN"
 
+/* Functions */
+
+/** @brief app_main: Main function/Entry point
+ * 
+ * This function is an entry point to the program.
+ * Performs all necessary initializations
+ *
+ * @return
+ */
 void app_main(void)
 {
     // Initializations
-    pp_nvs_init();
-    pp_i2c_init();
-    pp_rtc_init();
-    // pp_bluetooth_init();
-    pp_object_manager_init();
-    pp_alarm_init();
-    pp_wifi_init();
+    pp_nvs_init();              // Initializes NVS Flash memory
+    pp_i2c_init();              // Initializes I2C bus
+    pp_rtc_init();              // Initializes RTC module functionality
+    pp_bluetooth_init();        // Initializes bluetooth funcionality
+    pp_object_manager_init();   // Initializes object manager
+    pp_alarm_init();            // Initializes alarm functionality
+    pp_wifi_init();             // Initializes WiFi functionality
 
     // Go to the main program
-    pp_program_init();
+    pp_program_init();          // Redirect main loop to the program loop
 }

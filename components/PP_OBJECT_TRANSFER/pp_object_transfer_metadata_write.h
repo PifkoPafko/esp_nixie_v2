@@ -15,15 +15,15 @@
 #define __OBJECT_TRANSFER_METADATA_WRITE_H__
 
 /* Headers */
-#include "pp_object_manager.h"
-#include "pp_object_transfer_attr_ids.h"
-#include "pp_object_transfer_defs.h"
-#include "esp_err.h"
-#include "esp_gatts_api.h"
-#include "esp_log.h"
-#include "esp_wifi.h"
-#include "pp_wifi.h"
-#include "pp_alarm.h"
+// #include "pp_object_manager.h"
+// #include "pp_object_transfer_attr_ids.h"
+// #include "pp_object_transfer_defs.h"
+// #include "esp_err.h"
+// #include "esp_gatts_api.h"
+// #include "esp_log.h"
+// #include "esp_wifi.h"
+// #include "pp_wifi.h"
+// #include "pp_alarm.h"
 
 /* Structures */
 typedef struct{

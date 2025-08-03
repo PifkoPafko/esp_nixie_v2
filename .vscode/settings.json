@@ -109,7 +109,10 @@
     "pp_wifi.h": "c",
     "pp_object_transfer_metadata_write.h": "c",
     "pp_object_transfer_metadata_read.h": "c",
-    "pp_bluetooth.h": "c"
+    "pp_bluetooth.h": "c",
+    "pp_nvs.h": "c",
+    "pp_program.h": "c",
+    "global.h": "c"
   },
   "idf.flashType": "UART",
   "idf.portWin": "COM5",
