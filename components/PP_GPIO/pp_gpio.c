@@ -14,6 +14,11 @@
 /* Headers */
 #include "pp_gpio.h"
 
+/* Declarations */
+static void IRAM_ATTR pp_button_isr_handler(void* arg);
+static void pp_btn_timer_cb(TimerHandle_t xTimer);
+static void pp_button_main(void* arg);
+
 /* Macros */
 #define GPIO_TAG "GPIO"
 
@@ -34,27 +39,27 @@ void pp_gpio_init(void)
     ESP_LOGI(GPIO_TAG, "Initializing gpio");
 
     /* OUTPUTS INIT */
-    gpio_config_t io_conf = {};
-    io_conf.intr_type = GPIO_INTR_DISABLE;
-    io_conf.mode = GPIO_MODE_OUTPUT;
-    io_conf.pin_bit_mask = GPIO_OUTPUT_PIN_SEL;
-    io_conf.pull_down_en = 0;
-    io_conf.pull_up_en = 0;
-    ESP_ERROR_CHECK_WITHOUT_ABORT(gpio_config(&io_conf));
+    gpio_config_t io_conf_output = {};
+    io_conf_output.intr_type = GPIO_INTR_DISABLE;
+    io_conf_output.mode = GPIO_MODE_OUTPUT;
+    io_conf_output.pin_bit_mask = GPIO_OUTPUT_PIN_SEL;
+    io_conf_output.pull_down_en = 0;
+    io_conf_output.pull_up_en = 0;
+    ESP_ERROR_CHECK_WITHOUT_ABORT(gpio_config(&io_conf_output));
     ESP_ERROR_CHECK_WITHOUT_ABORT(gpio_set_level(GPIO_OUTPUT_OE, 0));
     pp_led_enable(GPIO_OUTPUT_RED, false);
     pp_led_enable(GPIO_OUTPUT_BLUE, false);
     pp_led_enable(GPIO_OUTPUT_GREEN, false);
 
     /* INPUTS INIT */
-    gpio_config_t io_conf = {};
-    io_conf.intr_type = GPIO_INTR_ANYEDGE;
-    io_conf.pin_bit_mask = GPIO_INPUT_PIN_SEL;
-    io_conf.mode = GPIO_MODE_INPUT;
-    io_conf.pull_up_en = 1;
-    ESP_ERROR_CHECK(gpio_config(&io_conf));
+    gpio_config_t io_conf_input = {};
+    io_conf_input.intr_type = GPIO_INTR_ANYEDGE;
+    io_conf_input.pin_bit_mask = GPIO_INPUT_PIN_SEL;
+    io_conf_input.mode = GPIO_MODE_INPUT;
+    io_conf_input.pull_up_en = 1;
+    ESP_ERROR_CHECK(gpio_config(&io_conf_input));
 
-    for (uint i=0; i<3; i++)
+    for (uint8_t i = 0; i < 3; ++i)
     {
         button_sm[i].state = IDLE;
         button_sm[i].last_enable = false;
@@ -70,7 +75,7 @@ void pp_gpio_init(void)
     btn_timer_h[2] = xTimerCreate(NULL, pdMS_TO_TICKS(100), pdFALSE, NULL, pp_btn_timer_cb);
 
     gpio_evt_queue = xQueueCreate(10, sizeof(button_queue_msg_t));
-    button_action_queue = queue;
+    button_action_queue = xQueueCreate(3, sizeof(button_action_t));
 
     ESP_ERROR_CHECK(xTaskCreate(pp_button_main, "BUTTON_MAIN", 3072, NULL, 1, button_main_h));
 }

@@ -11,7 +11,7 @@
  *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.                   *
  ****************************************************************************/
 
-#include "global.h"
+#include "pp_global.h"
 
 /* Global Variables */
 

@@ -1,3 +1,4 @@
-idf_component_register( SRCS "pp_pca9698.c"
-	INCLUDE_DIRS "."
-	REQUIRES PP_I2C)
+set(COMPONENT_SRCDIRS ".")
+set(COMPONENT_ADD_INCLUDEDIRS ".")
+set(COMPONENT_REQUIRES PP_I2C)
+register_component()

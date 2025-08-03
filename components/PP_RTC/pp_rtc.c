@@ -46,7 +46,7 @@ static void pp_rtc_main(void* arg)
  *
  * @return
  */
-void pp_rtc_init()
+void pp_rtc_init(void);
 {
     ESP_LOGI(RTC_TAG, "Initializing RTC");
     setenv("TZ", CENTRAL_EUROPEAN_TIME_ZONE, 1);

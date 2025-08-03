@@ -18,8 +18,9 @@
 #define NIXIE_DISPLAY_MANAGER_TAG "NIXIE_DISPLAY_MANAGER"
 
 /* Declarations */
-static static void pp_timer_cb(TimerHandle_t xTimer);
-static static void pp_timer_anti_poison_cb(TimerHandle_t xTimer);
+static void pp_display_main(void* arg);
+static void pp_timer_cb(TimerHandle_t xTimer);
+static void pp_timer_anti_poison_cb(TimerHandle_t xTimer);
 static inline void pp_timer_set_default(void);
 static inline void pp_timer_set_blink(void);
 static inline void pp_timer_stop(void);
@@ -36,10 +37,8 @@ static void pp_nixie_display_main(void* arg);
 
 /* Variables */
 static display_state_t display_state;
-static display_digits_t *display_digits_p;
 
 static uint8_t passkey[PASSKEY_SIZE];
-
 
 static TimerHandle_t timer_h;
 static TimerHandle_t timer_anti_poison_h;
@@ -54,7 +53,6 @@ static bool anti_poisoning_ongoing = false;
 void pp_display_manager_init(void)
 {
     ESP_LOGI(NIXIE_DISPLAY_MANAGER_TAG, "Initializing NIXIE Display Manager");
-    display_digits_p = display_digits;
 
     pp_nixie_display_init();
     
@@ -63,7 +61,7 @@ void pp_display_manager_init(void)
     timer_h = xTimerCreate(NULL, DEFAULT_PERIOD, pdTRUE, NULL, pp_timer_cb);
     timer_anti_poison_h = xTimerCreate(NULL, ANTI_POISON_PERIOD, pdTRUE, NULL, pp_timer_anti_poison_cb);
 
-    pp_update_display(DEFAULT_MODE);
+    pp_update_display();
     pp_timer_set_default();
 }
 
@@ -73,7 +71,7 @@ void pp_display_manager_init(void)
  */
 void pp_update_display()
 {
-    switch(display_mode)
+    switch(device_mode)
     {
         case DEFAULT_MODE:
         {
@@ -113,7 +111,7 @@ void pp_update_display()
  */
 void pp_set_display_passkey(uint32_t key)
 {
-    for (uint i=0; i<6; i++)
+    for (uint8_t i = 0; i < 6; ++i)
     {
         passkey[5-i] = key % 10;
         key /= 10;
@@ -182,7 +180,7 @@ static void pp_display_main(void* arg)
                 {
                     if(notify_value == NOTIFY_TIMER_BLINK_VAL)
                     {
-                        display_state.digit_enable[display_digits_p->blink_tube] = !display_state.digit_enable[display_digits_p->blink_tube];
+                        display_state.digit_enable[display_digits.blink_tube] = !display_state.digit_enable[display_digits.blink_tube];
                     }
                     else
                     {
@@ -195,7 +193,7 @@ static void pp_display_main(void* arg)
                 {
                     if(notify_value == NOTIFY_TIMER_BLINK_VAL)
                     {
-                        display_state.digit_enable[display_digits_p->blink_tube] = !display_state.digit_enable[display_digits_p->blink_tube];
+                        display_state.digit_enable[display_digits.blink_tube] = !display_state.digit_enable[display_digits.blink_tube];
                     }
                     else
                     {
@@ -249,7 +247,7 @@ static void pp_display_main(void* arg)
             }
         }
 
-        pp_display(&nixie_state);
+        pp_display(&display_state);
     }
 }
 
@@ -392,18 +390,18 @@ static void pp_set_nixie_state_time_change()
     display_state.digit_enable[14] = false;
     display_state.digit_enable[15] = false;
 
-    display_state.digit[0] = display_digits_p->display_mode.time_date_digits.time.hour_first;
-    display_state.digit[1] = display_digits_p->display_mode.time_date_digits.time.hour_second;
-    display_state.digit[2] = display_digits_p->display_mode.time_date_digits.time.minute_first;
-    display_state.digit[3] = display_digits_p->display_mode.time_date_digits.time.minute_second;
-    display_state.digit[4] = display_digits_p->display_mode.time_date_digits.time.second_first;
-    display_state.digit[5] = display_digits_p->display_mode.time_date_digits.time.second_second;
-    display_state.digit[7] = display_digits_p->display_mode.time_date_digits.date.day_first;
-    display_state.digit[8] = display_digits_p->display_mode.time_date_digits.date.day_second;
-    display_state.digit[9] = display_digits_p->display_mode.time_date_digits.date.month_first;
-    display_state.digit[10] = display_digits_p->display_mode.time_date_digits.date.month_second;
-    display_state.digit[11] = display_digits_p->display_mode.time_date_digits.date.year_first;
-    display_state.digit[12] = display_digits_p->display_mode.time_date_digits.date.year_second;
+    display_state.digit[0] = display_digits.display_mode.time_date_digits.time.hour_first;
+    display_state.digit[1] = display_digits.display_mode.time_date_digits.time.hour_second;
+    display_state.digit[2] = display_digits.display_mode.time_date_digits.time.minute_first;
+    display_state.digit[3] = display_digits.display_mode.time_date_digits.time.minute_second;
+    display_state.digit[4] = display_digits.display_mode.time_date_digits.time.second_first;
+    display_state.digit[5] = display_digits.display_mode.time_date_digits.time.second_second;
+    display_state.digit[7] = display_digits.display_mode.time_date_digits.date.day_first;
+    display_state.digit[8] = display_digits.display_mode.time_date_digits.date.day_second;
+    display_state.digit[9] = display_digits.display_mode.time_date_digits.date.month_first;
+    display_state.digit[10] = display_digits.display_mode.time_date_digits.date.month_second;
+    display_state.digit[11] = display_digits.display_mode.time_date_digits.date.year_first;
+    display_state.digit[12] = display_digits.display_mode.time_date_digits.date.year_second;
 
     display_state.right_comma_enable[1] = true;
     display_state.right_comma_enable[3] = true;
@@ -417,7 +415,7 @@ static void pp_set_nixie_state_time_change()
  */
 static void pp_set_nixie_state_alarm()
 {
-    switch(display_digits_p->mode.alarm_digits.mode)
+    switch(display_digits.display_mode.alarm_digits.alarm_mode)
     {
         case ALARM_SINGLE_MODE:
         {
@@ -467,18 +465,18 @@ static void pp_set_nixie_state_alarm_single()
     display_state.digit_enable[13] = false;
     display_state.digit_enable[14] = false;
 
-    display_state.digit[0] = display_digits_p->display_mode.alarm_digits.alarm_mode;
-    display_state.digit[2] = display_digits_p->display_mode.alarm_digits.time.hour_first;
-    display_state.digit[3] = display_digits_p->display_mode.alarm_digits.time.hour_second;
-    display_state.digit[4] = display_digits_p->display_mode.alarm_digits.time.minute_first;
-    display_state.digit[5] = display_digits_p->display_mode.alarm_digits.time.minute_second;
-    display_state.digit[7] = display_digits_p->display_mode.alarm_digits.arg.date.day_first;
-    display_state.digit[8] = display_digits_p->display_mode.alarm_digits.arg.date.day_second;
-    display_state.digit[9] = display_digits_p->display_mode.alarm_digits.arg.date.month_first;
-    display_state.digit[10] = display_digits_p->display_mode.alarm_digits.arg.date.month_second;
-    display_state.digit[11] = display_digits_p->display_mode.alarm_digits.arg.date.year_first;
-    display_state.digit[12] = display_digits_p->display_mode.alarm_digits.arg.date.year_second;
-    display_state.digit[15] = display_digits_p->display_mode.alarm_digits.volume;
+    display_state.digit[0] = display_digits.display_mode.alarm_digits.alarm_mode;
+    display_state.digit[2] = display_digits.display_mode.alarm_digits.time.hour_first;
+    display_state.digit[3] = display_digits.display_mode.alarm_digits.time.hour_second;
+    display_state.digit[4] = display_digits.display_mode.alarm_digits.time.minute_first;
+    display_state.digit[5] = display_digits.display_mode.alarm_digits.time.minute_second;
+    display_state.digit[7] = display_digits.display_mode.alarm_digits.arg.date.day_first;
+    display_state.digit[8] = display_digits.display_mode.alarm_digits.arg.date.day_second;
+    display_state.digit[9] = display_digits.display_mode.alarm_digits.arg.date.month_first;
+    display_state.digit[10] = display_digits.display_mode.alarm_digits.arg.date.month_second;
+    display_state.digit[11] = display_digits.display_mode.alarm_digits.arg.date.year_first;
+    display_state.digit[12] = display_digits.display_mode.alarm_digits.arg.date.year_second;
+    display_state.digit[15] = display_digits.display_mode.alarm_digits.volume;
 
     display_state.right_comma_enable[3] = true;
     display_state.right_comma_enable[8] = true;
@@ -506,20 +504,20 @@ static void pp_set_nixie_state_alarm_weekly()
     display_state.digit_enable[6] = false;
     display_state.digit_enable[14] = false;
 
-    display_state.digit[0] = display_digits_p->display_mode.alarm_digits.alarm_mode;
-    display_state.digit[2] = display_digits_p->display_mode.alarm_digits.time.hour_first;
-    display_state.digit[3] = display_digits_p->display_mode.alarm_digits.time.hour_second;
-    display_state.digit[4] = display_digits_p->display_mode.alarm_digits.time.minute_first;
-    display_state.digit[5] = display_digits_p->display_mode.alarm_digits.time.minute_second;
+    display_state.digit[0] = display_digits.display_mode.alarm_digits.alarm_mode;
+    display_state.digit[2] = display_digits.display_mode.alarm_digits.time.hour_first;
+    display_state.digit[3] = display_digits.display_mode.alarm_digits.time.hour_second;
+    display_state.digit[4] = display_digits.display_mode.alarm_digits.time.minute_first;
+    display_state.digit[5] = display_digits.display_mode.alarm_digits.time.minute_second;
 
     for(uint8_t tube = 7, shift = 0; tube <= 13; ++tube, ++shift)
     {
-        display_state.digit[tube] = display_digits_p->display_mode.alarm_digits.arg.days & (1<<shift) ? 1 : 0;
+        display_state.digit[tube] = display_digits.display_mode.alarm_digits.arg.days & (1<<shift) ? 1 : 0;
     }
 
-    display_state.digit[15] = display_digits_p->display_mode.alarm_digits.volume;
+    display_state.digit[15] = display_digits.display_mode.alarm_digits.volume;
 
-    nixie_state[3].right_comma_enable = true;
+    display_state.right_comma_enable[3] = true;
 }
 
 /** @brief pp_set_nixie_state_alarm_monthly: Prepare data to display in ALARM_MONTHLY_MODE
@@ -548,14 +546,14 @@ static void pp_set_nixie_state_alarm_monthly()
     display_state.digit_enable[13] = false;
     display_state.digit_enable[14] = false;
 
-    display_state.digit[0] = display_digits_p->display_mode.alarm_digits.alarm_mode;
-    display_state.digit[2] = display_digits_p->display_mode.alarm_digits.time.hour_first;
-    display_state.digit[3] = display_digits_p->display_mode.alarm_digits.time.hour_second;
-    display_state.digit[4] = display_digits_p->display_mode.alarm_digits.time.minute_first;
-    display_state.digit[5] = display_digits_p->display_mode.alarm_digits.time.minute_second;
-    display_state.digit[7] = display_digits_p->display_mode.alarm_digits.arg.date.day_first;
-    display_state.digit[8] = display_digits_p->display_mode.alarm_digits.arg.date.day_second;
-    display_state.digit[15] = display_digits_p->display_mode.alarm_digits.volume;
+    display_state.digit[0] = display_digits.display_mode.alarm_digits.alarm_mode;
+    display_state.digit[2] = display_digits.display_mode.alarm_digits.time.hour_first;
+    display_state.digit[3] = display_digits.display_mode.alarm_digits.time.hour_second;
+    display_state.digit[4] = display_digits.display_mode.alarm_digits.time.minute_first;
+    display_state.digit[5] = display_digits.display_mode.alarm_digits.time.minute_second;
+    display_state.digit[7] = display_digits.display_mode.alarm_digits.arg.date.day_first;
+    display_state.digit[8] = display_digits.display_mode.alarm_digits.arg.date.day_second;
+    display_state.digit[15] = display_digits.display_mode.alarm_digits.volume;
 
     display_state.right_comma_enable[3] = true;
 }
@@ -584,16 +582,16 @@ static void pp_set_nixie_state_alarm_yearly()
     display_state.digit_enable[13] = false;
     display_state.digit_enable[14] = false;
 
-    display_state.digit[0] = display_digits_p->display_mode.alarm_digits.alarm_mode;
-    display_state.digit[2] = display_digits_p->display_mode.alarm_digits.time.hour_first;
-    display_state.digit[3] = display_digits_p->display_mode.alarm_digits.time.hour_second;
-    display_state.digit[4] = display_digits_p->display_mode.alarm_digits.time.minute_first;
-    display_state.digit[5] = display_digits_p->display_mode.alarm_digits.time.minute_second;
-    display_state.digit[7] = display_digits_p->display_mode.alarm_digits.arg.date.day_first;
-    display_state.digit[8] = display_digits_p->display_mode.alarm_digits.arg.date.day_second;
-    display_state.digit[9] = display_digits_p->display_mode.alarm_digits.arg.date.month_first;
-    display_state.digit[10] = display_digits_p->display_mode.alarm_digits.arg.date.month_second;
-    display_state.digit[15] = display_digits_p->display_mode.alarm_digits.volume;
+    display_state.digit[0] = display_digits.display_mode.alarm_digits.alarm_mode;
+    display_state.digit[2] = display_digits.display_mode.alarm_digits.time.hour_first;
+    display_state.digit[3] = display_digits.display_mode.alarm_digits.time.hour_second;
+    display_state.digit[4] = display_digits.display_mode.alarm_digits.time.minute_first;
+    display_state.digit[5] = display_digits.display_mode.alarm_digits.time.minute_second;
+    display_state.digit[7] = display_digits.display_mode.alarm_digits.arg.date.day_first;
+    display_state.digit[8] = display_digits.display_mode.alarm_digits.arg.date.day_second;
+    display_state.digit[9] = display_digits.display_mode.alarm_digits.arg.date.month_first;
+    display_state.digit[10] = display_digits.display_mode.alarm_digits.arg.date.month_second;
+    display_state.digit[15] = display_digits.display_mode.alarm_digits.volume;
 
     display_state.right_comma_enable[3] = true;
     display_state.right_comma_enable[8] = true;

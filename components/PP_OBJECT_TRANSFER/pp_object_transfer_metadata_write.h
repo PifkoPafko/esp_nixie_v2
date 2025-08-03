@@ -15,22 +15,27 @@
 #define __OBJECT_TRANSFER_METADATA_WRITE_H__
 
 /* Headers */
+#include <stdbool.h>
+#include <stdint.h>
+
+// #include "esp_log.h"
+// #include "esp_err.h"
+
+#include "esp_gatts_api.h"
+// #include "esp_wifi.h"
+
 // #include "pp_object_manager.h"
 // #include "pp_object_transfer_attr_ids.h"
 // #include "pp_object_transfer_defs.h"
-// #include "esp_err.h"
-// #include "esp_gatts_api.h"
-// #include "esp_log.h"
-// #include "esp_wifi.h"
 // #include "pp_wifi.h"
 // #include "pp_alarm.h"
 
 /* Structures */
 typedef struct{
-    bool need_attr_set = false,
-    uint16_t length = 0,
-    uint8_t value[32],
-    bool need_ind = false
+    bool need_attr_set;
+    uint16_t length;
+    uint8_t value[32];
+    bool need_ind;
 }otp_write_attr_t;
 
 /* Function declarations */
@@ -57,7 +62,7 @@ typedef struct{
  * 
  * @return  (esp_gatt_status_t) GATT status of the operation.
  */
-esp_gatt_status_t pp_object_transfer_write_event(esp_ble_gatts_cb_param_t *param, uint16_t *handle_table, otp_write_attr_t *write_params, esp_gatt_rsp_t *rsp)
+esp_gatt_status_t pp_object_transfer_write_event(esp_ble_gatts_cb_param_t *param, uint16_t *handle_table, otp_write_attr_t *write_params, esp_gatt_rsp_t *rsp);
 
 /** @brief pp_object_transfer_write_event_indication: Object Transfer Write Indication function
  * 

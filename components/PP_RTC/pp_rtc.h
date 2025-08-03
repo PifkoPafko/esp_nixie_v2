@@ -12,16 +12,21 @@
  ****************************************************************************/
 
 /* Headers */
-// #include "esp_log.h"
 
-// #include <sys/time.h>
-// #include <time.h>
-// #include "pp_i2c.h"
-// #include "pp_alarm.h"
+#include <stdbool.h>
+#include <time.h>
+#include <sys/time.h>
 
 // #include "freertos/FreeRTOS.h"
 // #include "freertos/task.h"
 // #include "freertos/semphr.h"
+
+#include "esp_log.h"
+
+// #include "pp_i2c.h"
+#include "pp_alarm.h"
+
+
 
 /* Macros */
 #define CENTRAL_EUROPEAN_TIME_ZONE	"CET-1CEST,M3.5.0/2,M10.5.0/3"  // for Poland
@@ -78,7 +83,7 @@
  *
  * @return
  */
-void pp_rtc_init();
+void pp_rtc_init(void);
 
 /** @brief pp_rtc_set_time: Sets time to RTC
  *

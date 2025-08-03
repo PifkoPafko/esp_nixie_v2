@@ -1,3 +1,3 @@
-idf_component_register( SRCS "pp_rtc.c"
-	INCLUDE_DIRS "."
-	REQUIRES PP_I2C PP_ALARM)
+set(COMPONENT_SRCDIRS ".")
+set(COMPONENT_ADD_INCLUDEDIRS ".")
+register_component()

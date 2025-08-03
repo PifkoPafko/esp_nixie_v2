@@ -21,14 +21,13 @@
 // #include "string.h"
 // #include  <stdbool.h>
 
-// #include "pp_object_manager.h"
-// #include "pp_object_transfer_attr_ids.h"
-// #include "pp_object_transfer_defs.h"
-// #include "pp_wave_player.h"
-
 // #include "freertos/FreeRTOS.h"
 // #include "freertos/task.h"
 // #include "freertos/semphr.h"
+
+// #include "driver/gptimer.h"
+// #include "driver/gpio.h"
+// #include "driver/i2s_std.h" // i2s setup
 
 // #include "esp_err.h"
 // #include "esp_log.h"
@@ -36,11 +35,10 @@
 // #include <sys/time.h>
 // #include <time.h>
 
-// #include "driver/gptimer.h"
-// #include "driver/gpio.h"
-// #include "driver/i2s_std.h" // i2s setup
-
-// #include "esp_err.h"
+// #include "pp_object_manager.h"
+// #include "pp_object_transfer_attr_ids.h"
+#include "pp_object_transfer_defs.h"
+// #include "pp_wave_player.h"
 
 /* Macros */
 // #define ALARM_LOG
@@ -95,39 +93,6 @@ typedef enum {
     ALARM_PLAY,
     SET_NEXT_ALARM,
 }alarm_play_sm_t;
-
-typedef struct
-{
-    uint8_t day;
-    uint8_t month;
-    uint8_t year;
-}alarm_single_args_t;
-
-typedef struct
-{
-    uint8_t day;
-    uint8_t month;
-}alarm_yearly_args_t;
-
-typedef struct 
-{
-    bool is_set;
-    uint8_t mode;
-    uint8_t enable;
-    uint8_t desc_len;
-    char desc[40];
-    uint8_t hour;
-    uint8_t minute;
-
-    union {
-        alarm_single_args_t single_alarm_args;
-        uint8_t days;
-        uint8_t day;
-        alarm_yearly_args_t yearly_alarm_args;
-    } args;
-
-    uint8_t volume;
-}alarm_mode_args_t;
 
 /** @brief pp_alarm_init: Alarm player initialization function
  * 

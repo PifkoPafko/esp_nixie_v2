@@ -112,7 +112,10 @@
     "pp_bluetooth.h": "c",
     "pp_nvs.h": "c",
     "pp_program.h": "c",
-    "global.h": "c"
+    "global.h": "c",
+    "semphr.h": "c",
+    "i2c.h": "c",
+    "pp_global.h": "c"
   },
   "idf.flashType": "UART",
   "idf.portWin": "COM5",

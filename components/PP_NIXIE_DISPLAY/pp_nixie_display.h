@@ -14,6 +14,14 @@
 #ifndef __NIXIE_DISPLAY_H__
 #define __NIXIE_DISPLAY_H__
 
+/* Headers */
+#include <stdbool.h>
+#include <stdint.h>
+#include <string.h>
+
+#include "pp_global.h"
+#include "pp_pca9698.h"
+
 /* Macros */
 #define TUBES_COUNT 16
 #define EXPANDER_COUNT 6
@@ -125,10 +133,10 @@ void pp_nixie_display_init(void);
  * 
  * This function sets outputs of expanders and siplay desired digits and commas of nixie tubes.
  *
- * @param[in]   nixie_state  (nixie_tube_state_t*) Pointer to nixie_state structure.
+ * @param[in]   nixie_state  (display_state_t*) Pointer to display_state_t structure.
  * 
  * @return
  */
-void pp_display(nixie_tube_state_t *nixie_state);
+void pp_display(display_state_t *display_state);
 
 #endif

@@ -15,10 +15,14 @@
 #define __NIXIE_DISPLAY_MANAGER_H__
 
 /* Headers */
-// #include "freertos/FreeRTOS.h"
-// #include "freertos/timers.h"
+#include <stdint.h>
+#include <stdbool.h>
+#include <time.h>
+#include "freertos/FreeRTOS.h"
+#include "freertos/timers.h"
 
-// #include "pp_nixie_display.h"
+#include "pp_global.h"
+#include "pp_nixie_display.h"
 
 /* Macros */
 #define NOTIFY_NORMAL_VAL 0
@@ -31,13 +35,15 @@
 #define ANTI_POISON_PERIOD pdMS_TO_TICKS(60000)
 #define ANTI_POISON_DIGIT_PERIOD pdMS_TO_TICKS(100)
 
+#define PASSKEY_SIZE 6
+
 /* Functions */
 
 /** @brief pp_display_manager_init: Initializes display manager and calls init function for display.
  * 
  * @return
  */
-void pp_display_manager_init(void)
+void pp_display_manager_init(void);
 
 /** @brief pp_update_display: Update state of the display.
  * 

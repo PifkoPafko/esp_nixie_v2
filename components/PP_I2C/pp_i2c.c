@@ -26,7 +26,7 @@ static SemaphoreHandle_t i2c_mutex;
  *
  * @return  esp_err_t
  */
-static esp_err_t pp_i2c_create_mutex(void) 
+static esp_err_t pp_i2c_create_mutex(void)
 {
 	i2c_mutex = xSemaphoreCreateMutex();
     if(!i2c_mutex)

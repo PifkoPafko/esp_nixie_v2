@@ -18,7 +18,7 @@
 #define NIXIE_DISPLAY_TAG "NIXIE DISPLAY"
 
 /* Declarations */
-static void pp_nixie_display_generate_i2c_msg(nixie_tube_state_t *nixie_state, uint8_t *i2c_msg);
+static void pp_nixie_display_generate_i2c_msg(display_state_t *nixie_state, uint8_t *i2c_msg);
 
 /* Variables */
 static const uint8_t FIRST_NIX_DIGIT_MASK[DIGITS_COUNT] = { NIXIE_0_0_BIT, NIXIE_0_1_BIT, NIXIE_0_2_BIT, NIXIE_0_3_BIT, NIXIE_0_4_BIT, NIXIE_0_5_BIT, NIXIE_0_6_BIT, NIXIE_0_7_BIT, NIXIE_0_8_BIT, NIXIE_0_9_BIT};
@@ -68,16 +68,16 @@ void pp_nixie_display_init(void)
 /** @brief pp_display: Displays given nixie tubes state.
  * 
  * This function sets outputs of expanders and siplay desired digits and commas of nixie tubes.
- *
- * @param[in]   nixie_state  (nixie_tube_state_t*) Pointer to nixie_state structure.
+ * 
+ * @param[in]   nixie_state  (display_state_t*) Pointer to display_state_t structure.
  * 
  * @return
  */
-void pp_display(nixie_tube_state_t *nixie_state)
+void pp_display(display_state_t *display_state)
 {
     uint8_t i2c_msg[EXPANDER_COUNT][EXPANDER_REG_COUNT];
     memset(i2c_msg, 0, EXPANDER_COUNT*EXPANDER_REG_COUNT*sizeof(i2c_msg[0]));
-    pp_nixie_display_generate_i2c_msg(nixie_state, &i2c_msg[0][0]);
+    pp_nixie_display_generate_i2c_msg(display_state, &i2c_msg[0][0]);
     
     for(uint8_t expander_id = 0; expander_id < EXPANDER_COUNT; expander_id++)
     {
@@ -89,61 +89,61 @@ void pp_display(nixie_tube_state_t *nixie_state)
  * 
  * This function generates I2C messages from given nixie state. 
  *
- * @param[in]   nixie_state  (nixie_tube_state_t*) Pointer to nixie_state structure.
+ * @param[in]   nixie_state  (display_state_t*) Pointer to display_state_t structure.
  * @param[out]  i2c_msg  (uint8_t*) Pointer to I2C message table which should be i2c_msg[EXPANDER_COUNT][EXPANDER_REG_COUNT]. The result will be stored here.
  * 
  * @return
  */
-static void pp_nixie_display_generate_i2c_msg(nixie_tube_state_t *nixie_state, uint8_t *i2c_msg)
+static void pp_nixie_display_generate_i2c_msg(display_state_t *display_state, uint8_t *i2c_msg)
 {
     for(uint8_t expander_id = 0; expander_id < EXPANDER_COUNT; expander_id++)
     {
         uint8_t expander_nixie_id = expander_id * 3;
         uint8_t *msg = i2c_msg + (expander_id * EXPANDER_REG_COUNT);
 
-        if(nixie_state->digit_enable[expander_nixie_id])
+        if(display_state->digit_enable[expander_nixie_id])
         {
-            msg[FIRST_NIX_DIGIT_REG_ID[nixie_state->digit[expander_nixie_id]]] |= FIRST_NIX_DIGIT_MASK[nixie_state->digit[expander_nixie_id]];
+            msg[FIRST_NIX_DIGIT_REG_ID[display_state->digit[expander_nixie_id]]] |= FIRST_NIX_DIGIT_MASK[display_state->digit[expander_nixie_id]];
         }
 
-        if(nixie_state->left_comma_enable[expander_nixie_id])
+        if(display_state->left_comma_enable[expander_nixie_id])
         {
             msg[FIRST_NIX_LEFT_COMMA_REG_ID] |= FIRST_NIX_LEFT_COMMA_MASK;
         }
 
-        if(nixie_state->right_comma_enable[expander_nixie_id])
+        if(display_state->right_comma_enable[expander_nixie_id])
         {
             msg[FIRST_NIX_RIGHT_COMMA_REG_ID] |= FIRST_NIX_RIGHT_COMMA_MASK;
         }
 
         if(expander_id < 5)
         {
-            if(nixie_state->digit_enable[expander_nixie_id + 1])
+            if(display_state->digit_enable[expander_nixie_id + 1])
             {
-                msg[SECOND_NIX_DIGIT_REG_ID[nixie_state->digit[expander_nixie_id + 1]]] |= SECOND_NIX_DIGIT_MASK[nixie_state->digit[expander_nixie_id + 1]];
+                msg[SECOND_NIX_DIGIT_REG_ID[display_state->digit[expander_nixie_id + 1]]] |= SECOND_NIX_DIGIT_MASK[display_state->digit[expander_nixie_id + 1]];
             }
 
-            if(nixie_state->left_comma_enable[expander_nixie_id + 1])
+            if(display_state->left_comma_enable[expander_nixie_id + 1])
             {
                 msg[SECOND_NIX_LEFT_COMMA_REG_ID] |= SECOND_NIX_LEFT_COMMA_MASK;
             }
 
-            if(nixie_state->right_comma_enable[expander_nixie_id + 1])
+            if(display_state->right_comma_enable[expander_nixie_id + 1])
             {
                 msg[SECOND_NIX_RIGHT_COMMA_REG_ID] |= SECOND_NIX_RIGHT_COMMA_MASK;
             }
 
-            if(nixie_state->digit_enable[expander_nixie_id + 2])
+            if(display_state->digit_enable[expander_nixie_id + 2])
             {
-                msg[THIRD_NIX_DIGIT_REG_ID[nixie_state->digit[expander_nixie_id + 2]]] |= THIRD_NIX_DIGIT_MASK[nixie_state->digit[expander_nixie_id + 2]];
+                msg[THIRD_NIX_DIGIT_REG_ID[display_state->digit[expander_nixie_id + 2]]] |= THIRD_NIX_DIGIT_MASK[display_state->digit[expander_nixie_id + 2]];
             }
 
-            if(nixie_state->left_comma_enable[expander_nixie_id + 2])
+            if(display_state->left_comma_enable[expander_nixie_id + 2])
             {
                 msg[THIRD_NIX_LEFT_COMMA_REG_ID] |= THIRD_NIX_LEFT_COMMA_MASK;
             }
 
-            if(nixie_state->right_comma_enable[expander_nixie_id + 2])
+            if(display_state->right_comma_enable[expander_nixie_id + 2])
             {
                 msg[THIRD_NIX_RIGHT_COMMA_REG_ID] |= THIRD_NIX_RIGHT_COMMA_MASK;
             }

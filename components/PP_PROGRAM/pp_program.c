@@ -143,6 +143,7 @@ static void pp_button_functions(button_action_t action_handler)
                         pairing_sm = PAIRING;
 
                         device_mode = PAIRING_MODE;
+                        pp_update_display();
                     }
                     else
                     {
@@ -160,6 +161,7 @@ static void pp_button_functions(button_action_t action_handler)
                 ESP_LOGI(MAIN_TAG, "DEFAULT MODE -> TIME CHANGE MODE");
                 device_mode = TIME_CHANGE_MODE;
                 pp_time_change_mode(action_handler, true);
+                pp_update_display();
             }
 
             if (action_handler.button == BUTTON_CENTER && action_handler.action == LONG_PRESS && pairing_sm != PAIRING)
@@ -167,6 +169,7 @@ static void pp_button_functions(button_action_t action_handler)
                 ESP_LOGI(MAIN_TAG, "DEFAULT MODE -> ALARM ADD MODE");
                 device_mode = ALARM_ADD_MODE;
                 pp_alarm_add_mode(action_handler, true);
+                pp_update_display();
             }
 
             if (action_handler.button == BUTTON_RIGHT && action_handler.action == LONG_PRESS)
@@ -198,6 +201,7 @@ static void pp_button_functions(button_action_t action_handler)
                         ESP_LOGI(MAIN_TAG, "DEFAULT MODE -> ALARM_DELETE_MODE");
                         device_mode = ALARM_DELETE_MODE;
                         pp_set_current_alarm_digits();
+                        pp_update_display();
                     }
                     else
                     {
@@ -220,18 +224,21 @@ static void pp_button_functions(button_action_t action_handler)
         case TIME_CHANGE_MODE:
         {
             pp_time_change_mode(action_handler, false);
+            pp_update_display();
             break;
         }
 
         case ALARM_ADD_MODE:
         {
             pp_alarm_add_mode(action_handler, false);
+            pp_update_display();
             break;
         }
 
         case ALARM_DELETE_MODE:
         {
             pp_alarm_delete_mode(action_handler);
+            pp_update_display();
             break;
         }
 
@@ -241,6 +248,7 @@ static void pp_button_functions(button_action_t action_handler)
             {
                 ESP_LOGI(MAIN_TAG, "PAIRING MODE -> DEFAULT MODE");
                 device_mode = DEFAULT_MODE;
+                pp_update_display();
             }  
             break;
         }
@@ -252,6 +260,7 @@ static void pp_button_functions(button_action_t action_handler)
                 ESP_LOGI(MAIN_TAG, "ALARM DISABLED");
                 ESP_LOGI(MAIN_TAG, "ALARM RING MODE -> DEFAULT MODE");
                 device_mode = DEFAULT_MODE;
+                pp_update_display();
                 break;
             }
             break;

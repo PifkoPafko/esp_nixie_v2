@@ -450,6 +450,10 @@ static void gatts_profile_event_handler(esp_gatts_cb_event_t event, esp_gatt_if_
             {
                 ESP_LOGI(GATTS_TAG, "ESP_GATTS_WRITE_EVT: OTP");
                 otp_write_attr_t write_params;
+                write_params.need_attr_set = false;
+                write_params.length = 0;
+                write_params.need_ind = false;
+
                 pp_object_transfer_write_event(param, OPT_HANDLE_TABLE, &write_params, &otp_rsp);
 
                 if(write_params.need_attr_set)

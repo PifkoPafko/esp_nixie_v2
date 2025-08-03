@@ -15,8 +15,17 @@
 #define __GPIO_H__
 
 /* Headers */
-// #include "esp_log.h"
-// #include "driver/gpio.h"
+#include <stdint.h>
+#include <stdbool.h>
+
+#include "esp_log.h"
+
+#include "freertos/FreeRTOS.h"
+// #include "freertos/queue.h"
+
+#include "driver/gpio.h"
+
+#include "pp_global.h"
 
 /* Macros */
 #define GPIO_OUTPUT_OE          GPIO_NUM_3
@@ -28,7 +37,7 @@
 #define GPIO_INPUT_IO_LEFT      GPIO_NUM_12
 #define GPIO_INPUT_IO_CENTER    GPIO_NUM_13
 #define GPIO_INPUT_IO_RIGHT     GPIO_NUM_14
-#define GPIO_INPUT_PIN_SEL      ((1ULL<<GPIO_INPUT_IO_0) | (1ULL<<GPIO_INPUT_IO_1) | (1ULL<<GPIO_INPUT_IO_2))
+#define GPIO_INPUT_PIN_SEL      ((1ULL<<GPIO_INPUT_IO_LEFT) | (1ULL<<GPIO_INPUT_IO_CENTER) | (1ULL<<GPIO_INPUT_IO_RIGHT))
 
 /* STRUCTURES */
 typedef enum {

@@ -15,9 +15,14 @@
 #define __PP_I2C_H__
 
 /* Headers */
-// #include "driver/gpio.h"
-// #include "driver/i2c.h"
-// #include "esp_log.h"
+#include <stdint.h>
+#include <stddef.h>
+#include "freertos/FreeRTOS.h"
+#include "freertos/semphr.h"
+#include "esp_err.h"
+#include "esp_log.h"
+#include "driver/i2c.h"
+
 
 /* Macros */
 #define I2C_MASTER_NUM  0

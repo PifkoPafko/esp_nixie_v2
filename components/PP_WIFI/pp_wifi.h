@@ -15,14 +15,11 @@
 #define __WIFI_H__
 
 /* Headers */
-// #include "esp_log.h"
 // #include "esp_event.h"
-// #include "esp_wifi.h"
-
 // #include "freertos/FreeRTOS.h"
 // #include "freertos/task.h"
 // #include "freertos/event_groups.h"
-// #include "esp_wifi.h"
+#include "esp_wifi.h"
 // #include "esp_log.h"
 // #include "pp_object_transfer_metadata_write.h"
 
@@ -72,7 +69,7 @@ void pp_wifi_init(void);
  * 
  * @return
  */
-void pp_start_search_task(void)
+void pp_start_search_task(void);
 
 /** @brief pp_connect_wifi: Connects to specified wifi network
  *

@@ -15,11 +15,14 @@
 #define __OBJECT_MANAGER_H__
 
 /* Headers */
+#include <stdint.h>
+#include <stddef.h>
 // #include "esp_err.h"
 // #include "esp_gatts_api.h"
 // #include "pp_alarm.h"
 
-// #include "pp_object_transfer_defs.h"
+#include "pp_global.h"
+#include "pp_object_transfer_defs.h"
 
 // #include "driver/sdmmc_host.h"
 // #include "esp_vfs_fat.h"
@@ -91,8 +94,8 @@ typedef enum{
 }object_type_t;
 
 typedef struct{
-    object_type_t type,
-    uint64_t id
+    object_type_t type;
+    uint64_t id;
 }object_id_array_t;
 
 typedef struct ListFilter

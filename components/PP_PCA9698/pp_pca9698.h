@@ -12,7 +12,8 @@
  ****************************************************************************/
 
 /* Headers */
-// #include "pp_i2c.h"
+#include <stdint.h>
+#include "pp_i2c.h"
 // #include "esp_err.h"
 
 /* Macros */
