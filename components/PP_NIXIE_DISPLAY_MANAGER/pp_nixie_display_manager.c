@@ -33,8 +33,6 @@ static void pp_set_nixie_state_alarm_monthly();
 static void pp_set_nixie_state_alarm_yearly();
 static void pp_set_nixie_state_pairing_passkey();
 
-static void pp_nixie_display_main(void* arg);
-
 /* Variables */
 static display_state_t display_state;
 
@@ -85,6 +83,7 @@ void pp_update_display()
         case ALARM_RING_MODE:
         {
             pp_timer_set_blink();
+            break;
         }
 
         case ALARM_DELETE_MODE:

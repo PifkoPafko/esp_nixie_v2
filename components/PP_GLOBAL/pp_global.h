@@ -20,6 +20,8 @@
 #include "freertos/task.h"
 
 /* Macros */
+#define DEVICE_NAME     "NIXIE B16"
+
 #define NOTIFY_TASK(x, y) (xTaskNotify(x, y, eSetValueWithOverwrite))
 #define NOTIFY_TASK_FROM_ISR(x, y) (xTaskNotifyFromISR(x, y, eSetValueWithOverwrite, NULL))
 

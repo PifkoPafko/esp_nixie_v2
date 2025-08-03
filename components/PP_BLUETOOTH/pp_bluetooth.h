@@ -15,25 +15,25 @@
 #define __PP_BLUETOOTH_H__
  
 /* Headers */
+#include "esp_log.h"
+#include "esp_random.h"
 #include "esp_gatts_api.h"
 #include "esp_gap_ble_api.h"
-
 // #include "esp_bt_defs.h"
 #include "esp_bt_main.h"
 #include "esp_bt.h"
 #include "esp_gatt_common_api.h"
-#include "esp_log.h"
-#include "esp_random.h"
+
 
 // #include "freertos/FreeRTOS.h"
 // #include "freertos/task.h"
 
-// #include "pp_object_transfer_gatt_server.h"
+#include "pp_global.h"
+#include "pp_nixie_display_manager.h"
+#include "pp_object_transfer_metadata_read.h"
+#include "pp_object_transfer_metadata_write.h"
 #include "pp_object_transfer_attr_ids.h"
-// #include "pp_object_transfer_metadata_read.h"
-// #include "pp_object_transfer_metadata_write.h"
-// #include "pp_object_manager.h"
-// #include "pp_nixie_display.h"
+#include "pp_gpio.h"
 
 /* Macros */
 #define ESP_APP_ID     0x55

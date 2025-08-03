@@ -334,7 +334,6 @@ static void gap_event_handler(esp_gap_ble_cb_event_t event, esp_ble_gap_cb_param
         {
             if (device_mode == PAIRING_MODE)
             {
-                pp_set_insert_passkey_flag(true);
                 ESP_LOGI(GATTS_TAG, "The passkey Notify number: %06" PRIu32, param->ble_security.key_notif.passkey);
             }
             else
@@ -375,7 +374,6 @@ static void gap_event_handler(esp_gap_ble_cb_event_t event, esp_ble_gap_cb_param
 
             if (param->ble_security.auth_cmpl.success && device_mode == PAIRING_MODE)
             {
-                pp_set_insert_passkey_flag(false);
                 device_mode = DEFAULT_MODE;
             }
             
@@ -387,7 +385,7 @@ static void gap_event_handler(esp_gap_ble_cb_event_t event, esp_ble_gap_cb_param
             ESP_LOGD(GATTS_TAG, "ESP_GAP_BLE_REMOVE_BOND_DEV_COMPLETE_EVT status = %d", param->remove_bond_dev_cmpl.status);
             ESP_LOGI(GATTS_TAG, "ESP_GAP_BLE_REMOVE_BOND_DEV");
             ESP_LOGI(GATTS_TAG, "-----ESP_GAP_BLE_REMOVE_BOND_DEV----");
-            esp_log_buffer_hex(GATTS_TAG, (void *)param->remove_bond_dev_cmpl.bd_addr, sizeof(esp_bd_addr_t));
+            ESP_LOG_BUFFER_HEX(GATTS_TAG, (void *)param->remove_bond_dev_cmpl.bd_addr, sizeof(esp_bd_addr_t));
             ESP_LOGI(GATTS_TAG, "------------------------------------");
             break;
         }
@@ -414,7 +412,7 @@ static void gatts_profile_event_handler(esp_gatts_cb_event_t event, esp_gatt_if_
     {
         case ESP_GATTS_REG_EVT:
         {
-            ESP_ERROR_CHECK(esp_ble_gap_set_device_name(SAMPLE_DEVICE_NAME));
+            ESP_ERROR_CHECK(esp_ble_gap_set_device_name(DEVICE_NAME));
             ESP_ERROR_CHECK(esp_ble_gap_config_local_privacy(true));
             ESP_ERROR_CHECK(esp_ble_gatts_create_attr_tab(gatt_db, gatts_if, OPT_IDX_NB, SVC_INST_ID));
             break;
@@ -426,7 +424,7 @@ static void gatts_profile_event_handler(esp_gatts_cb_event_t event, esp_gatt_if_
             esp_gatt_rsp_t rsp;
             esp_gatt_status_t status = ESP_GATT_OK;
 
-            if(param->read.handle >= OPT_IDX_SVC && param->read.handle < OPT_IDX_NB)
+            if(param->read.handle < OPT_IDX_NB)
             {
                 ESP_LOGI(GATTS_TAG, "ESP_GATTS_READ_EVT: OTP");
                 status = pp_object_transfer_read_event(param->read.handle, OPT_HANDLE_TABLE, &rsp);
@@ -446,7 +444,7 @@ static void gatts_profile_event_handler(esp_gatts_cb_event_t event, esp_gatt_if_
             esp_gatt_rsp_t otp_rsp;
             esp_gatt_status_t status = ESP_GATT_OK;
 
-            if(param->write.handle >= OPT_IDX_SVC && param->write.handle < OPT_IDX_NB)
+            if(param->write.handle < OPT_IDX_NB)
             {
                 ESP_LOGI(GATTS_TAG, "ESP_GATTS_WRITE_EVT: OTP");
                 otp_write_attr_t write_params;
