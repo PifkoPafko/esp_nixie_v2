@@ -17,11 +17,11 @@
 /* Headers */
 #include <stdint.h>
 #include <stddef.h>
-// #include <sys/stat.h>
-// #include <dirent.h>
-// #include <unistd.h>
-// #include "ctype.h"
-// #include <string.h>
+#include <sys/stat.h>
+#include <dirent.h>
+#include <unistd.h>
+#include <string.h>
+#include "ctype.h"
 // #include <stdlib.h>
 // #include <inttypes.h>
 

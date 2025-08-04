@@ -15,28 +15,34 @@
 #define __ALARM_H__
 
 /* Headers */
-// #include "project_defs.h"
+#include <stdint.h>
+#include <stdbool.h>
+#include <time.h>
+#include "string.h"
+
 // #include "ctype.h"
 // #include "stdlib.h"
-// #include "string.h"
+
 // #include  <stdbool.h>
+
+#include "esp_log.h"
 
 // #include "freertos/FreeRTOS.h"
 // #include "freertos/task.h"
 // #include "freertos/semphr.h"
 
-// #include "driver/gptimer.h"
+#include "driver/gptimer.h"
 // #include "driver/gpio.h"
-// #include "driver/i2s_std.h" // i2s setup
+#include "driver/i2s_std.h" // i2s setup
 
 // #include "esp_err.h"
-// #include "esp_log.h"
+
 // #include "stdlib.h"
 // #include <sys/time.h>
-// #include <time.h>
 
-// #include "pp_object_manager.h"
 // #include "pp_object_transfer_attr_ids.h"
+#include "pp_object_manager.h"
+#include "pp_global.h"
 #include "pp_object_transfer_defs.h"
 // #include "pp_wave_player.h"
 

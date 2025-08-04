@@ -24,6 +24,11 @@ static void pp_object_manager_set_current_object_from_file(uint64_t id);
 static bool pp_seekfor(FILE *stream, const char* str, fpos_t *pos);
 static char* id_to_string(char* bfr, uint64_t id);
 
+static esp_err_t pp_object_list_delete_by_id(uint64_t id);
+static uint64_t pp_object_list_add(object_type_t type);
+static uint64_t pp_object_list_add_by_id(object_type_t type, uint64_t id);
+static int pp_object_list_search(uint64_t id, bool filtered);
+
 static void pp_object_list_filter(filter_function fun);
 static void pp_object_list_sort(compare_function fun, bool asc);
 
@@ -176,11 +181,11 @@ void pp_object_manager_init(void)
     slot_config.flags |= SDMMC_SLOT_FLAG_INTERNAL_PULLUP;
 
 #ifdef FORMAT_SD
-    ESP_LOGI(SDCARD_TAG, "Formating sd card");
+    ESP_LOGI(TAG, "Formating sd card");
     ESP_ERROR_CHECK(esp_vfs_fat_sdcard_format(mount_point, card));
 #endif
 
-    ESP_LOGI(SDCARD_TAG, "Mounting filesystem");
+    ESP_LOGI(TAG, "Mounting filesystem");
     ESP_ERROR_CHECK(esp_vfs_fat_sdmmc_mount(mount_point, &host, &slot_config, &mount_config, &card));
 
     FRESULT fr = f_stat(ALARMS_PATH, NULL);
@@ -196,9 +201,9 @@ void pp_object_manager_init(void)
         }
     }
 
-    DIR dir;
+    FF_DIR dir;
     FILINFO fno;
-    FRESULT fr = f_opendir(&dir, ALARMS_PATH);
+    fr = f_opendir(&dir, ALARMS_PATH);
 
     if (fr != FR_OK)
     {
@@ -217,7 +222,7 @@ void pp_object_manager_init(void)
         {
             uint64_t id = strtoull(fno.fname, NULL, 16);
             uint8_t type[ESP_UUID_LEN_128];
-            pp_object_list_read_type_from_file(type, id)
+            pp_object_list_read_type_from_file(type, id);
             pp_object_list_add_by_id(pp_object_manager_check_type(type), id);
         }
     }
@@ -271,14 +276,14 @@ bool pp_object_manager_is_object_empty(void)
  */
 oacp_op_code_result_t pp_object_manager_create_object(uint32_t size, esp_bt_uuid_t type)
 {
-    ESP_LOGI(OBJECT_TAG, "Requested object type UUID:");
-    if(type.len == ESP_UUID_LEN_16) ESP_LOGI(OBJECT_TAG, "%02x", type.uuid.uuid16);
-    else if(type.len == ESP_UUID_LEN_128) ESP_LOG_BUFFER_HEX_LEVEL(OBJECT_TAG, type.uuid.uuid128, ESP_UUID_LEN_128, ESP_LOG_INFO);
+    ESP_LOGI(TAG, "Requested object type UUID:");
+    if(type.len == ESP_UUID_LEN_16) ESP_LOGI(TAG, "%02x", type.uuid.uuid16);
+    else if(type.len == ESP_UUID_LEN_128) ESP_LOG_BUFFER_HEX_LEVEL(TAG, type.uuid.uuid128, ESP_UUID_LEN_128, ESP_LOG_INFO);
 
 
     if(type.len == ESP_UUID_LEN_16)
     {
-        ESP_LOGE(OBJECT_TAG, "Unsupported object type with 16-bit UUID");
+        ESP_LOGE(TAG, "Unsupported object type with 16-bit UUID");
         return OACP_RES_UNSUPPORTED_TYPE;
     }
 
@@ -287,21 +292,21 @@ oacp_op_code_result_t pp_object_manager_create_object(uint32_t size, esp_bt_uuid
     switch(ret_type)
     {
         case ALARM_TYPE:
-            ESP_LOGI(OBJECT_TAG, "Requested object type: Alarm file");
+            ESP_LOGI(TAG, "Requested object type: Alarm file");
             break;
 
         case RINGTONE_TYPE:
-            ESP_LOGI(OBJECT_TAG, "Requested object type: Ringtone file");
+            ESP_LOGI(TAG, "Requested object type: Ringtone file");
             break;
 
         default:
-            ESP_LOGE(OBJECT_TAG, "Unsupported object type with 128-bit UUID");
+            ESP_LOGE(TAG, "Unsupported object type with 128-bit UUID");
             return OACP_RES_UNSUPPORTED_TYPE;
     }
 
-    ESP_LOGI(OBJECT_TAG, "Creating list object");
+    ESP_LOGI(TAG, "Creating list object");
     uint64_t new_id = pp_object_list_add(ret_type);
-    ESP_LOGI(OBJECT_TAG, "Object created, ID: %" PRIx64, new_id);
+    ESP_LOGI(TAG, "Object created, ID: %" PRIx64, new_id);
 
     current_object.size = 0;
     current_object.alloc_size = 0;
@@ -312,7 +317,7 @@ oacp_op_code_result_t pp_object_manager_create_object(uint32_t size, esp_bt_uuid
     current_object.id = new_id;
     current_object.properties = PROPERTY_ALL;
 
-    ESP_LOGI(OBJECT_TAG, "Creating file on SD Card");
+    ESP_LOGI(TAG, "Creating file on SD Card");
     FILE* f = pp_object_manager_open_file("w+", new_id);
 
     fprintf(f, "Size: %x\n", current_object.size);
@@ -329,7 +334,7 @@ oacp_op_code_result_t pp_object_manager_create_object(uint32_t size, esp_bt_uuid
     fprintf(f, "\n");
     fprintf(f, "Properties: %x\n", PROPERTY_ALL_WITHOUT_MARK);
     fclose(f);
-    ESP_LOGI(OBJECT_TAG, "File created: %" PRIx64, new_id);
+    ESP_LOGI(TAG, "File created: %" PRIx64, new_id);
 
     switch(ret_type)
     {
@@ -338,11 +343,11 @@ oacp_op_code_result_t pp_object_manager_create_object(uint32_t size, esp_bt_uuid
             break;
 
         case RINGTONE_TYPE:
-            ESP_LOGI(OBJECT_TAG, "Ringtone files not supported yet");
+            ESP_LOGI(TAG, "Ringtone files not supported yet");
             break;
     }
 
-    ESP_LOGI(OBJECT_TAG, "ID inserted into the list");
+    ESP_LOGI(TAG, "ID inserted into the list");
     filter.type = NO_FILTER;
     pp_object_list_make_list();
     current_object.index = pp_object_list_search(new_id, false);
@@ -361,13 +366,13 @@ oacp_op_code_result_t pp_object_manager_delete_object(void)
 {
     if(pp_object_manager_is_object_empty())
     {
-        ESP_LOGE(OBJECT_TAG, "Invalid current object");
+        ESP_LOGE(TAG, "Invalid current object");
         return OACP_RES_INVALID_OBJECT;
     }
 
     if((current_object.properties & PROPERTY_DELETE) == 0)
     {
-        ESP_LOGE(OBJECT_TAG, "Procedure not permitted");
+        ESP_LOGE(TAG, "Procedure not permitted");
         return OACP_RES_PROCEDURE_NOT_PERMIT;
     }
 
@@ -375,13 +380,13 @@ oacp_op_code_result_t pp_object_manager_delete_object(void)
     strcpy(file, MOUNT_POINT);
     strcat(file, "/");
     itoa(current_object.id, &file[8], 16);
-    ESP_LOGI(OBJECT_TAG, "File to remove: %s", file);
+    ESP_LOGI(TAG, "File to remove: %s", file);
     remove(file);
-    ESP_LOGI(OBJECT_TAG, "File removed");
+    ESP_LOGI(TAG, "File removed");
 
-    ESP_LOGI(OBJECT_TAG, "ID to remove from list: %llx", current_object.id);
+    ESP_LOGI(TAG, "ID to remove from list: %llx", current_object.id);
     pp_object_list_delete_by_id(current_object.id);
-    ESP_LOGI(OBJECT_TAG, "ID removed from list");
+    ESP_LOGI(TAG, "ID removed from list");
     pp_object_list_make_list();
     current_object.index = -1;
 
@@ -398,11 +403,11 @@ olcp_op_code_result_t pp_object_manager_first_object(void)
 {
     if(unfiltered_end_idx < 0)
     {
-        ESP_LOGI(OBJECT_TAG, "List is empty");
+        ESP_LOGI(TAG, "List is empty");
         return OLCP_RES_SUCCESS;
     }
 
-    pp_object_manager_set_current_object_from_file(object_list[0]->id);
+    pp_object_manager_set_current_object_from_file(object_list[0].id);
     current_object.index = 0;
     
     return OLCP_RES_SUCCESS;
@@ -418,11 +423,11 @@ olcp_op_code_result_t pp_object_manager_last_object(void)
 {
     if(unfiltered_end_idx < 0)
     {
-        ESP_LOGI(OBJECT_TAG, "List is empty");
+        ESP_LOGI(TAG, "List is empty");
         return OLCP_RES_NO_OBJECT;
     }
 
-    pp_object_manager_set_current_object_from_file(object_list[unfiltered_end_idx]->id);
+    pp_object_manager_set_current_object_from_file(object_list[unfiltered_end_idx].id);
     current_object.index = unfiltered_end_idx;
     return OLCP_RES_SUCCESS;
 }
@@ -437,17 +442,17 @@ olcp_op_code_result_t pp_object_manager_next_object(void)
 {
     if(pp_object_manager_is_object_empty())
     {
-        ESP_LOGI(OBJECT_TAG, "Current object is invalid");
+        ESP_LOGI(TAG, "Current object is invalid");
         return OLCP_RES_OPERATION_FAILED;
     }
 
     if(current_object.index == unfiltered_end_idx)
     {
-        ESP_LOGI(OBJECT_TAG, "Next object is out of the bonds");
+        ESP_LOGI(TAG, "Next object is out of the bonds");
         return OLCP_RES_OUT_OF_THE_BONDS;
     }
 
-    pp_object_manager_set_current_object_from_file(object_list[current_object.index + 1]->id);
+    pp_object_manager_set_current_object_from_file(object_list[current_object.index + 1].id);
     ++current_object.index;
     return OLCP_RES_SUCCESS;
 }
@@ -462,17 +467,17 @@ olcp_op_code_result_t pp_object_manager_previous_object(void)
 {
     if(pp_object_manager_is_object_empty())
     {
-        ESP_LOGI(OBJECT_TAG, "Current object is invalid");
+        ESP_LOGI(TAG, "Current object is invalid");
         return OLCP_RES_OPERATION_FAILED;
     }
 
     if(current_object.index == 0)
     {
-        ESP_LOGI(OBJECT_TAG, "Previous object is out of the bonds");
+        ESP_LOGI(TAG, "Previous object is out of the bonds");
         return OLCP_RES_OUT_OF_THE_BONDS;
     }
 
-    pp_object_manager_set_current_object_from_file(object_list[current_object.index - 1]->id);
+    pp_object_manager_set_current_object_from_file(object_list[current_object.index - 1].id);
     --current_object.index;
     return OLCP_RES_SUCCESS;
 }
@@ -490,7 +495,7 @@ olcp_op_code_result_t pp_object_manager_goto_object(uint64_t id)
 {
     if(unfiltered_end_idx < 0)
     {
-        ESP_LOGI(OBJECT_TAG, "No objects on the server");
+        ESP_LOGI(TAG, "No objects on the server");
         return OLCP_RES_NO_OBJECT;
     }
 
@@ -498,7 +503,7 @@ olcp_op_code_result_t pp_object_manager_goto_object(uint64_t id)
 
     if(index < 0)
     {
-        ESP_LOGI(OBJECT_TAG, "Object not found");
+        ESP_LOGI(TAG, "Object not found");
         return OLCP_RES_OBJECT_NOT_FOUND;
     }
 
@@ -559,7 +564,7 @@ olcp_op_code_result_t pp_object_manager_order_object(uint8_t type)
 olcp_op_code_result_t pp_object_manager_request_number(uint32_t *number)
 {
     *number = unfiltered_end_idx + 1;
-    ESP_LOGI(OBJECT_TAG, "Number of objects: %" PRIu32, *number);
+    ESP_LOGI(TAG, "Number of objects: %" PRIu32, *number);
     return OLCP_RES_SUCCESS;
 }
 
@@ -603,7 +608,7 @@ olcp_op_code_result_t pp_object_manager_clear_marking(void)
         fclose(f);
     }
 
-    ESP_LOGI(OBJECT_TAG, "Clearing markings done");
+    ESP_LOGI(TAG, "Clearing markings done");
     return OLCP_RES_SUCCESS;
 }
 
@@ -704,7 +709,7 @@ void pp_object_manager_change_alarm_data_in_file(alarm_mode_args_t *alarm)
     fprintf(f, "Hour: %02x\n", alarm->hour);
     fprintf(f, "Minute: %02x\n", alarm->minute);
     
-    switch(alarm.mode) 
+    switch(alarm->mode) 
     {
         case ALARM_SINGLE_MODE:
         {
@@ -894,10 +899,9 @@ void pp_object_manager_printf_alarm_info(void)
 
     if(found)
     {
-        alarm_mode_args_t alarm = get_alarm_values();
-        printf("State: %s\n", alarm.enable?"enabled":"disabled");
+        printf("State: %s\n", current_alarm.enable?"enabled":"disabled");
 
-        switch(alarm.mode)
+        switch(current_alarm.mode)
         {
             case ALARM_SINGLE_MODE:
                 printf("Mode: single\n");
@@ -916,31 +920,31 @@ void pp_object_manager_printf_alarm_info(void)
                 break;
         }
 
-        printf("Description length: %u\n", alarm.desc_len);
-        printf("Description: %s\n", alarm.desc);
-        printf("Hour: %u\n", alarm.hour);
-        printf("Minute: %u\n", alarm.minute);
+        printf("Description length: %u\n", current_alarm.desc_len);
+        printf("Description: %s\n", current_alarm.desc);
+        printf("Hour: %u\n", current_alarm.hour);
+        printf("Minute: %u\n", current_alarm.minute);
 
-        switch(alarm.mode)
+        switch(current_alarm.mode)
         {
             case ALARM_SINGLE_MODE:
-                printf("Day: %u\n", alarm.args.single_alarm_args.day);
-                printf("Month: %u\n", alarm.args.single_alarm_args.month);
-                printf("Year: %u\n", alarm.args.single_alarm_args.year);
+                printf("Day: %u\n", current_alarm.args.single_alarm_args.day);
+                printf("Month: %u\n", current_alarm.args.single_alarm_args.month);
+                printf("Year: %u\n", current_alarm.args.single_alarm_args.year);
                 break;
             case ALARM_WEEKLY_MODE:
-                printf("Days: %u\n", alarm.args.days);
+                printf("Days: %u\n", current_alarm.args.days);
                 break;
             case ALARM_MONTHLY_MODE:
-                printf("Day: %u\n", alarm.args.day);
+                printf("Day: %u\n", current_alarm.args.day);
                 break;
             case ALARM_YEARLY_MODE:
-                printf("Day: %u\n", alarm.args.yearly_alarm_args.day);
-                printf("Month: %u\n", alarm.args.yearly_alarm_args.month);
+                printf("Day: %u\n", current_alarm.args.yearly_alarm_args.day);
+                printf("Month: %u\n", current_alarm.args.yearly_alarm_args.month);
                 break;
         }
         
-        printf("Volume: %d\n", alarm.volume);
+        printf("Volume: %d\n", current_alarm.volume);
     }
 }
 
@@ -991,7 +995,7 @@ static FILE* pp_object_manager_open_file(const char* option,  uint64_t id)
     strcpy(file, MOUNT_POINT);
     strcat(file, "/");
     itoa(id, &file[8], 16);
-    ESP_LOGI(OBJECT_TAG, "Opened file path: %s", file);
+    ESP_LOGI(TAG, "Opened file path: %s", file);
 
     FILE* f = fopen(file, option);
     if(f == NULL)
@@ -1018,7 +1022,7 @@ static void pp_object_manager_truncate_rest(uint64_t id, uint32_t offset)
     strcat(file, "/");
     itoa(id, &file[8], 16);
     truncate(file, offset);
-    ESP_LOGI(OBJECT_TAG, "File: %s content truncated from offset %" PRIu32, file, offset);
+    ESP_LOGI(TAG, "File: %s content truncated from offset %" PRIu32, file, offset);
 }
 
 /** @brief pp_object_manager_set_current_object_from_file: Set current object with values stored in file
@@ -1160,7 +1164,7 @@ static void pp_object_manager_set_current_object_from_file(uint64_t id)
         }
 
         case RINGTONE_TYPE:
-            ESP_LOGI(OBJECT_TAG, "Requested object type: Ringtone file");
+            ESP_LOGI(TAG, "Requested object type: Ringtone file");
             break;
     }
 
@@ -1254,7 +1258,7 @@ uint64_t pp_object_list_get_new_id(void)
         return 0;
     }
 
-    if(int i = 0; i < alarm_count + ringtone_count; ++i)
+    for(uint32_t i = 0; i < alarm_count + ringtone_count; ++i)
     {
         if(object_list[i].id > max)
         {
@@ -1293,7 +1297,7 @@ esp_err_t pp_object_list_delete(uint32_t index)
     }
 
     object_id_array_t temp = object_list[index];
-    object_list[index] = object_list[alarm_count + ringtone_count - i];
+    object_list[index] = object_list[alarm_count + ringtone_count - 1];
 
     if(temp.id == max_id)
     {
@@ -1313,7 +1317,7 @@ esp_err_t pp_object_list_delete(uint32_t index)
  * 
  * @return (esp_err_t) ESP_FAIL if ID not found
  */
-esp_err_t pp_object_list_delete_by_id(uint64_t id)
+static esp_err_t pp_object_list_delete_by_id(uint64_t id)
 {
     for(int i = 0; i < alarm_count + ringtone_count; ++i)
     {
@@ -1357,11 +1361,11 @@ esp_err_t pp_object_list_delete_by_id(uint64_t id)
  * 
  * @return (uint64_t) ID of an object
  */
-uint64_t pp_object_list_add(object_type_t type)
+static uint64_t pp_object_list_add(object_type_t type)
 {
     ++max_id;
-    objects[alarm_count + ringtone_count].type = type;
-    objects[alarm_count + ringtone_count].id = max_id;
+    object_list[alarm_count + ringtone_count].type = type;
+    object_list[alarm_count + ringtone_count].id = max_id;
 
     if(type == ALARM_TYPE)
     {
@@ -1387,10 +1391,10 @@ uint64_t pp_object_list_add(object_type_t type)
  * 
  * @return (uint64_t) ID of an object
  */
-uint64_t pp_object_list_add_by_id(object_type_t type, uint64_t id)
+static uint64_t pp_object_list_add_by_id(object_type_t type, uint64_t id)
 {
-    objects[alarm_count + ringtone_count].type = type;
-    objects[alarm_count + ringtone_count].id = id;
+    object_list[alarm_count + ringtone_count].type = type;
+    object_list[alarm_count + ringtone_count].id = id;
 
     if(type == ALARM_TYPE)
     {
@@ -1417,7 +1421,7 @@ uint64_t pp_object_list_add_by_id(object_type_t type, uint64_t id)
  * 
  * @return (int) -1 if object not found, otherwise index of an object
  */
-int pp_object_list_search(uint64_t id, bool filtered)
+static int pp_object_list_search(uint64_t id, bool filtered)
 {
     int idx = -1;
     int end_idx;
@@ -1474,13 +1478,13 @@ void pp_object_list_make_list(void)
 static void pp_object_list_sort(compare_function fun, bool asc)
 {
     int swapped;
-    uint32_t r_idx = unfiltered_end_idx >= 0 ? 0 : -1;
-    uint32_t l_idx = -1;
+    int32_t r_idx = unfiltered_end_idx >= 0 ? 0 : -1;
+    int32_t l_idx = -1;
 
     /* Checking for empty list */
-    if (r_idx < 0>)
-        return;
+    if (r_idx < 0)
 
+        return;
     do
     {
         swapped = 0;
@@ -1803,7 +1807,7 @@ static bool pp_object_list_no_filter(uint64_t id)
 static bool pp_object_list_name_starts_with(uint64_t id)
 {
     char name[NAME_LEN_MAX];
-    pp_read_name_from_file(name, id);
+    pp_object_list_read_name_from_file(name, id);
     uint8_t name_len = strlen(name);
 
     if(filter.par_length > name_len)
@@ -1831,7 +1835,7 @@ static bool pp_object_list_name_starts_with(uint64_t id)
 static bool pp_object_list_name_ends_with(uint64_t id)
 {
     char name[NAME_LEN_MAX];
-    pp_read_name_from_file(name, id);
+    pp_object_list_read_name_from_file(name, id);
     uint8_t name_len = strlen(name);
 
     if(filter.par_length > name_len)
@@ -1859,7 +1863,7 @@ static bool pp_object_list_name_ends_with(uint64_t id)
 static bool pp_object_list_name_containts(uint64_t id)
 {
     char name[NAME_LEN_MAX];
-    pp_read_name_from_file(name, id);
+    pp_object_list_read_name_from_file(name, id);
     uint8_t name_len = strlen(name);
 
     if(filter.par_length > name_len)
@@ -1891,7 +1895,7 @@ static bool pp_object_list_name_containts(uint64_t id)
 static bool pp_object_list_name_is_exactly(uint64_t id)
 {
     char name[NAME_LEN_MAX];
-    pp_read_name_from_file(name, id);
+    pp_object_list_read_name_from_file(name, id);
     uint8_t name_len = strlen(name);
 
     if(filter.par_length != name_len)
@@ -1923,7 +1927,7 @@ static bool pp_object_list_name_is_exactly(uint64_t id)
 static bool pp_object_list_object_type(uint64_t id)
 {
     uint8_t uuid[16];
-    pp_read_type_from_file(uuid, id);
+    pp_object_list_read_name_from_file((char*)uuid, id);
 
     if(memcmp(uuid, filter.parameter, 16))
     {
@@ -1944,7 +1948,7 @@ static bool pp_object_list_object_type(uint64_t id)
  */
 static bool pp_object_list_current_size_between(uint64_t id)
 {
-    uint32_t current_size = pp_read_current_size_from_file(id);
+    uint32_t current_size = pp_object_list_read_current_size_from_file(id);
     uint32_t size_left, size_right;
 
     memcpy(&size_left, filter.parameter, 4);
@@ -2057,7 +2061,7 @@ uint8_t pp_object_list_get_order(void)
  */
 uint8_t pp_object_list_get_how_many(void)
 {
-    return alarm_count + ringtone_count = 0;
+    return alarm_count + ringtone_count;
 }
 
 /** @brief pp_object_list_get_objects_array: Get pointer to object array

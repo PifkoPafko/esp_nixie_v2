@@ -18,7 +18,7 @@
 #define TAG "ALARM"
 
 /* Declarations */
-static bool IRAM_ATTR pp_alarm_timer_cb(gptimer_handle_t timer, const gptimer_alarm_event_data_t *edata, void *user_data)
+static bool pp_alarm_timer_cb(gptimer_handle_t timer, const gptimer_alarm_event_data_t *edata, void *user_data);
 static void pp_alarm_main(void* arg);
 void static pp_set_timer_for_playing_alarm(void);
 void static pp_disable_current_alarm(void);
@@ -46,9 +46,9 @@ static time_t next_alarm_interval = 0;
  * 
  * @return Whether a high priority task has been waken up by this function
  */
-static bool IRAM_ATTR pp_alarm_timer_cb(gptimer_handle_t timer, const gptimer_alarm_event_data_t *edata, void *user_data)
+static bool pp_alarm_timer_cb(gptimer_handle_t timer, const gptimer_alarm_event_data_t *edata, void *user_data)
 {
-    NOTIFY_TASK_FROM_ISR(alarm_main_h, ALARM_TIMER_NOTIFICATION)
+    NOTIFY_TASK_FROM_ISR(alarm_main_h, ALARM_TIMER_NOTIFICATION);
     return false;
 }
 
@@ -112,8 +112,6 @@ void pp_alarm_init(void)
     gptimer_enable(alarm_timer);
 
     pp_set_next_alarm();
-
-    return ESP_OK;
 }
 
 /** @brief pp_alarm_main: Alarm Main Task
@@ -150,7 +148,6 @@ static void pp_alarm_main(void* arg)
     int16_t buf[AUDIO_BUFFER];
     size_t bytes_read = 0;
     size_t bytes_written = 0;
-    bool repeat_flag = true;
 
     while (true)
     {
@@ -549,7 +546,7 @@ void pp_set_next_alarm(void)
 
     for( int i = 0; i < quantity; ++i )
     {
-        ret = pp_object_manager_get_alarm_data_from_file(object_array[i]->id, &next_alarm);
+        ret = pp_object_manager_get_alarm_data_from_file(object_array[i].id, &next_alarm);
 
         if (!ret && next_alarm.enable)
         {
@@ -705,14 +702,14 @@ void pp_set_next_alarm(void)
                     if (new_next_alarm_interval < next_alarm_interval)
                     {
                         next_alarm_interval = new_next_alarm_interval;
-                        next_alarm_id = object_array[i]->id;
+                        next_alarm_id = object_array[i].id;
                     }
                 }
                 else
                 {
                     next_alarm_enabled = true;
                     next_alarm_interval = t - now;
-                    next_alarm_id = object_array[i]->id;
+                    next_alarm_id = object_array[i].id;
                 }
             }
         }
