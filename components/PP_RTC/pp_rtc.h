@@ -14,16 +14,18 @@
 /* Headers */
 
 #include <stdbool.h>
+#include <string.h>
 #include <time.h>
 #include <sys/time.h>
 
-// #include "freertos/FreeRTOS.h"
+#include "esp_log.h"
+
+#include "freertos/FreeRTOS.h"
 // #include "freertos/task.h"
 // #include "freertos/semphr.h"
 
-#include "esp_log.h"
-
-// #include "pp_i2c.h"
+#include "pp_global.h"
+#include "pp_i2c.h"
 #include "pp_alarm.h"
 
 

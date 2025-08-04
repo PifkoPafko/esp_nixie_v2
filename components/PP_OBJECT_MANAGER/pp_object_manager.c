@@ -20,9 +20,9 @@
 /* Declarations */
 static FILE* pp_object_manager_open_file(const char* option,  uint64_t id);
 static void pp_object_manager_truncate_rest(uint64_t id, uint32_t offset);
-static void pp_object_manager_set_current_object_from_file(uint64_t id)
+static void pp_object_manager_set_current_object_from_file(uint64_t id);
 static bool pp_seekfor(FILE *stream, const char* str, fpos_t *pos);
-static char* id_to_string(char* bfr, uint64_t id)
+static char* id_to_string(char* bfr, uint64_t id);
 
 static void pp_object_list_filter(filter_function fun);
 static void pp_object_list_sort(compare_function fun, bool asc);
@@ -46,10 +46,6 @@ static bool pp_object_list_alloc_size_between(uint64_t id);
 static bool pp_object_list_marked_objects(uint64_t id);
 
 /***************************************************************************************************************/
-/* Types */
-typedef bool (*filter_function)(uint64_t);
-typedef int (*compare_function)(uint64_t, uint64_t, bool);       //par bool: 1-ascending, 0-descending
-
 /*  Variables */
 static object_t current_object;
     
@@ -122,7 +118,7 @@ bool compare_func_table_asc[ORDER_RANGE] = {
     true,
     true,
     true,
-}
+};
 
 static ListFilter_t filter;     // Current objects filter
 static uint8_t order;           // Current objects order
@@ -155,7 +151,7 @@ void pp_object_manager_init(void)
     filter.type = 0;
     filter.par_length = 0;
 
-    ESP_LOGI(SDCARD_TAG, "Initializing sd card");
+    ESP_LOGI(TAG, "Initializing sd card");
     esp_vfs_fat_sdmmc_mount_config_t mount_config = 
     {
         .format_if_mount_failed = false,

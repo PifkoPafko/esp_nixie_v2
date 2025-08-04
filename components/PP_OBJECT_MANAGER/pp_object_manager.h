@@ -17,25 +17,29 @@
 /* Headers */
 #include <stdint.h>
 #include <stddef.h>
-// #include "esp_err.h"
-// #include "esp_gatts_api.h"
-// #include "pp_alarm.h"
-
-#include "pp_global.h"
-#include "pp_object_transfer_defs.h"
-
-// #include "driver/sdmmc_host.h"
-// #include "esp_vfs_fat.h"
-
-// #include <string.h>
-// #include <stdlib.h>
-// #include <inttypes.h>
-// #include "esp_log.h"
-
 // #include <sys/stat.h>
 // #include <dirent.h>
 // #include <unistd.h>
 // #include "ctype.h"
+// #include <string.h>
+// #include <stdlib.h>
+// #include <inttypes.h>
+
+#include "esp_log.h"
+// #include "esp_err.h"
+
+#include "esp_bt_defs.h"
+// #include "esp_gatts_api.h"
+#include "esp_vfs_fat.h"
+#include "driver/sdmmc_host.h"
+
+#include "pp_global.h"
+#include "pp_object_transfer_defs.h"
+// #include "pp_alarm.h"
+
+/* Types */
+typedef bool (*filter_function)(uint64_t);
+typedef int (*compare_function)(uint64_t, uint64_t, bool);       //par bool: 1-ascending, 0-descending
 
 /* Macros */
 #define MOUNT_POINT                 "/sdcard"
