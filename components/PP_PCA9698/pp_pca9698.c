@@ -18,31 +18,36 @@
 
 /** @brief pp_pca_write_reg: Write one chosen IO register in chosen PCA9698
  *
- * @param[in]   slave_addr  (slave_addr_t) Address of PCA9698
+ * @param[in]   dev_handle  (i2c_master_dev_handle_t) I2C device handle
  * @param[in]   reg         (reg_addr_t) Address of register
  * @param[in]   arg         (const uint8_t) Data to write
  * 
  * @return
  */
-void pp_pca_write_reg(slave_addr_t slave_addr, reg_addr_t reg, const uint8_t arg) 
+void pp_pca_write_reg(i2c_master_dev_handle_t dev_handle, reg_addr_t reg, const uint8_t arg) 
 {
-    uint8_t slave_write_addr = WRITE_BIT_MASK(slave_addr);
-    uint8_t reg_addr = DISABLE_AUTO_INCREMEMT_BIT_MASK(reg);
-    pp_i2c_dev_write(slave_write_addr, (const uint8_t*)&reg_addr, 1, (const uint8_t*)&arg, 1);
+    uint8_t data_out[2] = {DISABLE_AUTO_INCREMEMT_BIT_MASK(reg), arg};
+    ESP_ERROR_CHECK(i2c_master_transmit(dev_handle, data_out, 2, -1));
 }
 
 /** @brief pp_pca_write_reg: Write all 5 IO registers in chosen PCA9698
  *
- * @param[in]   slave_addr  (slave_addr_t) Address of PCA9698
+ * @param[in]   dev_handle  (i2c_master_dev_handle_t) I2C device handle
  * @param[in]   reg         (reg_addr_t) Address of register
  * @param[in]   arg         (const uint8_t*) Pointer to data to write
  * 
  * @return
  */
-void pp_pca_write_all_reg(slave_addr_t slave_addr, reg_addr_t reg, const uint8_t* arg) 
+void pp_pca_write_all_reg(i2c_master_dev_handle_t dev_handle, reg_addr_t reg, const uint8_t* arg) 
 {
-    uint8_t slave_write_addr = WRITE_BIT_MASK(slave_addr);
-    uint8_t reg_addr = ENABLE_AUTO_INCREMEMT_BIT_MASK(reg);
-    pp_i2c_dev_write(slave_write_addr, (const uint8_t*)&reg_addr, 1, arg, 5);
+    uint8_t data_out[6];
+    data_out[0] = ENABLE_AUTO_INCREMEMT_BIT_MASK(reg);
+
+    for(int i = 1; i < 6; ++i)
+    {
+        data_out[i] = arg[i];
+    }
+
+    ESP_ERROR_CHECK(i2c_master_transmit(dev_handle, data_out, 6, -1));
 }
 

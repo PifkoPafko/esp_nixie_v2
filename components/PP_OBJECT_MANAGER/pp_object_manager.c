@@ -15,6 +15,7 @@
 #include "pp_object_manager.h"
 
 /* Macros */
+// #define FORMAT_SD
 #define TAG "OBJECT_MANAGER"
 
 /* Declarations */
@@ -188,48 +189,53 @@ void pp_object_manager_init(void)
     ESP_LOGI(TAG, "Mounting filesystem");
     ESP_ERROR_CHECK(esp_vfs_fat_sdmmc_mount(mount_point, &host, &slot_config, &mount_config, &card));
 
-    FRESULT fr = f_stat(ALARMS_PATH, NULL);
+    struct stat file_stat_info;
+    int fr = stat(ALARMS_PATH, &file_stat_info);
 
-    if(fr == FR_NO_PATH)
+    if(fr != 0)
     {
-        FRESULT res = f_mkdir(ALARMS_PATH);
+        int res = mkdir(ALARMS_PATH, 777);
 
         if(res != FR_OK)
         {
-            ESP_LOGE(TAG, "Can't create \\alarms directory");
+            ESP_LOGE(TAG, "Can't create \\alarms directory, res = %d", res);
             ESP_ERROR_CHECK(ESP_FAIL);
         }
+
+        ESP_LOGI(TAG, "\\alarms directory created");
     }
 
-    FF_DIR dir;
-    FILINFO fno;
-    fr = f_opendir(&dir, ALARMS_PATH);
+    DIR *dir = opendir(ALARMS_PATH);
 
-    if (fr != FR_OK)
+    if (dir == NULL)
     {
         ESP_LOGE(TAG, "Can't open \\alarms directory");
         ESP_ERROR_CHECK(ESP_FAIL);
     }
 
+    ESP_LOGI(TAG, "\\alarms directory opened");
+
     while(true)
     {
-        fr = f_readdir(&dir, &fno);                   /* Read a directory item */
-        if (fr != FR_OK || fno.fname[0] == 0) 
+        struct dirent *temp_dir = readdir(dir);                   /* Read a directory item */
+        if (temp_dir == NULL) 
         {
+            ESP_LOGI(TAG, "The end of \\alarms directory");
             break;  /* Error or end of dir */
         }
         else    /* File */
         {
-            uint64_t id = strtoull(fno.fname, NULL, 16);
+            ESP_LOGI(TAG, "\\alarms directory file = %s", temp_dir->d_name);
+            uint64_t id = strtoull(temp_dir->d_name, NULL, 16);
             uint8_t type[ESP_UUID_LEN_128];
             pp_object_list_read_type_from_file(type, id);
             pp_object_list_add_by_id(pp_object_manager_check_type(type), id);
         }
     }
 
-    fr = f_closedir(&dir);
+    fr = closedir(dir);
 
-    if (fr != FR_OK)
+    if (fr != 0)
     {
         ESP_LOGE(TAG, "Can't close \\alarms directory");
         ESP_ERROR_CHECK(ESP_FAIL);
@@ -1460,9 +1466,10 @@ void pp_object_list_make_list(void)
     ESP_LOGI(TAG, "Filter OP Code: %x", filter.type);
 
     if(filter.type < FILTER_RANGE && filter_func_table[filter.type]) pp_object_list_filter(filter_func_table[filter.type]);
-    if(order < ORDER_RANGE && compare_func_table[filter.type]) pp_object_list_sort(compare_func_table[order], compare_func_table_asc[order]);
+    ESP_LOGI(TAG, "Filtering done");
 
-    ESP_LOGE(TAG, "Sorting and filtering done");
+    if(order < ORDER_RANGE && compare_func_table[filter.type]) pp_object_list_sort(compare_func_table[order], compare_func_table_asc[order]);
+    ESP_LOGI(TAG, "Sorting done");
 }
 
 /** @brief pp_object_list_sort: Sorts the list with choosen compare function and order.
@@ -1761,8 +1768,8 @@ static uint32_t pp_object_list_read_current_size_from_file(uint64_t id)
  */
 static void pp_object_list_filter(filter_function fun)
 {
-    uint32_t end_idx = alarm_count + ringtone_count - 1;
-    uint32_t idx = 0;
+    int end_idx = alarm_count + ringtone_count - 1;
+    int idx = 0;
 
     while(idx <= end_idx)
     {

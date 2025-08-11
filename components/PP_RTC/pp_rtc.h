@@ -21,11 +21,9 @@
 #include "esp_log.h"
 
 #include "freertos/FreeRTOS.h"
-// #include "freertos/task.h"
-// #include "freertos/semphr.h"
+#include "driver/i2c_master.h"
 
 #include "pp_global.h"
-#include "pp_i2c.h"
 #include "pp_alarm.h"
 
 
@@ -36,7 +34,7 @@
 #define WRITE_BIT_MASK(x)   (((x) << 1) & 0xFE)
 #define READ_BIT_MASK(x)    (((x) << 1) | 0x01)
 
-#define DS_RTC_ADDR                 0b11010000
+#define DS_RTC_ADDR                 0x68
 #define DS_RTC_START_REG_ADDR       0x00
 #define DS_RTC_CONTROL_REG_ADDR     0x0E
 #define DS_EOSC_FLAG                (1<<7)

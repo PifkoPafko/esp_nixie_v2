@@ -95,7 +95,11 @@ void pp_gpio_init(void)
     gpio_evt_queue = xQueueCreate(10, sizeof(button_queue_msg_t));
     button_action_queue = xQueueCreate(10, sizeof(button_action_t));
 
-    ESP_ERROR_CHECK(xTaskCreate(pp_button_main, "BUTTON_MAIN", 3072, NULL, 1, &button_main_h));
+    BaseType_t res = xTaskCreate(pp_button_main, "BUTTON_MAIN", 3072, NULL, 1, &button_main_h);
+    if(res != pdPASS)
+    {
+        ESP_ERROR_CHECK(ESP_FAIL);
+    }
 }
 
 /** @brief pp_led_enable: Enables or disables chosen LED

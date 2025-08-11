@@ -13,7 +13,7 @@
 
 /* Headers */
 #include <stdint.h>
-#include "pp_i2c.h"
+#include "driver/i2c_master.h"
 // #include "esp_err.h"
 
 /* Macros */
@@ -25,14 +25,14 @@
 
 /* SLAVE ADDRESSES */
 typedef enum{
-    SLAVE_ADDR_0 =          0x20,
-    SLAVE_ADDR_1 =          0x21,
-    SLAVE_ADDR_2 =          0x22,
-    SLAVE_ADDR_3 =          0x23,
-    SLAVE_ADDR_4 =          0x24,
-    SLAVE_ADDR_5 =          0x25,
-    SLAVE_ADDR_6 =          0x26,
-    SLAVE_ADDR_7 =          0x27,
+    SLAVE_ADDR_0 =          0x20, //0x20 0x40
+    SLAVE_ADDR_1 =          0x21, //0x21 0x42
+    SLAVE_ADDR_2 =          0x22, //0x22 0x44
+    SLAVE_ADDR_3 =          0x23, //0x23 0x46
+    SLAVE_ADDR_4 =          0x24, //0x24 0x48
+    SLAVE_ADDR_5 =          0x25, //0x25 0x4A
+    SLAVE_ADDR_6 =          0x26, //0x26 0x4C
+    SLAVE_ADDR_7 =          0x27, //0x27 0x4E
     GPIO_ALL_CALL_ADDR =    0xDC    /* GPIO ALL CALL ADRESS*/
 }slave_addr_t;
 
@@ -78,20 +78,20 @@ typedef enum{
 
 /** @brief pp_pca_write_reg: Write one chosen IO register in chosen PCA9698
  *
- * @param[in]   slave_addr  (slave_addr_t) Address of PCA9698
+ * @param[in]   dev_handle  (i2c_master_dev_handle_t) I2C device handle
  * @param[in]   reg         (reg_addr_t) Address of register
  * @param[in]   arg         (const uint8_t) Data to write
  * 
  * @return
  */
-void pp_pca_write_reg(slave_addr_t slave_addr, reg_addr_t reg, const uint8_t arg);
+void pp_pca_write_reg(i2c_master_dev_handle_t dev_handle, reg_addr_t reg, const uint8_t arg);
 
 /** @brief pp_pca_write_reg: Write all 5 IO registers in chosen PCA9698
  *
- * @param[in]   slave_addr  (slave_addr_t) Address of PCA9698
+ * @param[in]   dev_handle  (i2c_master_dev_handle_t) I2C device handle
  * @param[in]   reg         (reg_addr_t) Address of register
  * @param[in]   arg         (const uint8_t*) Pointer to data to write
  * 
  * @return
  */
-void pp_pca_write_all_reg(slave_addr_t slave_addr, reg_addr_t reg, const uint8_t* arg);
+void pp_pca_write_all_reg(i2c_master_dev_handle_t dev_handle, reg_addr_t reg, const uint8_t* arg);

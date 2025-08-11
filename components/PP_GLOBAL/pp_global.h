@@ -22,6 +22,9 @@
 /* Macros */
 #define DEVICE_NAME     "NIXIE B16"
 
+/* I2C Devices */
+#define I2C_DEVICE_NUM 7
+
 #define NOTIFY_TASK(x, y) (xTaskNotify(x, y, eSetValueWithOverwrite))
 #define NOTIFY_TASK_FROM_ISR(x, y) (xTaskNotifyFromISR(x, y, eSetValueWithOverwrite, NULL))
 

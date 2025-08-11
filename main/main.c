@@ -38,10 +38,10 @@ void app_main(void)
     // Initializations
     pp_nvs_init();              // Initializes NVS Flash memory
     pp_i2c_init();              // Initializes I2C bus
-    pp_rtc_init();              // Initializes RTC module functionality
-    pp_bluetooth_init();        // Initializes bluetooth funcionality
     pp_object_manager_init();   // Initializes object manager
     pp_alarm_init();            // Initializes alarm functionality
+    pp_rtc_init();              // Initializes RTC module functionality
+    pp_bluetooth_init();        // Initializes bluetooth funcionality
     pp_wifi_init();             // Initializes WiFi functionality
 
     // Go to the main program

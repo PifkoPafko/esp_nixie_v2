@@ -54,7 +54,11 @@ void pp_display_manager_init(void)
 
     pp_nixie_display_init();
     
-    ESP_ERROR_CHECK(xTaskCreate(pp_display_main, "NIXIE DISPLAY", 4096, NULL, 1, &display_main_h));
+    BaseType_t res = xTaskCreate(pp_display_main, "NIXIE DISPLAY", 4096, NULL, 1, &display_main_h);
+    if(res != pdPASS)
+    {
+        ESP_ERROR_CHECK(ESP_FAIL);
+    }
 
     timer_h = xTimerCreate(NULL, DEFAULT_PERIOD, pdTRUE, NULL, pp_timer_cb);
     timer_anti_poison_h = xTimerCreate(NULL, ANTI_POISON_PERIOD, pdTRUE, NULL, pp_timer_anti_poison_cb);
@@ -297,10 +301,10 @@ static void pp_timer_anti_poison_cb(TimerHandle_t xTimer)
  */
 static inline void pp_timer_set_default(void)
 {
-    ESP_ERROR_CHECK(xTimerStop(timer_h, 10));
-    ESP_ERROR_CHECK(xTimerChangePeriod(timer_h, DEFAULT_PERIOD, 10));
-    ESP_ERROR_CHECK(xTimerReset(timer_h, 10));
-    ESP_ERROR_CHECK(xTimerReset(timer_anti_poison_h, 10));
+    xTimerStop(timer_h, 10);
+    xTimerChangePeriod(timer_h, DEFAULT_PERIOD, 10);
+    xTimerReset(timer_h, 10);
+    xTimerReset(timer_anti_poison_h, 10);
 }
 
 /** @brief pp_timer_set_blink: Setting General and Anti-poisoning timers to work in blinking mode
@@ -309,10 +313,10 @@ static inline void pp_timer_set_default(void)
  */
 static inline void pp_timer_set_blink(void)
 {
-    ESP_ERROR_CHECK(xTimerStop(timer_anti_poison_h, 10));
-    ESP_ERROR_CHECK(xTimerStop(timer_h, 10));
-    ESP_ERROR_CHECK(xTimerChangePeriod(timer_h, BLINK_PERIOD, 10));
-    ESP_ERROR_CHECK(xTimerReset(timer_h, 10));
+    xTimerStop(timer_anti_poison_h, 10);
+    xTimerStop(timer_h, 10);
+    xTimerChangePeriod(timer_h, BLINK_PERIOD, 10);
+    xTimerReset(timer_h, 10);
 }
 
 /** @brief pp_timer_stop: Stops General and Anti-poisoning timers.
@@ -321,8 +325,8 @@ static inline void pp_timer_set_blink(void)
  */
 static inline void pp_timer_stop(void)
 {
-    ESP_ERROR_CHECK(xTimerStop(timer_anti_poison_h, 10));
-    ESP_ERROR_CHECK(xTimerStop(timer_h, 10));
+    xTimerStop(timer_anti_poison_h, 10);
+    xTimerStop(timer_h, 10);
 }
 
 

@@ -116,10 +116,17 @@
     "semphr.h": "c",
     "i2c.h": "c",
     "pp_global.h": "c",
-    "unistd.h": "c"
+    "unistd.h": "c",
+    "gptimer_priv.h": "c",
+    "esp_memory_utils.h": "c",
+    "gptimer_etm.h": "c",
+    "sdkconfig.h": "c",
+    "soc_caps.h": "c",
+    "i2c_master.h": "c",
+    "timers.h": "c"
   },
   "idf.flashType": "UART",
-  "idf.portWin": "COM5",
+  "idf.portWin": "COM3",
   "idf.adapterTargetName": "esp32s3",
   "idf.openOcdConfigs": [
     "board/esp32s3-bridge.cfg"

@@ -19,6 +19,8 @@
 #include <stdint.h>
 #include <string.h>
 
+#include "esp_log.h"
+
 #include "pp_global.h"
 #include "pp_pca9698.h"
 

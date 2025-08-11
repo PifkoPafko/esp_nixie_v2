@@ -21,6 +21,8 @@
 static void pp_nixie_display_generate_i2c_msg(display_state_t *nixie_state, uint8_t *i2c_msg);
 
 /* Variables */
+static i2c_master_dev_handle_t exp_dev_handle[6];
+
 static const uint8_t FIRST_NIX_DIGIT_MASK[DIGITS_COUNT] = { NIXIE_0_0_BIT, NIXIE_0_1_BIT, NIXIE_0_2_BIT, NIXIE_0_3_BIT, NIXIE_0_4_BIT, NIXIE_0_5_BIT, NIXIE_0_6_BIT, NIXIE_0_7_BIT, NIXIE_0_8_BIT, NIXIE_0_9_BIT};
 static const uint8_t FIRST_NIX_DIGIT_REG_ID[DIGITS_COUNT] = {NIXIE_0_0_REG_ID, NIXIE_0_1_REG_ID, NIXIE_0_2_REG_ID, NIXIE_0_3_REG_ID, NIXIE_0_4_REG_ID, NIXIE_0_5_REG_ID, NIXIE_0_6_REG_ID, NIXIE_0_7_REG_ID, NIXIE_0_8_REG_ID, NIXIE_0_9_REG_ID};
 static const uint8_t FIRST_NIX_LEFT_COMMA_MASK = NIXIE_0_LC_BIT;
@@ -56,13 +58,33 @@ void pp_nixie_display_init(void)
 {
     ESP_LOGI(NIXIE_DISPLAY_TAG, "Initializing NIXIE Display");
 
+    i2c_master_bus_handle_t bus_handle;
+    ESP_ERROR_CHECK(i2c_master_get_bus_handle(0, &bus_handle));
+
+    for(uint8_t i = 0; i < 6; ++i)
+    {
+        i2c_device_config_t dev_cfg = {
+        .dev_addr_length = I2C_ADDR_BIT_LEN_7,
+        .device_address = EXPANDER_ADDRESS[i],
+        .scl_speed_hz = 100000,
+        };
+
+        ESP_ERROR_CHECK(i2c_master_bus_add_device(bus_handle, &dev_cfg, &exp_dev_handle[i]));
+    }
+
     uint8_t conf_output_mask[EXPANDER_REG_COUNT];
     memset(conf_output_mask, 0, EXPANDER_REG_COUNT*sizeof(conf_output_mask[0]));
 
     for(uint8_t expander_id = 0; expander_id < EXPANDER_COUNT; expander_id++)
     {
-        pp_pca_write_all_reg(EXPANDER_ADDRESS[expander_id], IOC0_ADDR, conf_output_mask);
+        pp_pca_write_all_reg(exp_dev_handle[expander_id], IOC0_ADDR, conf_output_mask);
     }
+
+    // for(uint8_t i = 0; i < 128; i++)
+    // {
+    //     esp_err_t XD = i2c_master_probe(bus_handle, i, -1);
+    //     ESP_LOGI(NIXIE_DISPLAY_TAG, "I2C Probe = %lx", (uint32_t)XD);
+    // }
 }
 
 /** @brief pp_display: Displays given nixie tubes state.
@@ -81,7 +103,7 @@ void pp_display(display_state_t *display_state)
     
     for(uint8_t expander_id = 0; expander_id < EXPANDER_COUNT; expander_id++)
     {
-        pp_pca_write_all_reg(EXPANDER_ADDRESS[expander_id], OP0_ADDR, i2c_msg[expander_id]);
+        pp_pca_write_all_reg(exp_dev_handle[expander_id], OP0_ADDR, i2c_msg[expander_id]);
     }
 }
 

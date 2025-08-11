@@ -18,6 +18,9 @@
 #include <stdint.h>
 #include <stdbool.h>
 #include <time.h>
+
+#include "esp_log.h"
+
 #include "freertos/FreeRTOS.h"
 #include "freertos/timers.h"
 
