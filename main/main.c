@@ -19,6 +19,8 @@
 #include "pp_object_manager.h"
 #include "pp_alarm.h"
 #include "pp_wifi.h"
+#include "pp_gpio.h"
+#include "pp_nixie_display_manager.h"
 #include "pp_program.h"
 
 /* Macros */
@@ -41,9 +43,11 @@ void app_main(void)
     pp_object_manager_init();   // Initializes object manager
     pp_alarm_init();            // Initializes alarm functionality
     pp_rtc_init();              // Initializes RTC module functionality
+    pp_gpio_init();             // Initializes gpio funcionality
+    pp_display_manager_init();  // Initializes display funcionality
     pp_bluetooth_init();        // Initializes bluetooth funcionality
     pp_wifi_init();             // Initializes WiFi functionality
 
     // Go to the main program
-    pp_program_init();          // Redirect main loop to the program loop
+    pp_program_main();          // Redirect main loop to the program loop
 }

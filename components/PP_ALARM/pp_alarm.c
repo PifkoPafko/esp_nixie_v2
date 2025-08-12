@@ -48,7 +48,8 @@ static time_t next_alarm_interval = 0;
  */
 static bool pp_alarm_timer_cb(gptimer_handle_t timer, const gptimer_alarm_event_data_t *edata, void *user_data)
 {
-    NOTIFY_TASK_FROM_ISR(alarm_main_h, ALARM_TIMER_NOTIFICATION);
+    display_update_type_t notif = ALARM_TIMER_NOTIFICATION;
+    xQueueSendFromISR(display_update_queue, &notif, NULL);
     return false;
 }
 

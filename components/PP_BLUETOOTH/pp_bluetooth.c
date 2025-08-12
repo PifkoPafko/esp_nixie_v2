@@ -318,7 +318,9 @@ static void gap_event_handler(esp_gap_ble_cb_event_t event, esp_ble_gap_cb_param
                 esp_ble_gap_set_security_param(ESP_BLE_SM_SET_STATIC_PASSKEY, &passkey, sizeof(uint32_t));
                 pp_set_display_passkey(passkey);
                 device_mode = PAIRING_PASSKEY_MODE;
-                NOTIFY_TASK(display_main_h, NOTIFY_NORMAL_VAL);
+
+                display_update_type_t notif = NOTIFY_NORMAL_VAL;
+                xQueueSend(display_update_queue, &notif, 10);
             }
             break;
         }
@@ -377,7 +379,8 @@ static void gap_event_handler(esp_gap_ble_cb_event_t event, esp_ble_gap_cb_param
             if (param->ble_security.auth_cmpl.success && (device_mode == PAIRING_MODE || device_mode == PAIRING_PASSKEY_MODE))
             {
                 device_mode = DEFAULT_MODE;
-                NOTIFY_TASK(display_main_h, NOTIFY_NORMAL_VAL);
+                display_update_type_t notif = NOTIFY_NORMAL_VAL;
+                xQueueSend(display_update_queue, &notif, 10);
             }
             
             break;

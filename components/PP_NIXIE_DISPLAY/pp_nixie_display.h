@@ -118,8 +118,8 @@ typedef struct nixie_tube_state
 {
     bool digit_enable[TUBES_COUNT];
     uint8_t digit[TUBES_COUNT];
-    uint8_t left_comma_enable[TUBES_COUNT];
-    uint8_t right_comma_enable[TUBES_COUNT];
+    bool left_comma_enable[TUBES_COUNT];
+    bool right_comma_enable[TUBES_COUNT];
 } display_state_t;
 
 /* Functions */

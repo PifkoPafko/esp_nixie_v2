@@ -25,9 +25,6 @@
 /* I2C Devices */
 #define I2C_DEVICE_NUM 7
 
-#define NOTIFY_TASK(x, y) (xTaskNotify(x, y, eSetValueWithOverwrite))
-#define NOTIFY_TASK_FROM_ISR(x, y) (xTaskNotifyFromISR(x, y, eSetValueWithOverwrite, NULL))
-
 /* Alarm mode */
 #define ALARM_SINGLE_MODE   0
 #define ALARM_WEEKLY_MODE   1
@@ -46,6 +43,13 @@ typedef enum {
     PAIRING_PASSKEY_MODE,
     ALARM_RING_MODE
 }device_mode_t;
+
+typedef enum {
+    NOTIFY_NORMAL_VAL = 0,
+    NOTIFY_TIMER_VAL,
+    NOTIFY_TIMER_BLINK_VAL,
+    NOTIFY_TIMER_ANTI_POISONING_VAL
+}display_update_type_t;
 
 typedef struct {
     uint8_t hour_first;
@@ -134,6 +138,7 @@ extern alarm_mode_args_t current_alarm;
 extern const uint8_t alarm_type_uuid[ESP_UUID_LEN_128];
 extern const uint8_t ringtone_type_uuid[ESP_UUID_LEN_128];
 extern QueueHandle_t button_action_queue;
+extern QueueHandle_t display_update_queue;
 extern display_digits_t display_digits;
 
 

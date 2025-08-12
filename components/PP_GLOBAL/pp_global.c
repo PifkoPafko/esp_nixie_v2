@@ -35,5 +35,8 @@ const uint8_t ringtone_type_uuid[ESP_UUID_LEN_128] = {0x03, 0x00, 0x12, 0xAC, 0x
 /* Button action queue handle */
 QueueHandle_t button_action_queue;
 
+/* Display Update Queue */
+QueueHandle_t display_update_queue;
+
 /* Display digits description */
 display_digits_t display_digits;

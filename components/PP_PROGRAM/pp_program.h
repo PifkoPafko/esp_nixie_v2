@@ -12,12 +12,6 @@
  ****************************************************************************/
 
 /* Headers */
-// #include <stdbool.h>
-// #include <stdint.h>
-// #include <sys/time.h>
-// #include <time.h>
-// #include "driver/gpio.h"
-
 #include "pp_nixie_display_manager.h"
 #include "pp_gpio.h"
 #include "pp_bluetooth.h"
@@ -86,11 +80,11 @@ typedef enum {
 
 /* Functions */
 
-/** @brief pp_program_init: Program initialization function
- *
- * Initializes Button action queue, display manager and gpio.
- * After required initialization it goes to the pp_program_main loop and stays there forever.
+/** @brief pp_program_main: Program loop
+ * 
+ * This function is a anchor for all the user actions.
+ * This function waits for a button action and redirect the operation to pp_button_functions.
  * 
  * @return
  */
-void pp_program_init(void);
+void pp_program_main(void);

@@ -28,11 +28,6 @@
 #include "pp_nixie_display.h"
 
 /* Macros */
-#define NOTIFY_NORMAL_VAL 0
-#define NOTIFY_TIMER_VAL 1
-#define NOTIFY_TIMER_BLINK_VAL 2
-#define NOTIFY_TIMER_ANTI_POISONING_VAL 3
-
 #define DEFAULT_PERIOD pdMS_TO_TICKS(1000)
 #define BLINK_PERIOD pdMS_TO_TICKS(500)
 #define ANTI_POISON_PERIOD pdMS_TO_TICKS(60000)

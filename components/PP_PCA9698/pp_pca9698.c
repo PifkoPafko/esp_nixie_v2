@@ -45,9 +45,8 @@ void pp_pca_write_all_reg(i2c_master_dev_handle_t dev_handle, reg_addr_t reg, co
 
     for(int i = 1; i < 6; ++i)
     {
-        data_out[i] = arg[i];
+        data_out[i] = arg[i-1];
     }
 
-    ESP_ERROR_CHECK(i2c_master_transmit(dev_handle, data_out, 6, -1));
+    i2c_master_transmit(dev_handle, data_out, 6, -1);
 }
-

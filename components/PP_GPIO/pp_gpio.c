@@ -49,7 +49,7 @@ static void IRAM_ATTR pp_button_isr_handler(void* arg)
     msg.enable = !gpio_get_level((uint32_t) arg);;
     msg.gpio_num = (uint32_t) arg;
     
-    ESP_ERROR_CHECK(xQueueSendFromISR(gpio_evt_queue, &msg, NULL));
+    xQueueSendFromISR(gpio_evt_queue, &msg, NULL);
 }
 
 void pp_gpio_init(void)
@@ -130,7 +130,7 @@ static void pp_btn_timer_cb(TimerHandle_t xTimer)
     button_queue_msg_t msg;
     msg.type = TIMER;
     
-    ESP_ERROR_CHECK(xQueueSendFromISR(gpio_evt_queue, &msg, NULL));
+    xQueueSendFromISR(gpio_evt_queue, &msg, NULL);
 }
 
 /** @brief pp_button_main: Buttons Main Task
@@ -313,7 +313,7 @@ static void pp_button_main(void* arg)
 
         if (action_happened)
         {
-            ESP_ERROR_CHECK(xQueueSend(button_action_queue, &action_handler, 1));
+            xQueueSend(button_action_queue, &action_handler, 1);
         }
     }
 }

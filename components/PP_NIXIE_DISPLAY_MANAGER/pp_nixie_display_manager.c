@@ -21,9 +21,9 @@
 static void pp_display_main(void* arg);
 static void pp_timer_cb(TimerHandle_t xTimer);
 static void pp_timer_anti_poison_cb(TimerHandle_t xTimer);
-static inline void pp_timer_set_default(void);
-static inline void pp_timer_set_blink(void);
-static inline void pp_timer_stop(void);
+static void pp_timer_set_default(void);
+static void pp_timer_set_blink(void);
+static void pp_timer_stop(void);
 static void pp_set_nixie_state_default();
 static void pp_set_nixie_state_time_change();
 static void pp_set_nixie_state_alarm();
@@ -53,10 +53,18 @@ void pp_display_manager_init(void)
     ESP_LOGI(NIXIE_DISPLAY_MANAGER_TAG, "Initializing NIXIE Display Manager");
 
     pp_nixie_display_init();
+
+    display_update_queue = xQueueCreate(10, sizeof(display_update_type_t));
+    if(display_update_queue == 0)
+    {
+        ESP_LOGE(NIXIE_DISPLAY_MANAGER_TAG, "display_update_queue not created");
+        ESP_ERROR_CHECK(ESP_FAIL);
+    }
     
     BaseType_t res = xTaskCreate(pp_display_main, "NIXIE DISPLAY", 4096, NULL, 1, &display_main_h);
     if(res != pdPASS)
     {
+        ESP_LOGE(NIXIE_DISPLAY_MANAGER_TAG, "pp_display_main not created");
         ESP_ERROR_CHECK(ESP_FAIL);
     }
 
@@ -100,10 +108,12 @@ void pp_update_display()
         default:
         {
             ESP_ERROR_CHECK(ESP_FAIL);
+            break;
         }
     }
 
-    NOTIFY_TASK(display_main_h, NOTIFY_NORMAL_VAL);
+    display_update_type_t notif = NOTIFY_TIMER_VAL;
+    xQueueSend(display_update_queue, &notif, 10);
 }
 
 /** @brief pp_set_display_passkey: Set bluetooth passkey to display afterwards
@@ -152,8 +162,8 @@ static void pp_display_main(void* arg)
 {
     while(true)
     {
-        uint32_t notify_value;
-        if(xTaskNotifyWait(0, 0, &notify_value, portMAX_DELAY) != pdTRUE) continue;
+        display_update_type_t notify_value;
+        if(xQueueReceive(display_update_queue, &notify_value, portMAX_DELAY) != pdTRUE) continue;
 
         if(notify_value == NOTIFY_TIMER_ANTI_POISONING_VAL)
         {
@@ -270,11 +280,13 @@ static void pp_timer_cb(TimerHandle_t xTimer)
 {
     if(device_mode == TIME_CHANGE_MODE || device_mode == ALARM_ADD_MODE)
     {
-        NOTIFY_TASK(display_main_h, NOTIFY_TIMER_BLINK_VAL);
+        display_update_type_t notif = NOTIFY_TIMER_BLINK_VAL;
+        xQueueSend(display_update_queue, &notif, 10);
     }
     else
     {
-        NOTIFY_TASK(display_main_h, NOTIFY_TIMER_VAL);
+        display_update_type_t notif = NOTIFY_TIMER_VAL;
+        xQueueSend(display_update_queue, &notif, 10);
     }
 }
 
@@ -291,7 +303,8 @@ static void pp_timer_cb(TimerHandle_t xTimer)
  */
 static void pp_timer_anti_poison_cb(TimerHandle_t xTimer)
 {
-    NOTIFY_TASK(display_main_h, NOTIFY_TIMER_ANTI_POISONING_VAL);
+    display_update_type_t notif = NOTIFY_TIMER_ANTI_POISONING_VAL;
+    xQueueSend(display_update_queue, &notif, 10);
 }
 
 
@@ -299,7 +312,7 @@ static void pp_timer_anti_poison_cb(TimerHandle_t xTimer)
  * 
  * @return
  */
-static inline void pp_timer_set_default(void)
+static void pp_timer_set_default(void)
 {
     xTimerStop(timer_h, 10);
     xTimerChangePeriod(timer_h, DEFAULT_PERIOD, 10);
@@ -311,7 +324,7 @@ static inline void pp_timer_set_default(void)
  * 
  * @return
  */
-static inline void pp_timer_set_blink(void)
+static void pp_timer_set_blink(void)
 {
     xTimerStop(timer_anti_poison_h, 10);
     xTimerStop(timer_h, 10);
@@ -323,7 +336,7 @@ static inline void pp_timer_set_blink(void)
  * 
  * @return
  */
-static inline void pp_timer_stop(void)
+static void pp_timer_stop(void)
 {
     xTimerStop(timer_anti_poison_h, 10);
     xTimerStop(timer_h, 10);

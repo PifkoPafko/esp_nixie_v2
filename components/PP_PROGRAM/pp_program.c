@@ -15,7 +15,6 @@
 #include "pp_program.h"
 
 /* Headers */
-static void pp_program_main(void);
 static void pp_button_functions(button_action_t action_handler);
 static void pp_time_change_mode(button_action_t action_handler, bool start);
 static void pp_alarm_add_mode(button_action_t action_handler, bool start);
@@ -32,23 +31,6 @@ static alarm_add_sm_t alarm_add_sm = IDLE_ALARM_ADD;        // Alarm Adding Stat
 
 static alarm_mode_args_t alarm_add;         // Alarm description when in process of adding it
 
-/* Functions */
-
-/** @brief pp_program_init: Program initialization function
- *
- * Initializes Button action queue, display manager and gpio.
- * After required initialization it goes to the pp_program_main loop and stays there forever.
- * 
- * @return
- */
-void pp_program_init(void)
-{
-    ESP_LOGI(PROGRAM_TAG, "Initializing program");
-    pp_gpio_init();
-    pp_display_manager_init();
-    pp_program_main();
-}
-
 /** @brief pp_program_main: Program loop
  * 
  * This function is a anchor for all the user actions.
@@ -56,7 +38,7 @@ void pp_program_init(void)
  * 
  * @return
  */
-static void pp_program_main(void)
+void pp_program_main(void)
 {
     while(true)
     {
@@ -339,6 +321,8 @@ static void pp_time_change_mode(button_action_t action_handler, bool start)
                 time_date->date.year_first = (timeinfo.tm_year - 100) / 10;
                 time_date->date.year_second = (timeinfo.tm_year - 100) % 10;
 
+                display_digits.blink_tube = 0;
+
                 time_change_sm = SET_HOUR_FIRST;
             }    
             break;
@@ -346,8 +330,6 @@ static void pp_time_change_mode(button_action_t action_handler, bool start)
 
         case SET_HOUR_FIRST:
         {
-            
-
             if (action_handler.action == SHORT_PRESS)
             {
                 switch (action_handler.button)
@@ -361,6 +343,7 @@ static void pp_time_change_mode(button_action_t action_handler, bool start)
 
                     case BUTTON_CENTER:
                     {
+                        display_digits.blink_tube = 1;
                         time_change_sm = SET_HOUR_SECOND;
                         break;
                     }
@@ -390,6 +373,7 @@ static void pp_time_change_mode(button_action_t action_handler, bool start)
 
                     case BUTTON_CENTER:
                     {
+                        display_digits.blink_tube = 2;
                         time_change_sm = SET_MINUTE_FIRST;
                         break;
                     }
@@ -416,6 +400,7 @@ static void pp_time_change_mode(button_action_t action_handler, bool start)
 
                     case BUTTON_CENTER:
                     {
+                        display_digits.blink_tube = 3;
                         time_change_sm = SET_MINUTE_SECOND;
                         break;
                     }
@@ -442,6 +427,7 @@ static void pp_time_change_mode(button_action_t action_handler, bool start)
 
                     case BUTTON_CENTER:
                     {
+                        display_digits.blink_tube = 4;
                         time_change_sm = SET_SECOND_FIRST;
                         break;
                     }
@@ -468,6 +454,7 @@ static void pp_time_change_mode(button_action_t action_handler, bool start)
 
                     case BUTTON_CENTER:
                     {
+                        display_digits.blink_tube = 5;
                         time_change_sm = SET_SECOND_SECOND;
                         break;
                     }
@@ -494,6 +481,7 @@ static void pp_time_change_mode(button_action_t action_handler, bool start)
 
                     case BUTTON_CENTER:
                     {
+                        display_digits.blink_tube = 7;
                         time_change_sm = SET_DAY_FIRST;
                         break;
                     }
@@ -520,6 +508,7 @@ static void pp_time_change_mode(button_action_t action_handler, bool start)
 
                     case BUTTON_CENTER:
                     {
+                        display_digits.blink_tube = 8;
                         time_change_sm = SET_DAY_SECOND;
                         break;
                     }
@@ -550,6 +539,7 @@ static void pp_time_change_mode(button_action_t action_handler, bool start)
 
                     case BUTTON_CENTER:
                     {
+                        display_digits.blink_tube = 9;
                         time_change_sm = SET_MONTH_FIRST;
                         break;
                     }
@@ -576,6 +566,7 @@ static void pp_time_change_mode(button_action_t action_handler, bool start)
 
                     case BUTTON_CENTER:
                     {
+                        display_digits.blink_tube = 10;
                         time_change_sm = SET_MONTH_SECOND;
                         break;
                     }
@@ -605,6 +596,7 @@ static void pp_time_change_mode(button_action_t action_handler, bool start)
 
                     case BUTTON_CENTER:
                     {
+                        display_digits.blink_tube = 11;
                         time_change_sm = SET_YEAR_FIRST;
                         break;
                     }
@@ -631,6 +623,7 @@ static void pp_time_change_mode(button_action_t action_handler, bool start)
 
                     case BUTTON_CENTER:
                     {
+                        display_digits.blink_tube = 12;
                         time_change_sm = SET_YEAR_SECOND;
                         break;
                     }
@@ -767,6 +760,8 @@ static void pp_alarm_add_mode(button_action_t action_handler, bool start)
 
                 alarm_digits_p->volume = 9;
 
+                display_digits.blink_tube = 0;
+
                 memset(&alarm_add, 0, sizeof(alarm_add));
                 alarm_add_sm = SET_MODE;
             }    
@@ -788,6 +783,7 @@ static void pp_alarm_add_mode(button_action_t action_handler, bool start)
 
                     case BUTTON_CENTER:
                     {
+                        display_digits.blink_tube = 2;
                         alarm_add_sm = SET_ALARM_HOUR_FIRST;
                         break;
                     }
@@ -814,6 +810,7 @@ static void pp_alarm_add_mode(button_action_t action_handler, bool start)
 
                     case BUTTON_CENTER:
                     {
+                        display_digits.blink_tube = 3;
                         alarm_add_sm = SET_ALARM_HOUR_SECOND;
                         break;
                     }
@@ -843,6 +840,7 @@ static void pp_alarm_add_mode(button_action_t action_handler, bool start)
 
                     case BUTTON_CENTER:
                     {
+                        display_digits.blink_tube = 4;
                         alarm_add_sm = SET_ALARM_MINUTE_FIRST;
                         break;
                     }
@@ -869,6 +867,7 @@ static void pp_alarm_add_mode(button_action_t action_handler, bool start)
 
                     case BUTTON_CENTER:
                     {
+                        display_digits.blink_tube = 5;
                         alarm_add_sm = SET_ALARM_MINUTE_SECOND;
                         break;
                     }
@@ -898,22 +897,27 @@ static void pp_alarm_add_mode(button_action_t action_handler, bool start)
                         switch(alarm_digits_p->alarm_mode)
                         {
                             case ALARM_SINGLE_MODE:
+                                display_digits.blink_tube = 7;
                                 alarm_add_sm = SET_SINGLE_DAY_FIRST;
                                 break;
 
                             case ALARM_WEEKLY_MODE:
+                                display_digits.blink_tube = 7;
                                 alarm_add_sm = SET_WEEKLY_MONDAY;
                                 break;
 
                             case ALARM_MONTHLY_MODE:
+                                display_digits.blink_tube = 7;
                                 alarm_add_sm = SET_MONTHLY_DAY_FIRST;
                                 break;
 
                             case ALARM_YEARLY_MODE:
+                                display_digits.blink_tube = 7;
                                 alarm_add_sm = SET_YEARLY_DAY_FIRST;
                                 break;
 
                             default:
+                                display_digits.blink_tube = 7;
                                 alarm_add_sm = SET_SINGLE_DAY_FIRST;
                                 break;
                         }
@@ -943,6 +947,7 @@ static void pp_alarm_add_mode(button_action_t action_handler, bool start)
 
                     case BUTTON_CENTER:
                     {
+                        display_digits.blink_tube = 8;
                         alarm_add_sm = SET_SINGLE_DAY_SECOND;
                         break;
                     }
@@ -973,6 +978,7 @@ static void pp_alarm_add_mode(button_action_t action_handler, bool start)
 
                     case BUTTON_CENTER:
                     {
+                        display_digits.blink_tube = 9;
                         alarm_add_sm = SET_SINGLE_MONTH_FIRST;
                         break;
                     }
@@ -999,6 +1005,7 @@ static void pp_alarm_add_mode(button_action_t action_handler, bool start)
 
                     case BUTTON_CENTER:
                     {
+                        display_digits.blink_tube = 10;
                         alarm_add_sm = SET_SINGLE_MONTH_SECOND;
                         break;
                     }
@@ -1028,6 +1035,7 @@ static void pp_alarm_add_mode(button_action_t action_handler, bool start)
 
                     case BUTTON_CENTER:
                     {
+                        display_digits.blink_tube = 11;
                         alarm_add_sm = SET_SINGLE_YEAR_FIRST;
                         break;
                     }
@@ -1054,6 +1062,7 @@ static void pp_alarm_add_mode(button_action_t action_handler, bool start)
 
                     case BUTTON_CENTER:
                     {
+                        display_digits.blink_tube = 12;
                         alarm_add_sm = SET_SINGLE_YEAR_SECOND;
                         break;
                     }
@@ -1080,6 +1089,7 @@ static void pp_alarm_add_mode(button_action_t action_handler, bool start)
 
                     case BUTTON_CENTER:
                     {
+                        display_digits.blink_tube = 15;
                         alarm_add_sm = SET_VOLUME;
                         break;
                     }
@@ -1105,6 +1115,7 @@ static void pp_alarm_add_mode(button_action_t action_handler, bool start)
 
                     case BUTTON_CENTER:
                     {
+                        display_digits.blink_tube = 8;
                         alarm_add_sm = SET_WEEKLY_TUESDAY;
                         break;
                     }
@@ -1130,6 +1141,7 @@ static void pp_alarm_add_mode(button_action_t action_handler, bool start)
 
                     case BUTTON_CENTER:
                     {
+                        display_digits.blink_tube = 9;
                         alarm_add_sm = SET_WEEKLY_WEDNESDAY;
                         break;
                     }
@@ -1155,6 +1167,7 @@ static void pp_alarm_add_mode(button_action_t action_handler, bool start)
 
                     case BUTTON_CENTER:
                     {
+                        display_digits.blink_tube = 10;
                         alarm_add_sm = SET_WEEKLY_THURSDAY;
                         break;
                     }
@@ -1180,6 +1193,7 @@ static void pp_alarm_add_mode(button_action_t action_handler, bool start)
 
                     case BUTTON_CENTER:
                     {
+                        display_digits.blink_tube = 11;
                         alarm_add_sm = SET_WEEKLY_FRIDAY;
                         break;
                     }
@@ -1205,6 +1219,7 @@ static void pp_alarm_add_mode(button_action_t action_handler, bool start)
 
                     case BUTTON_CENTER:
                     {
+                        display_digits.blink_tube = 12;
                         alarm_add_sm = SET_WEEKLY_SATURDAY;
                         break;
                     }
@@ -1230,6 +1245,7 @@ static void pp_alarm_add_mode(button_action_t action_handler, bool start)
 
                     case BUTTON_CENTER:
                     {
+                        display_digits.blink_tube = 13;
                         alarm_add_sm = SET_WEEKLY_SUNDAY;
                         break;
                     }
@@ -1255,6 +1271,7 @@ static void pp_alarm_add_mode(button_action_t action_handler, bool start)
 
                     case BUTTON_CENTER:
                     {
+                        display_digits.blink_tube = 15;
                         alarm_add_sm = SET_VOLUME;
                         break;
                     }
@@ -1281,6 +1298,7 @@ static void pp_alarm_add_mode(button_action_t action_handler, bool start)
 
                     case BUTTON_CENTER:
                     {
+                        display_digits.blink_tube = 8;
                         alarm_add_sm = SET_MONTHLY_DAY_SECOND;
                         break;
                     }
@@ -1311,6 +1329,7 @@ static void pp_alarm_add_mode(button_action_t action_handler, bool start)
 
                     case BUTTON_CENTER:
                     {
+                        display_digits.blink_tube = 15;
                         alarm_add_sm = SET_VOLUME;
                         break;
                     }
@@ -1337,6 +1356,7 @@ static void pp_alarm_add_mode(button_action_t action_handler, bool start)
 
                     case BUTTON_CENTER:
                     {
+                        display_digits.blink_tube = 8;
                         alarm_add_sm = SET_YEARLY_DAY_SECOND;
                         break;
                     }
@@ -1367,6 +1387,7 @@ static void pp_alarm_add_mode(button_action_t action_handler, bool start)
 
                     case BUTTON_CENTER:
                     {
+                        display_digits.blink_tube = 9;
                         alarm_add_sm = SET_YEARLY_MONTH_FIRST;
                         break;
                     }
@@ -1393,6 +1414,7 @@ static void pp_alarm_add_mode(button_action_t action_handler, bool start)
 
                     case BUTTON_CENTER:
                     {
+                        display_digits.blink_tube = 10;
                         alarm_add_sm = SET_YEARLY_MONTH_SECOND;
                         break;
                     }
@@ -1422,6 +1444,7 @@ static void pp_alarm_add_mode(button_action_t action_handler, bool start)
 
                     case BUTTON_CENTER:
                     {
+                        display_digits.blink_tube = 15;
                         alarm_add_sm = SET_VOLUME;
                         break;
                     }

@@ -79,12 +79,6 @@ void pp_nixie_display_init(void)
     {
         pp_pca_write_all_reg(exp_dev_handle[expander_id], IOC0_ADDR, conf_output_mask);
     }
-
-    // for(uint8_t i = 0; i < 128; i++)
-    // {
-    //     esp_err_t XD = i2c_master_probe(bus_handle, i, -1);
-    //     ESP_LOGI(NIXIE_DISPLAY_TAG, "I2C Probe = %lx", (uint32_t)XD);
-    // }
 }
 
 /** @brief pp_display: Displays given nixie tubes state.
@@ -98,7 +92,7 @@ void pp_nixie_display_init(void)
 void pp_display(display_state_t *display_state)
 {
     uint8_t i2c_msg[EXPANDER_COUNT][EXPANDER_REG_COUNT];
-    memset(i2c_msg, 0, EXPANDER_COUNT*EXPANDER_REG_COUNT*sizeof(i2c_msg[0]));
+    memset(i2c_msg, 0, EXPANDER_COUNT*EXPANDER_REG_COUNT*sizeof(i2c_msg[0][0]));
     pp_nixie_display_generate_i2c_msg(display_state, &i2c_msg[0][0]);
     
     for(uint8_t expander_id = 0; expander_id < EXPANDER_COUNT; expander_id++)
