@@ -165,21 +165,26 @@ static void pp_display_main(void* arg)
         display_update_type_t notify_value;
         if(xQueueReceive(display_update_queue, &notify_value, portMAX_DELAY) != pdTRUE) continue;
 
-        if(notify_value == NOTIFY_TIMER_ANTI_POISONING_VAL)
+        if(notify_value == NOTIFY_TIMER_ANTI_POISONING_VAL && device_mode == DEFAULT_MODE)
         {
             anti_poisoning_ongoing = true;
             memset(display_state.digit_enable, true, TUBES_COUNT*sizeof(display_state.digit_enable[0]));
             memset(display_state.right_comma_enable, true, TUBES_COUNT*sizeof(display_state.right_comma_enable[0]));
             memset(display_state.left_comma_enable, true, TUBES_COUNT*sizeof(display_state.left_comma_enable[0]));
 
-            for(uint8_t tube = 0; tube < TUBES_COUNT; ++tube)
+            for(uint8_t digit = 0; digit <= 9; ++digit)
             {
-                memset(display_state.digit, tube, TUBES_COUNT*sizeof(display_state.left_comma_enable[0]));
+                memset(display_state.digit, digit, TUBES_COUNT*sizeof(display_state.left_comma_enable[0]));
+                pp_display(&display_state);
                 vTaskDelay(ANTI_POISON_DIGIT_PERIOD);
             }
             anti_poisoning_ongoing = false;
+            
+            while(xQueueReceive(display_update_queue, &notify_value, 1) == pdTRUE);
+            notify_value = NOTIFY_TIMER_VAL;
+            xQueueSend(display_update_queue, &notify_value, 10);
         }
-        else
+        else if(notify_value == NOTIFY_NORMAL_VAL || notify_value == NOTIFY_TIMER_VAL || notify_value == NOTIFY_TIMER_BLINK_VAL)
         {
             switch(device_mode)
             {
@@ -258,9 +263,9 @@ static void pp_display_main(void* arg)
                     break;
                 }
             }
-        }
 
-        pp_display(&display_state);
+            pp_display(&display_state);
+        }
     }
 }
 

@@ -373,6 +373,7 @@ static void pp_time_change_mode(button_action_t action_handler, bool start)
 
                     case BUTTON_CENTER:
                     {
+                        if (time_date->time.hour_first == 2 && time_date->time.hour_second > 3) time_date->time.hour_second = 0;
                         display_digits.blink_tube = 2;
                         time_change_sm = SET_MINUTE_FIRST;
                         break;
@@ -508,6 +509,7 @@ static void pp_time_change_mode(button_action_t action_handler, bool start)
 
                     case BUTTON_CENTER:
                     {
+                        if (time_date->date.day_first == 3 && time_date->date.day_second > 1) time_date->date.day_second = 0;
                         display_digits.blink_tube = 8;
                         time_change_sm = SET_DAY_SECOND;
                         break;
@@ -530,7 +532,7 @@ static void pp_time_change_mode(button_action_t action_handler, bool start)
                     {
                         time_date->date.day_second++;
 
-                        if ( (time_date->date.day_first > 2 && time_date->date.day_second > 1) || (time_date->date.day_first < 2 && time_date->date.day_second > 9) )
+                        if ( (time_date->date.day_first == 3 && time_date->date.day_second > 1) || (time_date->date.day_first < 3 && time_date->date.day_second > 9) )
                         {
                             time_date->date.day_second = 0;
                         }

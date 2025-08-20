@@ -21,13 +21,14 @@
 #include "esp_log.h"
 
 #include "freertos/FreeRTOS.h"
-// #include "freertos/queue.h"
 
 #include "driver/gpio.h"
 
 #include "pp_global.h"
 
 /* Macros */
+// #define ENABLE_GPIO_DEBUG_LOGS   // Enable to show state transition logs of buttons
+
 #define GPIO_OUTPUT_OE          GPIO_NUM_3
 #define GPIO_OUTPUT_RED         GPIO_NUM_47
 #define GPIO_OUTPUT_BLUE        GPIO_NUM_21

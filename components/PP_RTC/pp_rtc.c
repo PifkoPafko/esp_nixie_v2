@@ -67,7 +67,7 @@ void pp_rtc_init(void)
     ESP_ERROR_CHECK(i2c_master_bus_add_device(bus_handle, &dev_cfg_rtc, &rtc_dev_handle));
 
     uint8_t data[2] = {DS_RTC_CONTROL_REG_ADDR, 0x1C};
-    ESP_ERROR_CHECK(i2c_master_transmit(rtc_dev_handle, data, 2, -1));
+    i2c_master_transmit(rtc_dev_handle, data, 2, -1);
 
     BaseType_t res = xTaskCreate(pp_rtc_main, "RTC", 3072, NULL, 2, &rtc_main_h);
     if(res != pdPASS)
@@ -95,7 +95,7 @@ void pp_rtc_set_time(struct tm *timeinfo)
     outData[6] = (((timeinfo->tm_mon + 1) / 10) << 4 ) | ((timeinfo->tm_mon + 1) % 10);
     outData[7] = (((timeinfo->tm_year - 100) / 10) << 4 ) | ((timeinfo->tm_year - 100) % 10);
 
-    ESP_ERROR_CHECK(i2c_master_transmit(rtc_dev_handle, outData, 8, -1));
+    i2c_master_transmit(rtc_dev_handle, outData, 8, -1);
 }
 
 /** @brief pp_rtc_read_time: Reads time from RTC
@@ -110,7 +110,7 @@ void pp_rtc_read_time(struct tm *timeinfo)
     uint8_t data_out = DS_RTC_START_REG_ADDR;
     uint8_t data_in[7];
     memset(data_in, 0, 7);
-    ESP_ERROR_CHECK(i2c_master_transmit_receive(rtc_dev_handle, &data_out, 1, data_in, 7, -1));
+    i2c_master_transmit_receive(rtc_dev_handle, &data_out, 1, data_in, 7, -1);
 
     timeinfo->tm_sec = DS_SECONDS_TO_TM(data_in[0]);
     timeinfo->tm_min = DS_MINUTES_TO_TM(data_in[1]);

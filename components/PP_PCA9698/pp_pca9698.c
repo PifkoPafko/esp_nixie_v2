@@ -27,7 +27,7 @@
 void pp_pca_write_reg(i2c_master_dev_handle_t dev_handle, reg_addr_t reg, const uint8_t arg) 
 {
     uint8_t data_out[2] = {DISABLE_AUTO_INCREMEMT_BIT_MASK(reg), arg};
-    ESP_ERROR_CHECK(i2c_master_transmit(dev_handle, data_out, 2, -1));
+    i2c_master_transmit(dev_handle, data_out, 2, -1);
 }
 
 /** @brief pp_pca_write_reg: Write all 5 IO registers in chosen PCA9698

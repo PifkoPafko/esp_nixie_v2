@@ -48,6 +48,6 @@ void app_main(void)
     pp_bluetooth_init();        // Initializes bluetooth funcionality
     pp_wifi_init();             // Initializes WiFi functionality
 
-    // Go to the main program
+    // Go to the program main
     pp_program_main();          // Redirect main loop to the program loop
 }
