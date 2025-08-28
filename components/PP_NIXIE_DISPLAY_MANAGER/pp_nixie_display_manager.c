@@ -251,7 +251,7 @@ static void pp_display_main(void* arg)
                 case ALARM_RING_MODE:
                 {
                     pp_set_nixie_state_default();
-                    if(notify_value == NOTIFY_TIMER_BLINK_VAL)
+                    if(notify_value == NOTIFY_TIMER_VAL)
                     {
                         bool enable = !display_state.digit_enable[0];
                         memset(display_state.digit_enable, enable, TUBES_COUNT*sizeof(display_state.right_comma_enable[0]));
@@ -369,8 +369,6 @@ static void pp_set_nixie_state_default()
     memset(display_state.left_comma_enable, false, TUBES_COUNT*sizeof(display_state.left_comma_enable[0]));
 
     display_state.digit_enable[6] = false;
-    display_state.digit_enable[13] = false;
-    display_state.digit_enable[14] = false;
     display_state.digit_enable[15] = false;
 
     display_state.digit[0] = timeinfo.tm_hour / 10;
@@ -383,8 +381,10 @@ static void pp_set_nixie_state_default()
     display_state.digit[8] = timeinfo.tm_mday % 10;
     display_state.digit[9] = (timeinfo.tm_mon + 1) / 10;
     display_state.digit[10] = (timeinfo.tm_mon + 1) % 10;
-    display_state.digit[11] = (timeinfo.tm_year - 100) / 10;
-    display_state.digit[12] = (timeinfo.tm_year - 100) % 10;
+    display_state.digit[11] = 2;
+    display_state.digit[12] = 0;
+    display_state.digit[13] = (timeinfo.tm_year - 100) / 10;
+    display_state.digit[14] = (timeinfo.tm_year - 100) % 10;
 
     display_state.right_comma_enable[1] = true;
     display_state.right_comma_enable[3] = true;

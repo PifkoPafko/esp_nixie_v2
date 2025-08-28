@@ -30,6 +30,8 @@ static time_change_sm_t time_change_sm = IDLE_TIME_CHANGE;  // Time chnage State
 static alarm_add_sm_t alarm_add_sm = IDLE_ALARM_ADD;        // Alarm Adding State Machine
 
 static alarm_mode_args_t alarm_add;         // Alarm description when in process of adding it
+time_t now;                                 // Timestamp variable for keeping time during adding alarms and changing time
+struct tm timeinfo;               // Time and Date structure for keeping time during adding alarms and changing time
 
 /** @brief pp_program_main: Program loop
  * 
@@ -251,6 +253,7 @@ static void pp_button_functions(button_action_t action_handler)
                 ESP_LOGI(PROGRAM_TAG, "ALARM DISABLED");
                 ESP_LOGI(PROGRAM_TAG, "ALARM RING MODE -> DEFAULT MODE");
                 device_mode = DEFAULT_MODE;
+                xTaskNotifyFromISR(alarm_main_h, ALARM_STOP_NOTIFICATION, eNoAction, NULL);
                 pp_update_display();
                 break;
             }
@@ -303,9 +306,7 @@ static void pp_time_change_mode(button_action_t action_handler, bool start)
         {
             if (start)
             {
-                time_t now;
                 time(&now);
-                struct tm timeinfo;
                 localtime_r(&now, &timeinfo);
 
                 time_date->time.hour_first = timeinfo.tm_hour / 10;
@@ -732,6 +733,7 @@ static void pp_alarm_add_mode(button_action_t action_handler, bool start)
         ESP_LOGI(PROGRAM_TAG, "ALARM_ADD_MODE -> DEFAULT MODE");
         alarm_add_sm = IDLE_ALARM_ADD;
         device_mode = DEFAULT_MODE;
+        memset(&timeinfo, 0, sizeof(struct tm));
     }
 
     switch(alarm_add_sm)
@@ -740,11 +742,8 @@ static void pp_alarm_add_mode(button_action_t action_handler, bool start)
         {
             if (start)
             {
-                time_t now;
                 time(&now);
-
-                struct tm alarm_add_timeinfo;
-                localtime_r(&now, &alarm_add_timeinfo);
+                localtime_r(&now, &timeinfo);
 
                 alarm_digits_p->alarm_mode = ALARM_SINGLE_MODE;
 
@@ -753,12 +752,12 @@ static void pp_alarm_add_mode(button_action_t action_handler, bool start)
                 alarm_digits_p->time.minute_first = 0;
                 alarm_digits_p->time.minute_second = 0;
 
-                alarm_digits_p->arg.date.day_first = alarm_add_timeinfo.tm_mday / 10;
-                alarm_digits_p->arg.date.day_second = alarm_add_timeinfo.tm_mday % 10;
-                alarm_digits_p->arg.date.month_first = (alarm_add_timeinfo.tm_mon + 1) / 10;
-                alarm_digits_p->arg.date.month_second = (alarm_add_timeinfo.tm_mon + 1) % 10;
-                alarm_digits_p->arg.date.year_first = (alarm_add_timeinfo.tm_year - 100) / 10;
-                alarm_digits_p->arg.date.year_second = (alarm_add_timeinfo.tm_year - 100) % 10;
+                alarm_digits_p->arg.date.day_first = timeinfo.tm_mday / 10;
+                alarm_digits_p->arg.date.day_second = timeinfo.tm_mday % 10;
+                alarm_digits_p->arg.date.month_first = (timeinfo.tm_mon + 1) / 10;
+                alarm_digits_p->arg.date.month_second = (timeinfo.tm_mon + 1) % 10;
+                alarm_digits_p->arg.date.year_first = (timeinfo.tm_year - 100) / 10;
+                alarm_digits_p->arg.date.year_second = (timeinfo.tm_year - 100) % 10;
 
                 alarm_digits_p->volume = 9;
 
@@ -779,7 +778,23 @@ static void pp_alarm_add_mode(button_action_t action_handler, bool start)
                     case BUTTON_LEFT:
                     {
                         alarm_digits_p->alarm_mode++;
-                        if (alarm_digits_p->alarm_mode > 3) alarm_digits_p->alarm_mode = 0;
+                        if (alarm_digits_p->alarm_mode == 1)
+                        {
+                            alarm_digits_p->arg.days = 0;
+                        }
+                        else if (alarm_digits_p->alarm_mode > 3) 
+                        {
+                            alarm_digits_p->alarm_mode = 0;
+                        }
+                        else
+                        {    
+                            alarm_digits_p->arg.date.day_first = timeinfo.tm_mday / 10;
+                            alarm_digits_p->arg.date.day_second = timeinfo.tm_mday % 10;
+                            alarm_digits_p->arg.date.month_first = (timeinfo.tm_mon + 1) / 10;
+                            alarm_digits_p->arg.date.month_second = (timeinfo.tm_mon + 1) % 10;
+                            alarm_digits_p->arg.date.year_first = (timeinfo.tm_year - 100) / 10;
+                            alarm_digits_p->arg.date.year_second = (timeinfo.tm_year - 100) % 10;
+                        }
                         break;
                     }
 

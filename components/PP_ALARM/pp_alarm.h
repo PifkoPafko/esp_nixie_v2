@@ -20,34 +20,18 @@
 #include <time.h>
 #include "string.h"
 
-// #include "ctype.h"
-// #include "stdlib.h"
-
-// #include  <stdbool.h>
-
 #include "esp_log.h"
 
-// #include "freertos/FreeRTOS.h"
-// #include "freertos/task.h"
-// #include "freertos/semphr.h"
-
 #include "driver/gptimer.h"
-// #include "driver/gpio.h"
 #include "driver/i2s_std.h" // i2s setup
 
-// #include "esp_err.h"
-
-// #include "stdlib.h"
-// #include <sys/time.h>
-
-// #include "pp_object_transfer_attr_ids.h"
 #include "pp_object_manager.h"
+#include "pp_nixie_display_manager.h"
 #include "pp_global.h"
 #include "pp_object_transfer_defs.h"
-// #include "pp_wave_player.h"
 
 /* Macros */
-// #define ALARM_LOG
+#define ALARM_LOG
 
 #define ALARM_SINGLE_MODE   0
 #define ALARM_WEEKLY_MODE   1
@@ -85,7 +69,11 @@
 #define DAYS_TO_SEC(x)     ( (x) * 24ll * 60ll * 60ll )
 
 #define AUDIO_BUFFER 2048           // buffer size for reading the wav file and sending to i2s
-#define WAV_FILE "/sdcard/ringtone0.wav" // wav file to play
+#define WAV_FILE            "/sdcard/ringtone0.wav" // wav file to play
+#define BARKA_WAV_16        "/sdcard/1.wav" // barka 16 bit
+#define BARKA_WAV_16_TRIM   "/sdcard/2.wav" // barka 16 bit trimmed
+#define BARKA_WAV_24        "/sdcard/3.wav" // barka 24 bit
+#define BARKA_WAV_24_TRIM   "/sdcard/4.wav" // barka 24 bit trimmed
 
 #define ALARM_TIMER_NOTIFICATION    0
 #define ALARM_START_NOTIFICATION    1

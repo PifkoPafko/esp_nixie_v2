@@ -20,7 +20,11 @@ static void pp_search_wifi_task(void* arg);
 static void pp_sntp_cb(struct timeval *tv);
 
 /* Macros */
-#define TAG     "WIFI"
+#define TAG         "WIFI"
+#define SETUP_DEFAULT_WIFI
+
+#define WIFI_NAME   "Orange_Swiatlowod_5AF0"
+#define WIFI_PASS   "maQD9qJkU44Fv3gVqS"
 
 /* Variables */
 static TaskFunction_t wifi_search_main_fun;
@@ -52,6 +56,18 @@ void pp_wifi_init(void)
     esp_wifi_get_config(WIFI_IF_STA, &my_wifi.wifi_config);
     my_wifi.my_ssid_len = strlen((char*)my_wifi.wifi_config.sta.ssid);
     my_wifi.my_password_len = strlen((char*)my_wifi.wifi_config.sta.password);
+
+    #ifdef SETUP_DEFAULT_WIFI
+    strcpy((char*)my_wifi.wifi_config.sta.ssid, WIFI_NAME);
+    strcpy((char*)my_wifi.wifi_config.sta.password, WIFI_PASS);
+    my_wifi.my_ssid_len = strlen(WIFI_NAME);
+    my_wifi.my_password_len = strlen(WIFI_PASS);
+    esp_wifi_set_config(WIFI_IF_STA, &my_wifi.wifi_config);
+    #endif
+
+    
+
+
 
     ESP_ERROR_CHECK(esp_wifi_start());
     ESP_ERROR_CHECK(esp_wifi_connect());

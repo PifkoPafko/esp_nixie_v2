@@ -123,7 +123,8 @@
     "sdkconfig.h": "c",
     "soc_caps.h": "c",
     "i2c_master.h": "c",
-    "timers.h": "c"
+    "timers.h": "c",
+    "i2s_common.h": "c"
   },
   "idf.flashType": "UART",
   "idf.portWin": "COM3",

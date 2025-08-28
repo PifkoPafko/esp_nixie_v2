@@ -25,6 +25,8 @@ static void pp_object_manager_set_current_object_from_file(uint64_t id);
 static bool pp_seekfor(FILE *stream, const char* str, fpos_t *pos);
 static char* id_to_string(char* bfr, uint64_t id);
 
+
+static esp_err_t pp_object_list_delete(uint32_t index);
 static esp_err_t pp_object_list_delete_by_id(uint64_t id);
 static uint64_t pp_object_list_add(object_type_t type);
 static uint64_t pp_object_list_add_by_id(object_type_t type, uint64_t id);
@@ -154,8 +156,9 @@ void pp_object_manager_init(void)
     unfiltered_end_idx = -1;
 
     order = 0;
-    filter.type = 0;
-    filter.par_length = 0;
+    filter.type = OBJECT_TYPE;
+    filter.parameter[0] = ALARM_TYPE;
+    filter.par_length = 1;
 
     ESP_LOGI(TAG, "Initializing sd card");
     esp_vfs_fat_sdmmc_mount_config_t mount_config = 
@@ -181,63 +184,56 @@ void pp_object_manager_init(void)
     slot_config.cd = 4;
     slot_config.flags |= SDMMC_SLOT_FLAG_INTERNAL_PULLUP;
 
-#ifdef FORMAT_SD
-    ESP_LOGI(TAG, "Formating sd card");
-    ESP_ERROR_CHECK(esp_vfs_fat_sdcard_format(mount_point, card));
-#endif
-
     ESP_LOGI(TAG, "Mounting filesystem");
     ESP_ERROR_CHECK(esp_vfs_fat_sdmmc_mount(mount_point, &host, &slot_config, &mount_config, &card));
 
-    struct stat file_stat_info;
-    int fr = stat(ALARMS_PATH, &file_stat_info);
+    #ifdef FORMAT_SD
+    ESP_LOGI(TAG, "Formating sd card");
+    ESP_ERROR_CHECK(esp_vfs_fat_sdcard_format(mount_point, card));
+    #endif
 
-    if(fr != 0)
-    {
-        int res = mkdir(ALARMS_PATH, 777);
-
-        if(res != FR_OK)
-        {
-            ESP_LOGE(TAG, "Can't create \\alarms directory, res = %d", res);
-            ESP_ERROR_CHECK(ESP_FAIL);
-        }
-
-        ESP_LOGI(TAG, "\\alarms directory created");
-    }
-
-    DIR *dir = opendir(ALARMS_PATH);
-
-    if (dir == NULL)
-    {
-        ESP_LOGE(TAG, "Can't open \\alarms directory");
-        ESP_ERROR_CHECK(ESP_FAIL);
-    }
-
-    ESP_LOGI(TAG, "\\alarms directory opened");
+    DIR *dir = opendir(MOUNT_POINT);;
 
     while(true)
     {
         struct dirent *temp_dir = readdir(dir);                   /* Read a directory item */
         if (temp_dir == NULL) 
         {
-            ESP_LOGI(TAG, "The end of \\alarms directory");
+            ESP_LOGI(TAG, "The end of /MOUNT_POINT directory");
             break;  /* Error or end of dir */
+        }
+        else if(strcmp(temp_dir->d_name, "System Volume Information") == 0)
+        {
+            ESP_LOGI(TAG, "Skip System Volume Information File");
         }
         else    /* File */
         {
-            ESP_LOGI(TAG, "\\alarms directory file = %s", temp_dir->d_name);
-            uint64_t id = strtoull(temp_dir->d_name, NULL, 16);
-            uint8_t type[ESP_UUID_LEN_128];
-            pp_object_list_read_type_from_file(type, id);
-            pp_object_list_add_by_id(pp_object_manager_check_type(type), id);
+            ESP_LOGI(TAG, "/MOUNT_POINT directory file = %s", temp_dir->d_name);
+            object_type_t object_type;
+            uint64_t id;
+
+            if(strcmp(&temp_dir->d_name[strlen(temp_dir->d_name)-4], ".wav") == 0)
+            {
+                object_type = RINGTONE_TYPE;
+                id = strtoull(temp_dir->d_name, NULL, 16);
+                ESP_LOGI(TAG, "File = %s; id = %lld, type = RINGTONE", temp_dir->d_name, id);
+            }
+            else
+            {
+                object_type = ALARM_TYPE;
+                id = strtoull(temp_dir->d_name, NULL, 16);
+                ESP_LOGI(TAG, "File = %s; id = %lld, type = ALARM", temp_dir->d_name, id);
+            }
+
+            pp_object_list_add_by_id(object_type, id);
         }
     }
 
-    fr = closedir(dir);
+    int fr = closedir(dir);
 
     if (fr != 0)
     {
-        ESP_LOGE(TAG, "Can't close \\alarms directory");
+        ESP_LOGE(TAG, "Can't close /alarms directory");
         ESP_ERROR_CHECK(ESP_FAIL);
     }
 
@@ -391,7 +387,7 @@ oacp_op_code_result_t pp_object_manager_delete_object(void)
     ESP_LOGI(TAG, "File removed");
 
     ESP_LOGI(TAG, "ID to remove from list: %llx", current_object.id);
-    pp_object_list_delete_by_id(current_object.id);
+    ESP_ERROR_CHECK(pp_object_list_delete(current_object.index));
     ESP_LOGI(TAG, "ID removed from list");
     pp_object_list_make_list();
     current_object.index = -1;
@@ -410,7 +406,7 @@ olcp_op_code_result_t pp_object_manager_first_object(void)
     if(unfiltered_end_idx < 0)
     {
         ESP_LOGI(TAG, "List is empty");
-        return OLCP_RES_SUCCESS;
+        return OLCP_RES_NO_OBJECT;
     }
 
     pp_object_manager_set_current_object_from_file(object_list[0].id);
@@ -1026,7 +1022,7 @@ static void pp_object_manager_truncate_rest(uint64_t id, uint32_t offset)
     char file[20];
     strcpy(file, MOUNT_POINT);
     strcat(file, "/");
-    itoa(id, &file[8], 16);
+    itoa(id, &file[15], 16);
     truncate(file, offset);
     ESP_LOGI(TAG, "File: %s content truncated from offset %" PRIu32, file, offset);
 }
@@ -1286,7 +1282,7 @@ uint64_t pp_object_list_get_new_id(void)
  * 
  * @return (esp_err_t) ESP_FAIL if index out of range.
  */
-esp_err_t pp_object_list_delete(uint32_t index)
+static esp_err_t pp_object_list_delete(uint32_t index)
 {
     if(index >= alarm_count + ringtone_count)
     {
@@ -1303,7 +1299,7 @@ esp_err_t pp_object_list_delete(uint32_t index)
     }
 
     object_id_array_t temp = object_list[index];
-    object_list[index] = object_list[alarm_count + ringtone_count - 1];
+    object_list[index] = object_list[alarm_count + ringtone_count];
 
     if(temp.id == max_id)
     {
@@ -1933,10 +1929,10 @@ static bool pp_object_list_name_is_exactly(uint64_t id)
  */
 static bool pp_object_list_object_type(uint64_t id)
 {
-    uint8_t uuid[16];
-    pp_object_list_read_name_from_file((char*)uuid, id);
+    int index = pp_object_list_search(id, false);
+    if (index < 0) return false;
 
-    if(memcmp(uuid, filter.parameter, 16))
+    if(filter.parameter[0] != object_list[index].type)
     {
         return false;
     }

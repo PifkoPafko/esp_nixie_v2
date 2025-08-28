@@ -48,8 +48,7 @@ static time_t next_alarm_interval = 0;
  */
 static bool pp_alarm_timer_cb(gptimer_handle_t timer, const gptimer_alarm_event_data_t *edata, void *user_data)
 {
-    display_update_type_t notif = ALARM_TIMER_NOTIFICATION;
-    xQueueSendFromISR(display_update_queue, &notif, NULL);
+    xTaskNotifyFromISR(alarm_main_h, ALARM_TIMER_NOTIFICATION, eNoAction, NULL);
     return false;
 }
 
@@ -91,7 +90,7 @@ void pp_alarm_init(void)
     ESP_ERROR_CHECK(i2s_channel_init_std_mode(tx_handle, &std_cfg));
 
     ESP_LOGI(TAG, "Initializing wave player");
-    BaseType_t res = xTaskCreate(pp_alarm_main, "WAV PLAYER", 2048, NULL, 1, &alarm_main_h);
+    BaseType_t res = xTaskCreate(pp_alarm_main, "WAV PLAYER", 8192, NULL, 1, &alarm_main_h);
     if(res != pdPASS)
     {
         ESP_ERROR_CHECK(ESP_FAIL);
@@ -157,8 +156,15 @@ static void pp_alarm_main(void* arg)
     while (true)
     {
         notify_value = 0xFF;
-        got_notify = pdFALSE;
-        got_notify = xTaskNotifyWait(0, 0, &notify_value, 10);
+        if(alarm_play_sm == WAIT_FOR_START_PLAY)
+        {
+            got_notify = xTaskNotifyWait(0, 0, &notify_value, portMAX_DELAY);
+            if(got_notify != pdTRUE) continue;
+        }
+        else
+        {
+            got_notify = xTaskNotifyWait(0, 0, &notify_value, 1);
+        }
 
         switch(alarm_play_sm)
         {
@@ -166,7 +172,11 @@ static void pp_alarm_main(void* arg)
             {
                 if(got_notify == pdTRUE && (notify_value == ALARM_TIMER_NOTIFICATION || notify_value == ALARM_START_NOTIFICATION))
                 {
+                    ESP_LOGI(TAG, "ANY MODE -> ALARM_RING_MODE");
+                    device_mode = ALARM_RING_MODE;
+                    ESP_LOGI(TAG, "WAIT_FOR_START_PLAY -> SET_RINGTONE");
                     alarm_play_sm = SET_RINGTONE;
+                    pp_update_display();
                 }
                 break;
             }
@@ -175,18 +185,21 @@ static void pp_alarm_main(void* arg)
             {
                 if(got_notify == pdTRUE && (notify_value == ALARM_TIMER_NOTIFICATION || notify_value == ALARM_STOP_NOTIFICATION))
                 {
+                    ESP_LOGI(TAG, "SET_RINGTONE -> SET_NEXT_ALARM");
                     alarm_play_sm = SET_NEXT_ALARM;
                     break;
                 }
 
-                fh = fopen("/sdcard/ringtone0.wav", "r");
+                fh = fopen(BARKA_WAV_16_TRIM, "r");
                 if (fh == NULL)
                 {
                     ESP_LOGE(TAG, "Failed to open file");
-                    alarm_play_sm = WAIT_FOR_START_PLAY;
+                    ESP_LOGI(TAG, "SET_RINGTONE -> WAIT_FOR_START_PLAY");
+                    alarm_play_sm = SET_NEXT_ALARM;
                     break;
                 }
-
+                
+                ESP_LOGI(TAG, "SET_RINGTONE -> SET_DATA_POSITION");
                 alarm_play_sm = SET_DATA_POSITION;
                 break;
             }
@@ -195,6 +208,7 @@ static void pp_alarm_main(void* arg)
             {
                 if(got_notify == pdTRUE && (notify_value == ALARM_TIMER_NOTIFICATION || notify_value == ALARM_STOP_NOTIFICATION))
                 {
+                    ESP_LOGI(TAG, "SET_DATA_POSITION -> SET_NEXT_ALARM");
                     alarm_play_sm = SET_NEXT_ALARM;
                     break;
                 }
@@ -202,14 +216,10 @@ static void pp_alarm_main(void* arg)
                 // skip the header...
                 fseek(fh, 44, SEEK_SET);
 
-                bytes_read = fread(buf, sizeof(int16_t), AUDIO_BUFFER, fh);
-                for (int i=0; i<bytes_read; i++)
-                {
-                    buf[i] = buf[i]>>0;
-                }
-
                 i2s_channel_enable(tx_handle);
                 pp_set_timer_for_playing_alarm();
+
+                ESP_LOGI(TAG, "SET_DATA_POSITION -> ALARM_PLAY");
                 alarm_play_sm = ALARM_PLAY;
                 break;
             }
@@ -218,22 +228,27 @@ static void pp_alarm_main(void* arg)
             {
                 if(got_notify == pdTRUE && (notify_value == ALARM_TIMER_NOTIFICATION || notify_value == ALARM_STOP_NOTIFICATION))
                 {
+                    ESP_LOGI(TAG, "ALARM_PLAY -> SET_NEXT_ALARM");
                     alarm_play_sm = SET_NEXT_ALARM;
                     break;
                 }
 
+                bytes_read = fread(buf, sizeof(int16_t), AUDIO_BUFFER, fh);
+                ESP_LOGI(TAG, "Read bytes = %d", bytes_read);
+                // for (int i=0; i < bytes_read; i++)
+                // {
+                //     buf[i] = buf[i]>>0;
+                // }
+
                 if(bytes_read > 0)
                 {
                     // write the buffer to the i2s
-                    i2s_channel_write(tx_handle, buf, bytes_read * sizeof(int16_t), &bytes_written, portMAX_DELAY);
-                    bytes_read = fread(buf, sizeof(int16_t), AUDIO_BUFFER, fh);
-                    for (int i=0; i<bytes_read; i++)
-                    {
-                        buf[i] = buf[i]>>0;
-                    }
+                    esp_err_t ret = i2s_channel_write(tx_handle, buf, bytes_read * sizeof(int16_t), &bytes_written, portMAX_DELAY);
+                    // ESP_LOGI(TAG, "ret = %d, bytes_written = %d", ret, bytes_written);
                 }
                 else
                 {
+                    ESP_LOGI(TAG, "ALARM_PLAY -> SET_DATA_POSITION");
                     alarm_play_sm = SET_DATA_POSITION;
                 }
                 break;
@@ -243,11 +258,13 @@ static void pp_alarm_main(void* arg)
             {
                 i2s_channel_disable(tx_handle);
                 fclose(fh);
-                pp_set_next_alarm();
+                ESP_LOGI(TAG, "SET_NEXT_ALARM -> WAIT_FOR_START_PLAY");
                 alarm_play_sm = WAIT_FOR_START_PLAY;
+
+                device_mode = DEFAULT_MODE;
+                pp_set_next_alarm();
             }
         }
-
     }
 }
 
@@ -532,7 +549,9 @@ otp_rsp_status_t pp_set_alarm_values(uint8_t *payload, uint16_t payload_len)
 void pp_set_next_alarm(void)
 {
     uint8_t quantity = pp_object_list_get_how_many();
-    object_id_array_t *object_array =  pp_object_list_get_objects_array();
+    ESP_LOGI(TAG, "File count = %d", quantity);
+    
+    object_id_array_t *object_array = pp_object_list_get_objects_array();
     alarm_mode_args_t next_alarm;
     esp_err_t ret;
 
@@ -551,9 +570,16 @@ void pp_set_next_alarm(void)
 
     for( int i = 0; i < quantity; ++i )
     {
+        if(object_array[i].type != ALARM_TYPE)
+        {
+            ESP_LOGI(TAG, "File ID = %lld, Type = %d SKIPPED", object_array[i].id, object_array[i].type);
+            continue;
+        }
+
+        ESP_LOGI(TAG, "Set Next Alarm Check object ID: %lld", object_array[i].id);
         ret = pp_object_manager_get_alarm_data_from_file(object_array[i].id, &next_alarm);
 
-        if (!ret && next_alarm.enable)
+        if (ret == ESP_OK && next_alarm.enable)
         {
             struct tm tm;
             tm.tm_hour 	= next_alarm.hour;
