@@ -234,11 +234,11 @@ static void pp_alarm_main(void* arg)
                 }
 
                 bytes_read = fread(buf, sizeof(int16_t), AUDIO_BUFFER, fh);
-                ESP_LOGI(TAG, "Read bytes = %d", bytes_read);
-                // for (int i=0; i < bytes_read; i++)
-                // {
-                //     buf[i] = buf[i]>>0;
-                // }
+                // ESP_LOGI(TAG, "Read bytes = %d", bytes_read);
+                for (int i=0; i < bytes_read; i++)
+                {
+                    buf[i] = buf[i]>>1;
+                }
 
                 if(bytes_read > 0)
                 {

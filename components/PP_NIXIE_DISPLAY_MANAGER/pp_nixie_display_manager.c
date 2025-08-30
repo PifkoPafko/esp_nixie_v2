@@ -250,8 +250,8 @@ static void pp_display_main(void* arg)
 
                 case ALARM_RING_MODE:
                 {
-                    pp_set_nixie_state_default();
-                    if(notify_value == NOTIFY_TIMER_VAL)
+                    
+                    if(notify_value == NOTIFY_TIMER_BLINK_VAL)
                     {
                         bool enable = !display_state.digit_enable[0];
                         memset(display_state.digit_enable, enable, TUBES_COUNT*sizeof(display_state.right_comma_enable[0]));
@@ -259,6 +259,10 @@ static void pp_display_main(void* arg)
                         display_state.right_comma_enable[3] = enable;
                         display_state.right_comma_enable[8] = enable;
                         display_state.right_comma_enable[10] = enable;
+                    }
+                    else
+                    {
+                        pp_set_nixie_state_default();
                     }
                     break;
                 }
@@ -283,7 +287,7 @@ static void pp_display_main(void* arg)
  */
 static void pp_timer_cb(TimerHandle_t xTimer)
 {
-    if(device_mode == TIME_CHANGE_MODE || device_mode == ALARM_ADD_MODE)
+    if(device_mode == TIME_CHANGE_MODE || device_mode == ALARM_ADD_MODE || device_mode == PAIRING_MODE || device_mode == ALARM_RING_MODE)
     {
         display_update_type_t notif = NOTIFY_TIMER_BLINK_VAL;
         xQueueSend(display_update_queue, &notif, 10);
