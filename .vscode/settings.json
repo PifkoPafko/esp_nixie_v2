@@ -127,7 +127,7 @@
     "i2s_common.h": "c"
   },
   "idf.flashType": "UART",
-  "idf.portWin": "COM3",
+  "idf.portWin": "COM9",
   "idf.adapterTargetName": "esp32s3",
   "idf.openOcdConfigs": [
     "board/esp32s3-bridge.cfg"

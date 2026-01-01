@@ -21,6 +21,8 @@
 
 /* Macros */
 #define DEVICE_NAME     "NIXIE B16"
+// #define DISPLAY_ENABLE
+#define WIFI_ENABLE
 
 /* I2C Devices */
 #define I2C_DEVICE_NUM 7
@@ -31,7 +33,10 @@
 #define ALARM_MONTHLY_MODE  2
 #define ALARM_YEARLY_MODE   3
 
+/* Bluetooth */
 #define ESP_UUID_LEN_128    16
+#define MAX_BONDED_DEVICES  5
+
 
 /* Structures */
 typedef enum {
@@ -127,19 +132,31 @@ typedef struct
     uint8_t volume;
 }alarm_mode_args_t;
 
+typedef struct {
+    uint8_t channel;
+    uint32_t red;
+    uint32_t green;
+    uint32_t blue;
+}led_update_t;
+
 /* Variables declarations */
 extern TaskHandle_t display_main_h;
 extern TaskHandle_t button_main_h;
 extern TaskHandle_t rtc_main_h;
 extern TaskHandle_t alarm_main_h;
 extern TaskHandle_t wifi_main_h;
+extern TaskHandle_t led_main_h;
 extern device_mode_t device_mode;
 extern alarm_mode_args_t current_alarm;
 extern const uint8_t alarm_type_uuid[ESP_UUID_LEN_128];
 extern const uint8_t ringtone_type_uuid[ESP_UUID_LEN_128];
 extern QueueHandle_t button_action_queue;
 extern QueueHandle_t display_update_queue;
+extern QueueHandle_t led_update_queue;
 extern display_digits_t display_digits;
-
+extern led_update_t current_led[2];
+extern uint8_t gatts_if_curr;
+extern uint8_t bt_connection_id_curr;
+extern uint8_t bt_wifi_handle;
 
 #endif

@@ -47,15 +47,15 @@ esp_gatt_status_t pp_object_transfer_read_event(uint16_t handle, uint16_t *handl
     {
         do {
             ESP_LOGI(TAG, "Object Name READ EVENT");
-            object_t* object = pp_object_manager_get_object();
-            if(object == NULL)
+            if(pp_object_manager_is_object_empty())
             {
                 ESP_LOGE(TAG, "Object not selected");
                 rsp->handle = handle;
                 rsp_status = ERROR_OBJECT_NOT_SELECTED;
                 break;
             }
-
+            
+            object_t* object = pp_object_manager_get_object();
             memcpy(rsp->attr_value.value, object->name, object->name_len);
             rsp->attr_value.handle = handle;
             rsp->attr_value.offset = 0;
@@ -69,8 +69,7 @@ esp_gatt_status_t pp_object_transfer_read_event(uint16_t handle, uint16_t *handl
     {
         do {
             ESP_LOGI(TAG, "Object Type READ EVENT");
-            object_t *object = pp_object_manager_get_object();
-            if(object == NULL)
+            if(pp_object_manager_is_object_empty())
             {
                 ESP_LOGE(TAG, "Object not selected");
                 rsp->handle = handle;
@@ -78,6 +77,7 @@ esp_gatt_status_t pp_object_transfer_read_event(uint16_t handle, uint16_t *handl
                 break;
             }
 
+            object_t *object = pp_object_manager_get_object();
             memcpy(rsp->attr_value.value, &object->type.uuid.uuid16, object->type.len);
             rsp->attr_value.handle = handle;
             rsp->attr_value.offset = 0;
@@ -91,8 +91,7 @@ esp_gatt_status_t pp_object_transfer_read_event(uint16_t handle, uint16_t *handl
     {
         do {
             ESP_LOGI(TAG, "Object Size READ EVENT");
-            object_t *object = pp_object_manager_get_object();
-            if(object == NULL)
+            if(pp_object_manager_is_object_empty())
             {
                 ESP_LOGE(TAG, "Object not selected");
                 rsp->handle = handle;
@@ -100,6 +99,7 @@ esp_gatt_status_t pp_object_transfer_read_event(uint16_t handle, uint16_t *handl
                 break;
             }
 
+            object_t *object = pp_object_manager_get_object();
             uint8_t object_size[8];
             memcpy(object_size, &object->size, 4);
             memcpy(&object_size[4], &object->alloc_size, 4);
@@ -116,8 +116,7 @@ esp_gatt_status_t pp_object_transfer_read_event(uint16_t handle, uint16_t *handl
     {
         do {
             ESP_LOGI(TAG, "Object ID READ EVENT");
-            object_t* object = pp_object_manager_get_object();
-            if(object == NULL)
+            if(pp_object_manager_is_object_empty())
             {
                 ESP_LOGE(TAG, "Object not selected");
                 rsp->handle = handle;
@@ -125,6 +124,7 @@ esp_gatt_status_t pp_object_transfer_read_event(uint16_t handle, uint16_t *handl
                 break;
             }
 
+            object_t* object = pp_object_manager_get_object();
             ESP_LOGI(TAG, "ID: %llx", object->id);
             memcpy(rsp->attr_value.value, &object->id, 6);
             rsp->attr_value.handle = handle;
@@ -139,8 +139,7 @@ esp_gatt_status_t pp_object_transfer_read_event(uint16_t handle, uint16_t *handl
     {
         do {
             ESP_LOGI(TAG, "Object Properties READ EVENT");
-            object_t* object = pp_object_manager_get_object();
-            if(object == NULL)
+            if(pp_object_manager_is_object_empty())
             {
                 ESP_LOGE(TAG, "Object not selected");
                 rsp->handle = handle;
@@ -148,6 +147,7 @@ esp_gatt_status_t pp_object_transfer_read_event(uint16_t handle, uint16_t *handl
                 break;
             }
 
+            object_t* object = pp_object_manager_get_object();
             memcpy(rsp->attr_value.value, &object->properties, 4);
             rsp->attr_value.handle = handle;
             rsp->attr_value.offset = 0;
@@ -176,15 +176,15 @@ esp_gatt_status_t pp_object_transfer_read_event(uint16_t handle, uint16_t *handl
     {
         do {
             ESP_LOGI(TAG, "Object alarm data READ EVENT");
-
-            object_t* object = pp_object_manager_get_object();
-            if(object == NULL)
+            if(pp_object_manager_is_object_empty())
             {
                 ESP_LOGE(TAG, "Object not selected");
                 rsp->handle = handle;
                 rsp_status = ERROR_OBJECT_NOT_SELECTED;
                 break;
             }
+
+            object_t* object = pp_object_manager_get_object();
 
             if(pp_object_manager_check_type(object->type.uuid.uuid128) != ALARM_TYPE)
             {
@@ -302,6 +302,29 @@ esp_gatt_status_t pp_object_transfer_read_event(uint16_t handle, uint16_t *handl
             rsp->attr_value.value[1] = my_wifi->my_ssid_len;
             memcpy(&rsp->attr_value.value[2], my_wifi->wifi_config.sta.ssid, my_wifi->my_ssid_len);
             rsp->attr_value.len = 2 + my_wifi->my_ssid_len;
+
+            rsp->attr_value.offset = 0;
+            rsp->attr_value.auth_req = ESP_GATT_AUTH_REQ_NONE;
+
+            rsp_status = STATUS_OK;
+
+        } while(0);
+    }
+    else if(handle == handle_table[OPT_IDX_CHAR_OBJECT_LED_ACTION_VAL])
+    {
+        do {
+            ESP_LOGI(TAG, "Object led data READ EVENT");
+            rsp->attr_value.handle = handle;
+
+            memcpy(rsp->attr_value.value + 0,  &current_led[0].red,   sizeof(current_led[0].red));
+            memcpy(rsp->attr_value.value + 4,  &current_led[0].green, sizeof(current_led[0].green));
+            memcpy(rsp->attr_value.value + 8,  &current_led[0].blue,  sizeof(current_led[0].blue));
+
+            memcpy(rsp->attr_value.value + 12, &current_led[1].red,   sizeof(current_led[1].red));
+            memcpy(rsp->attr_value.value + 16, &current_led[1].green, sizeof(current_led[1].green));
+            memcpy(rsp->attr_value.value + 20, &current_led[1].blue,  sizeof(current_led[1].blue));
+
+            rsp->attr_value.len = 24;
 
             rsp->attr_value.offset = 0;
             rsp->attr_value.auth_req = ESP_GATT_AUTH_REQ_NONE;

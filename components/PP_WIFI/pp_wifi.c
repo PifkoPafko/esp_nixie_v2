@@ -156,12 +156,14 @@ static void pp_search_wifi_task(void* arg)
  */
 void pp_start_search_task(void)
 {
+#ifdef WIFI_ENABLE
     wifi_search_main_fun = pp_search_wifi_task;
     BaseType_t res = xTaskCreate(wifi_search_main_fun, "Wifi_Search", 4096, NULL, 1, &wifi_main_h);
     if(res != pdPASS)
     {
         ESP_ERROR_CHECK(ESP_FAIL);
     }
+#endif
 }
 
 /** @brief pp_connect_wifi: Connects to specified wifi network
@@ -175,6 +177,7 @@ void pp_start_search_task(void)
  */
 void pp_connect_wifi(const uint8_t *ssid, const uint8_t ssid_len, const uint8_t *password, const uint8_t pass_len)
 {
+#ifdef WIFI_ENABLE
     ESP_ERROR_CHECK(esp_wifi_stop());
     memcpy((uint8_t*)my_wifi.wifi_config.sta.ssid, ssid, ssid_len);
     my_wifi.wifi_config.sta.ssid[ssid_len] = '\0';
@@ -187,6 +190,7 @@ void pp_connect_wifi(const uint8_t *ssid, const uint8_t ssid_len, const uint8_t 
     ESP_ERROR_CHECK(esp_wifi_set_config(WIFI_IF_STA, &my_wifi.wifi_config) );    
     ESP_ERROR_CHECK(esp_wifi_start());
     ESP_ERROR_CHECK(esp_wifi_connect());
+#endif
 }
 
 /** @brief pp_get_wifi_connect_status: Returns WiFi connection status

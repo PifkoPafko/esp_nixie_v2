@@ -17,11 +17,6 @@
 /* Macros */
 #define TAG "WRITE_EVENT"
 
-/* Variable declarations */
-static esp_gatt_if_t gatts_interface;
-static uint16_t handle_wifi;
-static uint16_t connection_id;
-
 /** @brief pp_object_transfer_write_event: Object Transfer Write handler function
  * 
  * This function should be called when Bluetooth GATT Profile got a write request for Object Transfer profile.
@@ -53,15 +48,15 @@ esp_gatt_status_t pp_object_transfer_write_event(esp_ble_gatts_cb_param_t *param
     {
         do {
             ESP_LOGI(TAG, "Object Name WRITE EVENT");
-            object_t *object;
-            object = pp_object_manager_get_object();
-            if(object == NULL)
+            if(pp_object_manager_is_object_empty())
             {
                 ESP_LOGE(TAG, "Object not selected");
                 rsp->handle = handle;
                 rsp_status = ERROR_OBJECT_NOT_SELECTED;
                 break;
             }
+
+            object_t *object = pp_object_manager_get_object();
 
             if(param->write.len == 0)
             {
@@ -115,14 +110,14 @@ esp_gatt_status_t pp_object_transfer_write_event(esp_ble_gatts_cb_param_t *param
                 break;
             }
 
-            object_t *object;
-            object = pp_object_manager_get_object();
-            if(object == NULL)
+            if(pp_object_manager_is_object_empty())
             {
                 ESP_LOGE(TAG, "Object not selected");
                 rsp_status = ERROR_OBJECT_NOT_SELECTED;
                 break;
             }
+
+            object_t *object = pp_object_manager_get_object();
             
             object->properties = new_properties;
             pp_object_manager_change_properties_in_file();
@@ -310,7 +305,7 @@ esp_gatt_status_t pp_object_transfer_write_event(esp_ble_gatts_cb_param_t *param
     else if(handle == handle_table[OPT_IDX_CHAR_OBJECT_LIST_FILTER_VAL])
     {
         do {
-            ESP_LOGE(TAG, "Object Properties WRITE EVENT");
+            ESP_LOGI(TAG, "Object List Filter WRITE EVENT");
             rsp->handle = handle;
 
             if(param->write.len == 0)
@@ -400,10 +395,18 @@ esp_gatt_status_t pp_object_transfer_write_event(esp_ble_gatts_cb_param_t *param
 
             ListFilter_t *filter = pp_object_list_get_filter();
             filter->type = param->write.value[0];
-            memcpy(filter->parameter, &param->write.value[1], param->write.len-1);
-            //if(filter->type >= 0x01 && filter->type <= 0x04) filter->parameter[param->write.len-1] = '\0';
-            filter->par_length = param->write.len-1;
 
+            if(param->write.value[0] == OBJECT_TYPE)
+            {
+                filter->parameter[0] = pp_object_manager_check_type(&param->write.value[1]);
+                filter->par_length = 1;
+            }
+            else
+            {
+                memcpy(filter->parameter, &param->write.value[1], param->write.len-1);
+                filter->par_length = param->write.len-1;
+            }
+            
             pp_object_list_make_list();
 
             rsp_status = STATUS_OK;
@@ -416,14 +419,14 @@ esp_gatt_status_t pp_object_transfer_write_event(esp_ble_gatts_cb_param_t *param
             ESP_LOGI(TAG, "Object Alarm Action WRITE EVENT, payload length: %u", param->write.len);
             rsp->handle = handle;
             
-            object_t *object;
-            object = pp_object_manager_get_object();
-            if(object == NULL)
+            if(pp_object_manager_is_object_empty())
             {
                 ESP_LOGE(TAG, "Object not selected");
                 rsp_status = ERROR_OBJECT_NOT_SELECTED;
                 break;
             }
+
+            object_t *object = pp_object_manager_get_object();
 
             if(pp_object_manager_check_type(object->type.uuid.uuid128) != ALARM_TYPE)
             {
@@ -547,6 +550,30 @@ esp_gatt_status_t pp_object_transfer_write_event(esp_ble_gatts_cb_param_t *param
                     ESP_LOGE(TAG, "unknown descr value");;
                 }
             }
+        } while(0);
+    }
+    else if(handle == handle_table[OPT_IDX_CHAR_OBJECT_LED_ACTION_VAL])
+    {
+        do {
+            ESP_LOGI(TAG, "Object LED Action WRITE EVENT");
+            rsp->handle = handle;
+
+            if(param->write.len != 13)
+            {
+                ESP_LOGE(TAG, "INVALID ATTR VAL LENGTH = %d", param->write.len);
+                rsp_status = INVALID_ATTR_VAL_LENGTH;
+                break;
+            }
+
+            led_update_t led_params;
+            memcpy(&led_params.channel, &param->write.value[0], sizeof(led_params.channel));
+            memcpy(&led_params.red, &param->write.value[1],     sizeof(led_params.red));
+            memcpy(&led_params.green, &param->write.value[5],   sizeof(led_params.green));
+            memcpy(&led_params.blue, &param->write.value[9],    sizeof(led_params.blue));
+            xQueueSend(led_update_queue, &led_params, 10);
+
+            rsp_status = STATUS_OK;
+
         } while(0);
     }
 
@@ -796,7 +823,7 @@ void pp_object_transfer_send_found_wifi_ind(wifi_ap_record_t *wifi_record)
 
     *payload_ptr = (uint8_t)wifi_record->authmode;
 
-    esp_ble_gatts_send_indicate(gatts_interface, connection_id, handle_wifi, indicate_data_len, indicate_data, true);
+    esp_ble_gatts_send_indicate(gatts_if_curr, bt_connection_id_curr, bt_wifi_handle, indicate_data_len, indicate_data, true);
 }
 
 /** @brief pp_object_transfer_send_found_wifi_ind: Sends found WiFi networks by indication
@@ -815,5 +842,5 @@ void pp_object_transfer_send_found_wifi_ind(wifi_ap_record_t *wifi_record)
  */
 void pp_object_transfer_send_simple_wifi_ind(uint8_t type)
 {
-    esp_ble_gatts_send_indicate(gatts_interface, connection_id, handle_wifi, 1, &type, true);
+    esp_ble_gatts_send_indicate(gatts_if_curr, bt_connection_id_curr, bt_wifi_handle, 1, &type, true);
 }

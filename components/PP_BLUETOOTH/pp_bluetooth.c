@@ -22,6 +22,8 @@
 static void gap_event_handler(esp_gap_ble_cb_event_t event, esp_ble_gap_cb_param_t *param);
 static void gatts_profile_event_handler(esp_gatts_cb_event_t event, esp_gatt_if_t gatts_if, esp_ble_gatts_cb_param_t *param);
 static void gatts_event_handler(esp_gatts_cb_event_t event, esp_gatt_if_t gatts_if, esp_ble_gatts_cb_param_t *param);
+static void update_bonded_devices(void);
+static void remove_all_bonded_devices(void);
 
 /* Variables */
 static const uint16_t GATTS_OTP_SRV                     = 0x1825;
@@ -37,6 +39,7 @@ static const uint16_t GATTS_CHAR_OBJECT_LIST_FILTER     = 0x2AC7;
 static uint8_t GATTS_CHAR_ALARM_ACTION[16]              = {0x26, 0xab, 0x57, 0xe0, 0x57, 0xab, 0x45, 0x98, 0xaf, 0xf2, 0x06, 0xe5, 0x27, 0x3f, 0x91, 0x9e};
 // static uint8_t GATTS_CHAR_RINGTONE_ACTION[16]           = {0x26, 0xab, 0x57, 0xe0, 0x57, 0xab, 0x45, 0x98, 0xaf, 0xf2, 0x06, 0xe5, 0x27, 0x5c, 0xe5, 0x40};      TBD
 static uint8_t GATTS_CHAR_WIFI_ACTION[16]               = {0x26, 0xab, 0x57, 0xe0, 0x57, 0xab, 0x45, 0x98, 0xaf, 0xf2, 0x06, 0xe5, 0x27, 0x2a, 0x14, 0x80};
+static uint8_t GATTS_CHAR_LED_ACTION[16]                = {0x26, 0xab, 0x57, 0xe0, 0x57, 0xab, 0x45, 0x98, 0xaf, 0xf2, 0x06, 0xe5, 0x27, 0x1b, 0x18, 0x42};
 
 static const uint16_t primary_service_uuid          = ESP_GATT_UUID_PRI_SERVICE;
 static const uint16_t char_declaration_uuid         = ESP_GATT_UUID_CHAR_DECLARE;
@@ -204,7 +207,17 @@ static const esp_gatts_attr_db_t gatt_db[OPT_IDX_NB] =
     /* Object Wifi Action Characteristic Configuration Descriptor */
     [OPT_IDX_CHAR_OBJECT_WIFI_ACTION_CFG]  =
     {{ESP_GATT_AUTO_RSP}, {ESP_UUID_LEN_16, (uint8_t *)&character_client_config_uuid, ESP_GATT_PERM_WRITE,
-      GATTS_DEMO_CHAR_VAL_LEN_MAX, 0, NULL}}
+      GATTS_DEMO_CHAR_VAL_LEN_MAX, 0, NULL}},
+
+    /* Object LED Action Characteristic Declaration */
+    [OPT_IDX_CHAR_OBJECT_LED_ACTION]       =
+    {{ESP_GATT_AUTO_RSP}, {ESP_UUID_LEN_16, (uint8_t *)&char_declaration_uuid, ESP_GATT_PERM_READ,
+      CHAR_DECLARATION_SIZE, CHAR_DECLARATION_SIZE, (uint8_t *)&char_prop_read_write}},
+
+    /* Object LED Action Characteristic Value */
+    [OPT_IDX_CHAR_OBJECT_LED_ACTION_VAL]   =
+    {{ESP_GATT_RSP_BY_APP}, {ESP_UUID_LEN_128, GATTS_CHAR_LED_ACTION, ESP_GATT_PERM_READ | ESP_GATT_PERM_WRITE,
+      GATTS_DEMO_CHAR_VAL_LEN_MAX, 0, NULL}},
 };
 
 /* One gatt-based profile one app_id and one gatts_if, this array will store the gatts_if returned by ESP_GATTS_REG_EVT */
@@ -236,7 +249,7 @@ static esp_ble_gap_ext_adv_params_t ext_adv_params = {
 };
 
 /* Extended Advertising Raw Data */
-static uint8_t ext_adv_raw_data[] = {
+static const uint8_t ext_adv_raw_data[] = {
     0x02, 0x01, 0x06,
     0x02, 0x0a, 0xeb, 0x03, 0x03, 0xab, 0xcd,
     0x0a, 0X09, 'N', 'I', 'X', 'I', 'E', ' ', 'B', '1', '6',
@@ -245,6 +258,8 @@ static uint8_t ext_adv_raw_data[] = {
 /* OTP handle table */
 static uint16_t OPT_HANDLE_TABLE[OPT_IDX_NB];
 
+static esp_ble_bond_dev_t bonded_dev_list[5];
+static int bonded_dev_num = 0;
 
 /* Functions */
 
@@ -284,6 +299,8 @@ void pp_bluetooth_init(void)
     esp_ble_gap_set_security_param(ESP_BLE_SM_OOB_SUPPORT, &oob_support, sizeof(uint8_t));
     esp_ble_gap_set_security_param(ESP_BLE_SM_SET_INIT_KEY, &init_key, sizeof(uint8_t));
     esp_ble_gap_set_security_param(ESP_BLE_SM_SET_RSP_KEY, &rsp_key, sizeof(uint8_t));
+
+    update_bonded_devices();
 }
 
 /** @brief gap_event_handler: GAP Event handler
@@ -292,6 +309,8 @@ void pp_bluetooth_init(void)
  */
 static void gap_event_handler(esp_gap_ble_cb_event_t event, esp_ble_gap_cb_param_t *param)
 {
+    ESP_LOGI(GATTS_TAG, "Bluetooth GAP Event: %d", event);
+
     switch (event) 
     {
         case ESP_GAP_BLE_EXT_ADV_SET_PARAMS_COMPLETE_EVT:
@@ -314,37 +333,33 @@ static void gap_event_handler(esp_gap_ble_cb_event_t event, esp_ble_gap_cb_param
             if(param->adv_terminate.status == 0x00) 
             {
                 ESP_LOGI(GATTS_TAG, "ADV successfully ended with a connection being created");
-                uint32_t passkey = esp_random() / 4832 + 100000;    // /4295 to convert uint32 value to 0-999999 value
-                esp_ble_gap_set_security_param(ESP_BLE_SM_SET_STATIC_PASSKEY, &passkey, sizeof(uint32_t));
-                pp_set_display_passkey(passkey);
-                device_mode = PAIRING_PASSKEY_MODE;
-
-                display_update_type_t notif = NOTIFY_NORMAL_VAL;
-                xQueueSend(display_update_queue, &notif, 10);
             }
+            break;
+        }
+
+        case ESP_GAP_BLE_NC_REQ_EVT:
+        {
+            ESP_LOGI(GATTS_TAG, "ESP_GAP_BLE_NC_REQ_EVT");
             break;
         }
 
         case ESP_GAP_BLE_SEC_REQ_EVT:
         {
-            ESP_LOGI(GATTS_TAG, "ESP_GAP_BLE_NC_REQ_EVT");
-            /* send the positive(true) security response to the peer device to accept the security request.
-            If not accept the security request, should send the security response with negative(false) accept value*/
+            ESP_LOGI(GATTS_TAG, "ESP_GAP_BLE_SEC_REQ_EVT");
             esp_ble_gap_security_rsp(param->ble_security.ble_req.bd_addr, true);
+            break;
+        }
+
+        case ESP_GAP_BLE_PASSKEY_REQ_EVT:
+        {
+            ESP_LOGI(GATTS_TAG, "ESP_GAP_BLE_PASSKEY_REQ_EVT");
             break;
         }
 
         case ESP_GAP_BLE_PASSKEY_NOTIF_EVT:  ///the app will receive this evt when the IO has Output capability and the peer device IO has Input capability.
         {
-            if (device_mode == PAIRING_MODE || device_mode == PAIRING_PASSKEY_MODE)
-            {
-                ESP_LOGI(GATTS_TAG, "The passkey Notify number: %06" PRIu32, param->ble_security.key_notif.passkey);
-            }
-            else
-            {
-                esp_ble_gap_disconnect(param->ble_security.key_notif.bd_addr);
-            }
-            
+            ESP_LOGI(GATTS_TAG, "ESP_GAP_BLE_PASSKEY_NOTIF_EVT");
+            ESP_LOGI(GATTS_TAG, "Passkey notify, passkey %06" PRIu32, param->ble_security.key_notif.passkey);
             break;
         }
 
@@ -376,13 +391,20 @@ static void gap_event_handler(esp_gap_ble_cb_event_t event, esp_ble_gap_cb_param
                 ESP_LOGI(GATTS_TAG, "auth mode = %d",(uint8_t)param->ble_security.auth_cmpl.auth_mode);
             }
 
-            if (param->ble_security.auth_cmpl.success && (device_mode == PAIRING_MODE || device_mode == PAIRING_PASSKEY_MODE))
-            {
-                device_mode = DEFAULT_MODE;
-                display_update_type_t notif = NOTIFY_NORMAL_VAL;
-                xQueueSend(display_update_queue, &notif, 10);
-            }
+            gpio_set_level(GPIO_OUTPUT_BLUE, 1);
+            update_bonded_devices();
             
+            if(device_mode == PAIRING_PASSKEY_MODE)
+            {
+                ESP_LOGI(GATTS_TAG, "PAIRING_PASSKEY_MODE -> DEFAULT_MODE");
+                device_mode = DEFAULT_MODE;
+
+#ifdef DISPLAY_ENABLE
+            display_update_type_t notif = NOTIFY_NORMAL_VAL;
+            xQueueSend(display_update_queue, &notif, 10);
+#endif
+            }
+
             break;
         }
 
@@ -414,6 +436,8 @@ static void gap_event_handler(esp_gap_ble_cb_event_t event, esp_ble_gap_cb_param
  */
 static void gatts_profile_event_handler(esp_gatts_cb_event_t event, esp_gatt_if_t gatts_if, esp_ble_gatts_cb_param_t *param)
 {
+    ESP_LOGI(GATTS_TAG, "Bluetooth GATTS Event: %d", event);
+
     switch (event) 
     {
         case ESP_GATTS_REG_EVT:
@@ -425,12 +449,12 @@ static void gatts_profile_event_handler(esp_gatts_cb_event_t event, esp_gatt_if_
         }
         case ESP_GATTS_READ_EVT:
         {
-            ESP_LOGI(GATTS_TAG, "ESP_GATTS_READ_EVT");
+            ESP_LOGI(GATTS_TAG, "ESP_GATTS_READ_EVT, handle = %" PRIu16 " offset = %"  PRIu16, param->read.handle, param->read.offset);
 
             esp_gatt_rsp_t rsp;
             esp_gatt_status_t status = ESP_GATT_OK;
 
-            if(param->read.handle < OPT_IDX_NB)
+            if(param->read.handle >= OPT_HANDLE_TABLE[0] && param->read.handle <= OPT_HANDLE_TABLE[OPT_IDX_NB - 1])
             {
                 ESP_LOGI(GATTS_TAG, "ESP_GATTS_READ_EVT: OTP");
                 status = pp_object_transfer_read_event(param->read.handle, OPT_HANDLE_TABLE, &rsp);
@@ -450,7 +474,7 @@ static void gatts_profile_event_handler(esp_gatts_cb_event_t event, esp_gatt_if_
             esp_gatt_rsp_t otp_rsp;
             esp_gatt_status_t status = ESP_GATT_OK;
 
-            if(param->write.handle < OPT_IDX_NB)
+            if(param->write.handle >= OPT_HANDLE_TABLE[0] && param->write.handle <= OPT_HANDLE_TABLE[OPT_IDX_NB - 1])
             {
                 ESP_LOGI(GATTS_TAG, "ESP_GATTS_WRITE_EVT: OTP");
                 otp_write_attr_t write_params;
@@ -481,8 +505,72 @@ static void gatts_profile_event_handler(esp_gatts_cb_event_t event, esp_gatt_if_
         case ESP_GATTS_CONNECT_EVT:
         {
             ESP_LOGI(GATTS_TAG, "ESP_GATTS_CONNECT_EVT, conn_id = %d", param->connect.conn_id);
-            esp_ble_set_encryption(param->connect.remote_bda, ESP_BLE_SEC_ENCRYPT_MITM);
-            gpio_set_level(GPIO_OUTPUT_BLUE, 1);
+            bt_connection_id_curr = param->connect.conn_id;
+
+            bool accept_sec_req = false;
+            bool bonded = false;
+
+
+            if(bonded_dev_num > 0)
+            {
+                for (int i = 0; i < bonded_dev_num; i++) 
+                {
+                    if(memcmp(bonded_dev_list[i].bd_addr, param->connect.remote_bda, ESP_BD_ADDR_LEN) == 0)
+                    {
+                        ESP_LOGI(GATTS_TAG, "Peer device already bonded");
+                        bonded = true;
+                        break;
+                    }
+                }  
+            }
+  
+            if (device_mode == PAIRING_MODE && bonded == false)
+            {
+                if(bonded_dev_num >= MAX_BONDED_DEVICES)
+                {
+                    ESP_LOGI(GATTS_TAG, "Maximum bonded device level reached. Clearing bonds");
+                    remove_all_bonded_devices();
+                }
+
+                ESP_LOGI(GATTS_TAG, "PAIRING_MODE -> PAIRING_PASSKEY_MODE");
+                device_mode = PAIRING_PASSKEY_MODE;
+                accept_sec_req = true;
+
+                ESP_LOGI(GATTS_TAG, "Generating new passkey");
+                uint32_t passkey = esp_random() / 4832 + 100000;    // /4295 to convert uint32 value to 0-999999 value
+                esp_ble_gap_set_security_param(ESP_BLE_SM_SET_STATIC_PASSKEY, &passkey, sizeof(uint32_t));
+
+#ifdef DISPLAY_ENABLE
+                pp_set_display_passkey(passkey);
+                display_update_type_t notif = NOTIFY_NORMAL_VAL;
+                xQueueSend(display_update_queue, &notif, 10);
+#endif
+            }
+            else if(device_mode == PAIRING_MODE && bonded == true)
+            {
+                ESP_LOGI(GATTS_TAG, "PAIRING_MODE -> DEFAULT_MODE");
+                device_mode = DEFAULT_MODE;
+                accept_sec_req = true;
+            }
+            else if(device_mode != PAIRING_MODE && bonded == false)
+            {
+                ESP_LOGI(GATTS_TAG, "Device not bonded, set the device into PAIRING mode");
+                accept_sec_req = false;
+            }
+            else if(device_mode != PAIRING_MODE && bonded == true)
+            {
+                accept_sec_req = true;
+            }
+
+            if(accept_sec_req)
+            {
+                esp_ble_set_encryption(param->connect.remote_bda, ESP_BLE_SEC_ENCRYPT_MITM);
+            }
+            else
+            {
+                esp_ble_gap_disconnect(param->connect.remote_bda);
+            }
+
             break;
         }
         case ESP_GATTS_DISCONNECT_EVT:
@@ -507,6 +595,7 @@ static void gatts_profile_event_handler(esp_gatts_cb_event_t event, esp_gatt_if_
             {
                 ESP_LOGI(GATTS_TAG, "create attribute table successfully, the number handle = %d\n",param->add_attr_tab.num_handle);
                 memcpy(OPT_HANDLE_TABLE, param->add_attr_tab.handles, sizeof(OPT_HANDLE_TABLE));
+                bt_wifi_handle = OPT_HANDLE_TABLE[OPT_IDX_CHAR_OBJECT_WIFI_ACTION_VAL];
                 esp_ble_gatts_start_service(OPT_HANDLE_TABLE[OPT_IDX_SVC]);
             }
             break;
@@ -529,6 +618,7 @@ static void gatts_event_handler(esp_gatts_cb_event_t event, esp_gatt_if_t gatts_
         if (param->reg.status == ESP_GATT_OK) 
         {
             OPT_profile_tab[PROFILE_APP_IDX].gatts_if = gatts_if;
+            gatts_if_curr = gatts_if;
         } 
         else 
         {
@@ -544,4 +634,34 @@ static void gatts_event_handler(esp_gatts_cb_event_t event, esp_gatt_if_t gatts_
             OPT_profile_tab[PROFILE_APP_IDX].gatts_cb(event, gatts_if, param);
         }
     }
+}
+
+/** @brief update_bonded_devices: Updates bonded device list
+ * 
+ * @return
+ */
+static void update_bonded_devices(void)
+{
+    bonded_dev_num = esp_ble_get_bond_device_num();
+    esp_ble_get_bond_device_list(&bonded_dev_num, bonded_dev_list);
+}
+
+/** @brief remove_all_bonded_devices: Removes all bonds
+ * 
+ * @return
+ */
+static void remove_all_bonded_devices(void)
+{
+    bonded_dev_num = esp_ble_get_bond_device_num();
+    if (bonded_dev_num == 0) {
+        ESP_LOGI(GATTS_TAG, "Bonded devices number zero\n");
+        return;
+    }
+
+    esp_ble_get_bond_device_list(&bonded_dev_num, bonded_dev_list);
+    for (int i = 0; i < bonded_dev_num; i++) {
+        esp_ble_remove_bond_device(bonded_dev_list[i].bd_addr);
+    }
+
+    bonded_dev_num = 0;
 }

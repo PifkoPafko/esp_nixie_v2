@@ -20,6 +20,7 @@
 #include "pp_alarm.h"
 #include "pp_wifi.h"
 #include "pp_gpio.h"
+#include "pp_led.h"
 #include "pp_nixie_display_manager.h"
 #include "pp_program.h"
 
@@ -44,9 +45,17 @@ void app_main(void)
     pp_alarm_init();            // Initializes alarm functionality
     pp_rtc_init();              // Initializes RTC module functionality
     pp_gpio_init();             // Initializes gpio funcionality
+    pp_led_init();              // Initializes LED funcionality
+
+#ifdef DISPLAY_ENABLE
     pp_display_manager_init();  // Initializes display funcionality
+#endif
+
     pp_bluetooth_init();        // Initializes bluetooth funcionality
+
+#ifdef WIFI_ENABLE
     pp_wifi_init();             // Initializes WiFi functionality
+#endif
 
     // Go to the program main
     pp_program_main();          // Redirect main loop to the program loop

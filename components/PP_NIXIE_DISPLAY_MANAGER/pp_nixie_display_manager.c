@@ -81,6 +81,8 @@ void pp_display_manager_init(void)
  */
 void pp_update_display()
 {
+#ifdef DISPLAY_ENABLE
+
     switch(device_mode)
     {
         case DEFAULT_MODE:
@@ -114,6 +116,8 @@ void pp_update_display()
 
     display_update_type_t notif = NOTIFY_TIMER_VAL;
     xQueueSend(display_update_queue, &notif, 10);
+
+#endif
 }
 
 /** @brief pp_set_display_passkey: Set bluetooth passkey to display afterwards

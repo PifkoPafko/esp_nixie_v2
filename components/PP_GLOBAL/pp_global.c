@@ -21,6 +21,7 @@ TaskHandle_t button_main_h;
 TaskHandle_t rtc_main_h;
 TaskHandle_t alarm_main_h;
 TaskHandle_t wifi_main_h;
+TaskHandle_t led_main_h;
 
 /* Device Mode */
 device_mode_t device_mode = DEFAULT_MODE;
@@ -38,5 +39,16 @@ QueueHandle_t button_action_queue;
 /* Display Update Queue */
 QueueHandle_t display_update_queue;
 
+/* Current LED */
+led_update_t current_led[2];
+
+/* LED Update Queue */
+QueueHandle_t led_update_queue;
+
 /* Display digits description */
 display_digits_t display_digits;
+
+/* Bluetooth connection */
+uint8_t gatts_if_curr;
+uint8_t bt_connection_id_curr;
+uint8_t bt_wifi_handle;
