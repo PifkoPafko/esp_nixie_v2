@@ -15,6 +15,8 @@
 #include "pp_nixie_display_manager.h"
 #include "pp_gpio.h"
 #include "pp_bluetooth.h"
+#include "pp_led.h"
+#include "pp_nvs.h"
 
 /* Macros */
 #define ALARM_FILE_TYPE ".txt"
@@ -32,6 +34,34 @@ typedef enum {
     WAIT_FOR_CENTER_LONG,
     PAIRING
 }pairing_sm_t;
+
+typedef enum {
+    WAIT_FOR_CENTER_LED,
+    WAIT_FOR_RIGHT_LED,
+    WAIT_FOR_CENTER_LONG_LED,
+    WAIT_FOR_RIGHT_LONG_LED,
+    LED_ADJUST
+}led_sm_t;
+
+typedef enum {
+    IDLE_LED_CHANGE,
+    SET_LED0_ENABLE,
+    SET_LED0_RED,
+    SET_LED0_GREEN,
+    SET_LED0_BLUE,
+    SET_LED1_ENABLE,
+    SET_LED1_RED,
+    SET_LED1_GREEN,
+    SET_LED1_BLUE
+}led_lamps_sm_t;
+
+typedef enum {
+    WAIT_FOR_LEFT_RINGTONE,
+    WAIT_FOR_RIGHT_RINGTONE,
+    WAIT_FOR_LEFT_LONG_RINGTONE,
+    WAIT_FOR_RIGHT_LONG_RINGTONE,
+    RINGTONE
+}ring_sm_t;
 
 typedef enum {
     IDLE_TIME_CHANGE,
@@ -75,7 +105,8 @@ typedef enum {
     SET_YEARLY_DAY_SECOND,
     SET_YEARLY_MONTH_FIRST,
     SET_YEARLY_MONTH_SECOND,
-    SET_VOLUME
+    SET_VOLUME,
+    SET_RINGTONE_ALARM
 }alarm_add_sm_t;
 
 /* Functions */

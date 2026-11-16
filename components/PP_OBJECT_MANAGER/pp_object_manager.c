@@ -19,7 +19,6 @@
 #define TAG "OBJECT_MANAGER"
 
 /* Declarations */
-static FILE* pp_object_manager_open_file(const char* option,  uint64_t id);
 static void pp_object_manager_truncate_rest(uint64_t id, uint32_t offset);
 static void pp_object_manager_set_current_object_from_file(uint64_t id);
 static bool pp_seekfor(FILE *stream, const char* str, fpos_t *pos);
@@ -206,26 +205,65 @@ void pp_object_manager_init(void)
         {
             ESP_LOGI(TAG, "Skip System Volume Information File");
         }
+        else if(strcmp(temp_dir->d_name, "default") == 0)
+        {
+            ESP_LOGI(TAG, "Skip defult ringtones folder");
+        }
         else    /* File */
         {
             ESP_LOGI(TAG, "/MOUNT_POINT directory file = %s", temp_dir->d_name);
-            object_type_t object_type;
+            
             uint64_t id;
+            id = strtoull(temp_dir->d_name, NULL, 16);
 
-            if(strcmp(&temp_dir->d_name[strlen(temp_dir->d_name)-4], ".wav") == 0)
+            FILE* f = pp_object_manager_open_file("r", id);
+
+            if(f == NULL)
             {
-                object_type = RINGTONE_TYPE;
-                id = strtoull(temp_dir->d_name, NULL, 16);
-                ESP_LOGI(TAG, "File = %s; id = %lld, type = RINGTONE", temp_dir->d_name, id);
+                continue;
+            }
+
+            esp_bt_uuid_t type;
+            char line[50];
+            char *ptr;
+
+            fgets(line, sizeof(line), f);
+            fgets(line, sizeof(line), f);
+            fgets(line, sizeof(line), f);
+            fgets(line, sizeof(line), f);
+
+            fgets(line, sizeof(line), f);
+            type.len = atoi(&line[11]);
+
+            fgets(line, sizeof(line), f);
+            char uuid_byte_str[3];
+            uint16_t uuid_byte;
+            for(int i=15; i>=0; i--)
+            {
+                strncpy(uuid_byte_str, &line[6+(15-i)*2], 2);
+                uuid_byte_str[2] = '\0';
+                uuid_byte = strtol(uuid_byte_str, &ptr, 16);
+                type.uuid.uuid128[i] = uuid_byte;
+            }
+
+            fclose(f);
+
+            object_type_t ret_type = pp_object_manager_check_type(type.uuid.uuid128);
+
+            if(ret_type == RINGTONE_TYPE)
+            {
+                ESP_LOGI(TAG, "File id = %lld, type = RINGTONE", id);
+            }
+            else if(ret_type == ALARM_TYPE)
+            {
+                ESP_LOGI(TAG, "File id = %lld, type = ALARM", id);
             }
             else
             {
-                object_type = ALARM_TYPE;
-                id = strtoull(temp_dir->d_name, NULL, 16);
-                ESP_LOGI(TAG, "File = %s; id = %lld, type = ALARM", temp_dir->d_name, id);
+                continue;
             }
 
-            pp_object_list_add_by_id(object_type, id);
+            pp_object_list_add_by_id(ret_type, id);
         }
     }
 
@@ -233,7 +271,7 @@ void pp_object_manager_init(void)
 
     if (fr != 0)
     {
-        ESP_LOGE(TAG, "Can't close /alarms directory");
+        ESP_LOGE(TAG, "Can't close /MOUNT_POINT directory");
         ESP_ERROR_CHECK(ESP_FAIL);
     }
 
@@ -345,7 +383,7 @@ oacp_op_code_result_t pp_object_manager_create_object(uint32_t size, esp_bt_uuid
             break;
 
         case RINGTONE_TYPE:
-            ESP_LOGI(TAG, "Ringtone files not supported yet");
+            current_object.set_custom_object = false;
             break;
     }
 
@@ -742,6 +780,8 @@ void pp_object_manager_change_alarm_data_in_file(alarm_mode_args_t *alarm)
     }
 
     fprintf(f, "Volume: %02x\n", alarm->volume);
+    fprintf(f, "Ringtone default: %02x\n", alarm->ringtone_default);
+    fprintf(f, "Ringtone: %016" PRIx64 "\n", alarm->ringtone_id);
 
     uint32_t truncate_offset = ftell(f);
     fseek(f, 0, SEEK_SET);
@@ -836,6 +876,12 @@ esp_err_t pp_object_manager_get_alarm_data_from_file(uint64_t id, alarm_mode_arg
 
     fgets(line, sizeof(line), f);
     alarm_p->volume = strtol(&line[strlen("Volume: ") ], &ptr, 16);
+
+    fgets(line, sizeof(line), f);
+    alarm_p->ringtone_default = strtol(&line[strlen("Ringtone default: ") ], &ptr, 16);
+
+    fgets(line, sizeof(line), f);
+    alarm_p->ringtone_id = strtoll(&line[strlen("Ringtone: ") ], &ptr, 16);
     
     fclose(f);
 
@@ -991,7 +1037,7 @@ void pp_object_manager_print_current_object(void)
  * 
  * @return   (FILE*)  Pointer to opened file
  */
-static FILE* pp_object_manager_open_file(const char* option,  uint64_t id)
+FILE* pp_object_manager_open_file(const char* option,  uint64_t id)
 {
     char file[20];
     strcpy(file, MOUNT_POINT);
@@ -1167,6 +1213,17 @@ static void pp_object_manager_set_current_object_from_file(uint64_t id)
 
         case RINGTONE_TYPE:
             ESP_LOGI(TAG, "Requested object type: Ringtone file");
+
+            fpos_t pos;
+            bool found = pp_seekfor(f, "RINGTONE DATA\n", &pos);
+            if(!found)
+            {
+                current_object.set_custom_object = false;
+                break;
+            }
+
+            current_object.set_custom_object = true;
+
             break;
     }
 
@@ -2045,15 +2102,15 @@ ListFilter_t* pp_object_list_get_filter(void)
     return &filter;
 }
 
-/** @brief pp_object_list_get_order: Get current order options
+/** @brief pp_object_list_get_order: Get current order options address
  * 
- * This functions return current order options.
+ * This functions return current order options address.
  * 
- * @return  (uint8_t) Current order code.
+ * @return  (uint8_t) Address of current order code.
  */
-uint8_t pp_object_list_get_order(void)
+uint8_t* pp_object_list_get_order(void)
 {
-    return order;
+    return &order;
 }
 
 /** @brief pp_object_list_get_how_many: Get quantity of all objects

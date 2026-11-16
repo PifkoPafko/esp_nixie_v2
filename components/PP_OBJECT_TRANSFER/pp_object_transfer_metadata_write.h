@@ -30,6 +30,7 @@
 #include "pp_object_transfer_defs.h"
 #include "pp_wifi.h"
 #include "pp_alarm.h"
+#include "pp_ringtone.h"
 // #include "pp_alarm.h"
 
 /* Structures */

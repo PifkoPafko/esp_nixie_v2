@@ -40,12 +40,12 @@ void app_main(void)
 {
     // Initializations
     pp_nvs_init();              // Initializes NVS Flash memory
+    pp_led_init();              // Initializes LED funcionality
     pp_i2c_init();              // Initializes I2C bus
     pp_object_manager_init();   // Initializes object manager
     pp_alarm_init();            // Initializes alarm functionality
     pp_rtc_init();              // Initializes RTC module functionality
     pp_gpio_init();             // Initializes gpio funcionality
-    pp_led_init();              // Initializes LED funcionality
 
 #ifdef DISPLAY_ENABLE
     pp_display_manager_init();  // Initializes display funcionality

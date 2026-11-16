@@ -23,8 +23,8 @@ static void pp_sntp_cb(struct timeval *tv);
 #define TAG         "WIFI"
 #define SETUP_DEFAULT_WIFI
 
-#define WIFI_NAME   "Orange_Swiatlowod_5AF0"
-#define WIFI_PASS   "maQD9qJkU44Fv3gVqS"
+#define WIFI_NAME   "PLAY_Swiatlowod_BD40"
+#define WIFI_PASS   "xfpscfKn3hjm"
 
 /* Variables */
 static TaskFunction_t wifi_search_main_fun;
@@ -64,10 +64,6 @@ void pp_wifi_init(void)
     my_wifi.my_password_len = strlen(WIFI_PASS);
     esp_wifi_set_config(WIFI_IF_STA, &my_wifi.wifi_config);
     #endif
-
-    
-
-
 
     ESP_ERROR_CHECK(esp_wifi_start());
     ESP_ERROR_CHECK(esp_wifi_connect());

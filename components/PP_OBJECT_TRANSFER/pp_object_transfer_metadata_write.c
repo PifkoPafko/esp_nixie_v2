@@ -570,9 +570,19 @@ esp_gatt_status_t pp_object_transfer_write_event(esp_ble_gatts_cb_param_t *param
             memcpy(&led_params.red, &param->write.value[1],     sizeof(led_params.red));
             memcpy(&led_params.green, &param->write.value[5],   sizeof(led_params.green));
             memcpy(&led_params.blue, &param->write.value[9],    sizeof(led_params.blue));
+            led_params.enable = true;
             xQueueSend(led_update_queue, &led_params, 10);
 
             rsp_status = STATUS_OK;
+
+        } while(0);
+    }
+    else if(handle == handle_table[OPT_IDX_CHAR_OBJECT_RINGTONE_ACTION_VAL])
+    {
+        do {
+            ESP_LOGI(TAG, "Object Ringotne Action WRITE EVENT");
+            rsp->handle = handle;
+            rsp_status = pp_ringtone_action(param->write.value, param->write.len);
 
         } while(0);
     }

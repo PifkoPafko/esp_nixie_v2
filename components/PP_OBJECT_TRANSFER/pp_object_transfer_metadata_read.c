@@ -316,13 +316,23 @@ esp_gatt_status_t pp_object_transfer_read_event(uint16_t handle, uint16_t *handl
             ESP_LOGI(TAG, "Object led data READ EVENT");
             rsp->attr_value.handle = handle;
 
-            memcpy(rsp->attr_value.value + 0,  &current_led[0].red,   sizeof(current_led[0].red));
-            memcpy(rsp->attr_value.value + 4,  &current_led[0].green, sizeof(current_led[0].green));
-            memcpy(rsp->attr_value.value + 8,  &current_led[0].blue,  sizeof(current_led[0].blue));
+            if (current_led[0].enable)
+            {
+                memcpy(rsp->attr_value.value + 0,  &current_led[0].red,   sizeof(current_led[0].red) * 3);
+            }
+            else
+            {
+                memset(rsp->attr_value.value + 0, 0, sizeof(current_led[0].red) * 3);
+            }
 
-            memcpy(rsp->attr_value.value + 12, &current_led[1].red,   sizeof(current_led[1].red));
-            memcpy(rsp->attr_value.value + 16, &current_led[1].green, sizeof(current_led[1].green));
-            memcpy(rsp->attr_value.value + 20, &current_led[1].blue,  sizeof(current_led[1].blue));
+            if (current_led[1].enable)
+            {
+                memcpy(rsp->attr_value.value + 12,  &current_led[1].red,   sizeof(current_led[1].red) * 3);
+            }
+            else
+            {
+                memset(rsp->attr_value.value + 12, 0, sizeof(current_led[1].red) * 3);
+            }
 
             rsp->attr_value.len = 24;
 

@@ -90,7 +90,10 @@ void pp_gpio_init(void)
     ESP_ERROR_CHECK(gpio_isr_handler_add(GPIO_INPUT_IO_CENTER, pp_button_isr_handler, (void*) GPIO_INPUT_IO_CENTER));
     ESP_ERROR_CHECK(gpio_isr_handler_add(GPIO_INPUT_IO_RIGHT, pp_button_isr_handler, (void*) GPIO_INPUT_IO_RIGHT));
 
-    BaseType_t res = xTaskCreate(pp_button_main, "BUTTON_MAIN", 3072, NULL, 1, &button_main_h);
+    gpio_evt_queue = xQueueCreate(10, sizeof(button_queue_msg_t));
+    button_action_queue = xQueueCreate(10, sizeof(button_action_t));
+
+    BaseType_t res = xTaskCreate(pp_button_main, "BUTTON_MAIN", 3072, NULL, 2, &button_main_h);
     if(res != pdPASS)
     {
         ESP_ERROR_CHECK(ESP_FAIL);
@@ -99,9 +102,6 @@ void pp_gpio_init(void)
     btn_timer_h[0] = xTimerCreate(NULL, pdMS_TO_TICKS(100), pdFALSE, NULL, pp_btn_timer_1_cb);
     btn_timer_h[1] = xTimerCreate(NULL, pdMS_TO_TICKS(100), pdFALSE, NULL, pp_btn_timer_2_cb);
     btn_timer_h[2] = xTimerCreate(NULL, pdMS_TO_TICKS(100), pdFALSE, NULL, pp_btn_timer_3_cb);
-
-    gpio_evt_queue = xQueueCreate(10, sizeof(button_queue_msg_t));
-    button_action_queue = xQueueCreate(10, sizeof(button_action_t));
 }
 
 /** @brief pp_led_enable: Enables or disables chosen LED

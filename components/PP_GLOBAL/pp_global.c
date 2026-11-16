@@ -39,6 +39,9 @@ QueueHandle_t button_action_queue;
 /* Display Update Queue */
 QueueHandle_t display_update_queue;
 
+/* Alarm Queue */
+QueueHandle_t alarm_queue;
+
 /* Current LED */
 led_update_t current_led[2];
 

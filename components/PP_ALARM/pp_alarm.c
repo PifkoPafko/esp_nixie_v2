@@ -32,6 +32,8 @@ static gptimer_handle_t alarm_timer = NULL;
 static uint64_t next_alarm_id = 0;
 static bool next_alarm_enabled = false;
 static time_t next_alarm_interval = 0;
+static uint64_t next_ringtone_id = 0;
+static uint8_t next_ringtone_default = 1;
 
 /* Functions */
 
@@ -48,7 +50,8 @@ static time_t next_alarm_interval = 0;
  */
 static bool pp_alarm_timer_cb(gptimer_handle_t timer, const gptimer_alarm_event_data_t *edata, void *user_data)
 {
-    xTaskNotifyFromISR(alarm_main_h, ALARM_TIMER_NOTIFICATION, eNoAction, NULL);
+    alarm_notification_type_t notif = ALARM_TIMER_NOTIFICATION;
+    xQueueSendFromISR(alarm_queue, &notif, NULL);
     return false;
 }
 
@@ -88,6 +91,13 @@ void pp_alarm_init(void)
     };
 
     ESP_ERROR_CHECK(i2s_channel_init_std_mode(tx_handle, &std_cfg));
+
+    alarm_queue = xQueueCreate(3, sizeof(alarm_notification_type_t));
+    if(alarm_queue == 0)
+    {
+        ESP_LOGE(TAG, "alarm_queue not created");
+        ESP_ERROR_CHECK(ESP_FAIL);
+    }
 
     ESP_LOGI(TAG, "Initializing wave player");
     BaseType_t res = xTaskCreate(pp_alarm_main, "WAV PLAYER", 8192, NULL, 1, &alarm_main_h);
@@ -144,8 +154,6 @@ void pp_alarm_init(void)
 static void pp_alarm_main(void* arg)
 {
     alarm_play_sm_t alarm_play_sm = WAIT_FOR_START_PLAY;
-    BaseType_t got_notify = pdFALSE;
-    uint32_t notify_value = 0xFF;
 
     // create a writer buffer
     FILE *fh = NULL;
@@ -155,15 +163,17 @@ static void pp_alarm_main(void* arg)
 
     while (true)
     {
-        notify_value = 0xFF;
+        alarm_notification_type_t notify_value;
+        BaseType_t got_notify = pdFALSE;
+    
         if(alarm_play_sm == WAIT_FOR_START_PLAY)
         {
-            got_notify = xTaskNotifyWait(0, 0, &notify_value, portMAX_DELAY);
+            got_notify = xQueueReceive(alarm_queue, &notify_value, portMAX_DELAY);
             if(got_notify != pdTRUE) continue;
         }
         else
         {
-            got_notify = xTaskNotifyWait(0, 0, &notify_value, 1);
+            got_notify = xQueueReceive(alarm_queue, &notify_value, 1);
         }
 
         switch(alarm_play_sm)
@@ -172,8 +182,12 @@ static void pp_alarm_main(void* arg)
             {
                 if(got_notify == pdTRUE && (notify_value == ALARM_TIMER_NOTIFICATION || notify_value == ALARM_START_NOTIFICATION))
                 {
-                    ESP_LOGI(TAG, "ANY MODE -> ALARM_RING_MODE");
-                    device_mode = ALARM_RING_MODE;
+                    if(device_mode == DEFAULT_MODE)
+                    {
+                        ESP_LOGI(TAG, "DEFAULT_MODE -> ALARM_RING_MODE");
+                        device_mode = ALARM_RING_MODE;
+                    }
+                    
                     ESP_LOGI(TAG, "WAIT_FOR_START_PLAY -> SET_RINGTONE");
                     alarm_play_sm = SET_RINGTONE;
                     pp_update_display();
@@ -190,13 +204,33 @@ static void pp_alarm_main(void* arg)
                     break;
                 }
 
-                fh = fopen(BARKA_WAV_16_TRIM, "r");
+                char file_name[25];
+
+                if(next_ringtone_default)
+                {
+                    strcpy(file_name, DEFAULT_ALARMS_PATH);
+                    itoa(next_ringtone_id, &file_name[16], 16);
+                    strcat(file_name, ".wav");
+                    ESP_LOGI(TAG, "Opening file path: %s", file_name);
+
+                    fh = fopen(file_name, "r");
+                }
+                else
+                {
+                    strcpy(file_name, MOUNT_POINT);
+                    strcat(file_name, "/");
+                    itoa(next_ringtone_id, &file_name[8], 16);
+                    ESP_LOGI(TAG, "Opening file path: %s", file_name);
+
+                    fh = fopen(file_name, "r");
+                }
+
                 if (fh == NULL)
                 {
-                    ESP_LOGE(TAG, "Failed to open file");
-                    ESP_LOGI(TAG, "SET_RINGTONE -> WAIT_FOR_START_PLAY");
-                    alarm_play_sm = SET_NEXT_ALARM;
-                    break;
+                    ESP_LOGE(TAG, "Failed to open desired ringtone file id = %" PRIu64, next_ringtone_id);
+                    ESP_LOGI(TAG, "Opening default ringtone");
+                    next_ringtone_default = 1;
+                    fh = fopen(DEFAULT_ALARM, "r");
                 }
                 
                 ESP_LOGI(TAG, "SET_RINGTONE -> SET_DATA_POSITION");
@@ -214,7 +248,21 @@ static void pp_alarm_main(void* arg)
                 }
 
                 // skip the header...
-                fseek(fh, 44, SEEK_SET);
+                if(next_ringtone_default)
+                {
+                    fseek(fh, 44, SEEK_SET);
+                }
+                else
+                {
+                    char line[70];
+
+                    for(uint8_t skip_idx = 0; skip_idx < 8; ++skip_idx)
+                    {
+                        fgets(line, sizeof(line), fh);
+                    }
+
+                    fseek(fh, 44, SEEK_CUR);
+                }
 
                 i2s_channel_enable(tx_handle);
                 pp_set_timer_for_playing_alarm();
@@ -260,8 +308,12 @@ static void pp_alarm_main(void* arg)
                 fclose(fh);
                 ESP_LOGI(TAG, "SET_NEXT_ALARM -> WAIT_FOR_START_PLAY");
                 alarm_play_sm = WAIT_FOR_START_PLAY;
+                
+                if(device_mode == ALARM_RING_MODE)
+                {
+                    device_mode = DEFAULT_MODE;
+                }
 
-                device_mode = DEFAULT_MODE;
                 pp_set_next_alarm();
             }
         }
@@ -734,6 +786,8 @@ void pp_set_next_alarm(void)
                     {
                         next_alarm_interval = new_next_alarm_interval;
                         next_alarm_id = object_array[i].id;
+                        next_ringtone_id = next_alarm.ringtone_id;
+                        next_ringtone_default = next_alarm.ringtone_default;
                     }
                 }
                 else
@@ -741,6 +795,8 @@ void pp_set_next_alarm(void)
                     next_alarm_enabled = true;
                     next_alarm_interval = t - now;
                     next_alarm_id = object_array[i].id;
+                    next_ringtone_id = next_alarm.ringtone_id;
+                    next_ringtone_default = next_alarm.ringtone_default;
                 }
             }
         }
@@ -750,6 +806,8 @@ void pp_set_next_alarm(void)
     {
         ESP_LOGI(TAG, "Next alarm ID: %" PRIx64, next_alarm_id);
         ESP_LOGI(TAG, "Next alarm interval: %" PRIu64 " sec", (uint64_t)next_alarm_interval);
+        ESP_LOGI(TAG, "Next alarm default: %" PRIx8, next_ringtone_default);
+        ESP_LOGI(TAG, "Next alarm ringtone ID: %" PRIu64, next_ringtone_id);
 
         gptimer_stop(alarm_timer);
         gptimer_set_raw_count(alarm_timer, 0);
@@ -768,4 +826,17 @@ void pp_set_next_alarm(void)
         pp_disable_current_alarm();
         ESP_LOGI(TAG, "No enabled alarm to be set");
     }
+}
+
+/** @brief pp_set_next_ringtone_id: Set the next ringtone id to play.
+ * 
+ * Set the next ringtone id to play. This is used for ringtone listing mode RINGTONE_LIST_MODE
+ * and also during adding the new alarm mode 
+ * 
+ * @return (void)
+ */
+void pp_set_next_ringtone_id(uint8_t new_ringtone_default, uint64_t new_ringtone_id)
+{
+    next_ringtone_default = new_ringtone_default;
+    next_ringtone_id = new_ringtone_id;
 }

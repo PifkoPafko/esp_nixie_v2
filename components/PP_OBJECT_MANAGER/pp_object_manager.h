@@ -302,7 +302,14 @@ void pp_object_manager_printf_alarm_info(void);
  */
 void pp_object_manager_print_current_object(void);
 
-
+/** @brief pp_object_manager_open_file: Open a file by object ID
+ * 
+ * This functions opens a file by object ID with specified open options and
+ * returns a pointer to opened file.
+ * 
+ * @return   (FILE*)  Pointer to opened file
+ */
+FILE* pp_object_manager_open_file(const char* option,  uint64_t id);
 
 /***************************************************************************************************************/
 /* Functions - Object list filtering and order */
@@ -324,13 +331,21 @@ void pp_object_list_make_list(void);
  */
 ListFilter_t* pp_object_list_get_filter(void);
 
-/** @brief pp_object_list_get_order: Get current order options
+/** @brief pp_object_list_get_order: Get current order options address
  * 
- * This functions return current order options.
+ * This functions return current order options address.
  * 
- * @return  (uint8_t) Current order code.
+ * @return  (uint8_t) Address of current order code.
  */
-uint8_t pp_object_list_get_order(void);
+uint8_t* pp_object_list_get_order(void);
+
+/** @brief pp_object_list_set_filter_order: Set filter and order options
+ * 
+ * This functions sets the filtering and order options
+ * 
+ * @return
+ */
+void pp_object_list_set_filter_order(ListFilter_t filter_new, uint8_t order_new);
 
 /** @brief pp_object_list_get_how_many: Get quantity of all objects
  * 

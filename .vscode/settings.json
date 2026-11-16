@@ -126,10 +126,11 @@
     "timers.h": "c",
     "i2s_common.h": "c"
   },
-  "idf.flashType": "UART",
-  "idf.portWin": "COM9",
+"idf.flashType": "UART",
   "idf.adapterTargetName": "esp32s3",
   "idf.openOcdConfigs": [
     "board/esp32s3-bridge.cfg"
-  ]
+],
+"idf.currentSetup": "C:\\esp\\v5.4.4\\esp-idf",
+"idf.port": "COM4"
 }

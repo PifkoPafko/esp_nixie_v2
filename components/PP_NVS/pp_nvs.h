@@ -15,8 +15,10 @@
 #define __NVS_H__
 
 /* Headers */
+#include <string.h>
 #include "esp_log.h"
 #include "nvs_flash.h"
+#include "pp_global.h"
 
 /* Functions */
 
@@ -25,5 +27,11 @@
  * @return
  */
 void pp_nvs_init(void);
+
+/** @brief pp_nvs_led_store: Stores current LEDs settings into NVS.
+ *
+ * @return
+ */
+void pp_nvs_led_store(void);
 
 #endif

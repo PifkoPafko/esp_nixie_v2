@@ -31,7 +31,9 @@ static void pp_set_nixie_state_alarm_single();
 static void pp_set_nixie_state_alarm_weekly();
 static void pp_set_nixie_state_alarm_monthly();
 static void pp_set_nixie_state_alarm_yearly();
+static void pp_set_nixie_state_ringtone();
 static void pp_set_nixie_state_pairing_passkey();
+static void pp_set_nixie_state_led_change();
 
 /* Variables */
 static display_state_t display_state;
@@ -95,6 +97,7 @@ void pp_update_display()
         case ALARM_ADD_MODE:
         case PAIRING_MODE:
         case ALARM_RING_MODE:
+        case LED_CHANGE_MODE:
         {
             pp_timer_set_blink();
             break;
@@ -102,6 +105,7 @@ void pp_update_display()
 
         case ALARM_DELETE_MODE:
         case PAIRING_PASSKEY_MODE:
+        case RINGTONE_LIST_MODE:
         {
             pp_timer_stop();
             break;
@@ -213,14 +217,17 @@ static void pp_display_main(void* arg)
 
                 case ALARM_ADD_MODE:
                 {
-                    if(notify_value == NOTIFY_TIMER_BLINK_VAL)
+                    if(display_digits.alarm_add_ringtone)
+                    {
+                        pp_set_nixie_state_ringtone();
+                    }
+                    else if(notify_value == NOTIFY_TIMER_BLINK_VAL)
                     {
                         display_state.digit_enable[display_digits.blink_tube] = !display_state.digit_enable[display_digits.blink_tube];
                     }
                     else
                     {
                         pp_set_nixie_state_alarm();
-                        
                     }
                     break;
                 }
@@ -254,19 +261,44 @@ static void pp_display_main(void* arg)
 
                 case ALARM_RING_MODE:
                 {
-                    
                     if(notify_value == NOTIFY_TIMER_BLINK_VAL)
                     {
                         bool enable = !display_state.digit_enable[0];
-                        memset(display_state.digit_enable, enable, TUBES_COUNT*sizeof(display_state.right_comma_enable[0]));
-                        display_state.right_comma_enable[1] = enable;
-                        display_state.right_comma_enable[3] = enable;
-                        display_state.right_comma_enable[8] = enable;
-                        display_state.right_comma_enable[10] = enable;
+                        memset(display_state.digit_enable, enable, TUBES_COUNT*sizeof(display_state.digit_enable[0]));
+                        
+                        display_state.digit_enable[6] = false;
+                        display_state.digit_enable[15] = false;
+
+                        memset(display_state.right_comma_enable, false, TUBES_COUNT*sizeof(display_state.right_comma_enable[0]));
+                        memset(display_state.left_comma_enable, false, TUBES_COUNT*sizeof(display_state.left_comma_enable[0]));
+
+                        display_state.right_comma_enable[1] = true;
+                        display_state.right_comma_enable[3] = true;
+                        display_state.right_comma_enable[8] = true;
+                        display_state.right_comma_enable[10] = true;
                     }
                     else
                     {
                         pp_set_nixie_state_default();
+                    }
+                    break;
+                }
+
+                case RINGTONE_LIST_MODE:
+                {
+                    pp_set_nixie_state_ringtone();
+                    break;
+                }
+
+                case LED_CHANGE_MODE:
+                {
+                    if(notify_value == NOTIFY_TIMER_BLINK_VAL)
+                    {
+                        display_state.digit_enable[display_digits.blink_tube] = !display_state.digit_enable[display_digits.blink_tube];
+                    }
+                    else
+                    {
+                        pp_set_nixie_state_led_change();
                     }
                     break;
                 }
@@ -291,7 +323,7 @@ static void pp_display_main(void* arg)
  */
 static void pp_timer_cb(TimerHandle_t xTimer)
 {
-    if(device_mode == TIME_CHANGE_MODE || device_mode == ALARM_ADD_MODE || device_mode == PAIRING_MODE || device_mode == ALARM_RING_MODE)
+    if(device_mode == TIME_CHANGE_MODE || device_mode == ALARM_ADD_MODE || device_mode == PAIRING_MODE || device_mode == ALARM_RING_MODE || device_mode == LED_CHANGE_MODE)
     {
         display_update_type_t notif = NOTIFY_TIMER_BLINK_VAL;
         xQueueSend(display_update_queue, &notif, 10);
@@ -626,6 +658,29 @@ static void pp_set_nixie_state_alarm_yearly()
     display_state.right_comma_enable[8] = true;
 }
 
+/** @brief pp_set_nixie_state_ringtone: Prepare data to display in RINGTONE_LIST_MODE
+ * 
+ * Sets display_state structure using ringtone number as below:
+ * 
+ * [] [] [] [] [] [] [] [] [] [] [] [] [] [HUNDREDS] [TENS] [ONES]
+ * 
+ * @return
+ */
+static void pp_set_nixie_state_ringtone()
+{
+    memset(display_state.digit_enable, false, TUBES_COUNT*sizeof(display_state.digit_enable[0]));
+    memset(display_state.right_comma_enable, false, TUBES_COUNT*sizeof(display_state.right_comma_enable[0]));
+    memset(display_state.left_comma_enable, false, TUBES_COUNT*sizeof(display_state.left_comma_enable[0]));
+
+    display_state.digit_enable[13] = true;
+    display_state.digit_enable[14] = true;
+    display_state.digit_enable[15] = true;
+
+    display_state.digit[13] = display_digits.display_mode.ringtone_digits.number_first;
+    display_state.digit[14] = display_digits.display_mode.ringtone_digits.number_second;
+    display_state.digit[15] = display_digits.display_mode.ringtone_digits.number_third;
+}
+
 /** @brief pp_set_nixie_state_pairing_passkey: Prepare data to display in PAIRING_PASSKEY_MODE
  * 
  * Sets display_state structure using alarm parameters provided by user as below:
@@ -643,4 +698,39 @@ static void pp_set_nixie_state_pairing_passkey()
     memset(display_state.right_comma_enable, false, TUBES_COUNT*sizeof(display_state.right_comma_enable[0]));
     memset(display_state.left_comma_enable, false, TUBES_COUNT*sizeof(display_state.left_comma_enable[0]));
     memcpy(display_state.digit, passkey, PASSKEY_SIZE*sizeof(display_state.digit[0]));
+}
+
+/** @brief pp_set_nixie_state_led_change: Prepare data to display in LED CHANGE MODE
+ * 
+ * Sets display_state structure using time and date provided by user as below:
+ * 
+ * [LED0 RED] [LED0 GREEN] [LED0 BLUE] [] [LED1 RED] [LED1 GREEN] [LED1 BLUE] [] [] [] [] [] [] [] [] []
+ * 
+ * @return
+ */
+static void pp_set_nixie_state_led_change()
+{
+    memset(display_state.digit_enable, false, TUBES_COUNT*sizeof(display_state.digit_enable[0]));
+    memset(display_state.right_comma_enable, false, TUBES_COUNT*sizeof(display_state.right_comma_enable[0]));
+    memset(display_state.left_comma_enable, false, TUBES_COUNT*sizeof(display_state.left_comma_enable[0]));
+
+    display_state.digit_enable[0] = true;
+    display_state.digit_enable[1] = true;
+    display_state.digit_enable[2] = true;
+    display_state.digit_enable[3] = true;
+
+    display_state.digit_enable[5] = true;
+    display_state.digit_enable[6] = true;
+    display_state.digit_enable[7] = true;
+    display_state.digit_enable[8] = true;
+
+    display_state.digit[0] = display_digits.display_mode.led_change_digits.led_lamp_enable;
+    display_state.digit[1] = display_digits.display_mode.led_change_digits.led_lamp_red;
+    display_state.digit[2] = display_digits.display_mode.led_change_digits.led_lamp_green;
+    display_state.digit[3] = display_digits.display_mode.led_change_digits.led_lamp_blue;
+
+    display_state.digit[5] = display_digits.display_mode.led_change_digits.led_bottom_enable;
+    display_state.digit[6] = display_digits.display_mode.led_change_digits.led_bottom_red;
+    display_state.digit[7] = display_digits.display_mode.led_change_digits.led_bottom_green;
+    display_state.digit[8] = display_digits.display_mode.led_change_digits.led_bottom_blue;
 }

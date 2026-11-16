@@ -69,15 +69,10 @@
 #define DAYS_TO_SEC(x)     ( (x) * 24ll * 60ll * 60ll )
 
 #define AUDIO_BUFFER 2048           // buffer size for reading the wav file and sending to i2s
-#define WAV_FILE            "/sdcard/ringtone0.wav" // wav file to play
-#define BARKA_WAV_16        "/sdcard/1.wav" // barka 16 bit
-#define BARKA_WAV_16_TRIM   "/sdcard/2.wav" // barka 16 bit trimmed
-#define BARKA_WAV_24        "/sdcard/3.wav" // barka 24 bit
-#define BARKA_WAV_24_TRIM   "/sdcard/4.wav" // barka 24 bit trimmed
 
-#define ALARM_TIMER_NOTIFICATION    0
-#define ALARM_START_NOTIFICATION    1
-#define ALARM_STOP_NOTIFICATION     2
+#define DEFAULT_ALARMS_PATH "/sdcard/default/"
+#define DEFAULT_ALARM       "/sdcard/default/0.wav" // barka 16 bit
+#define DEFAULT_ALARM_COUNT  5
 
 /* Structures */
 typedef enum {
@@ -118,5 +113,14 @@ otp_rsp_status_t pp_set_alarm_values(uint8_t *payload, uint16_t payload_len);
  * @return (void)
  */
 void pp_set_next_alarm(void);
+
+/** @brief pp_set_next_ringtone_id: Set the next ringtone id to play.
+ * 
+ * Set the next ringtone id to play. This is used for ringtone listing mode RINGTONE_LIST_MODE
+ * and also during adding the new alarm mode 
+ * 
+ * @return (void)
+ */
+void pp_set_next_ringtone_id(uint8_t new_ringtone_default, uint64_t new_ringtone_id);
 
 #endif

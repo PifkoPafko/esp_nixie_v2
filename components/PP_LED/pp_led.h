@@ -32,20 +32,20 @@
 
 /* First LED strip */
 #define LEDC_LS_TIMER_CH0           LEDC_TIMER_1
-#define LEDC_LS_CH0_RED_GPIO        (35)
+#define LEDC_LS_CH0_RED_GPIO        (39)
 #define LEDC_LS_CH0_RED_CHANNEL     LEDC_CHANNEL_0
-#define LEDC_LS_CH0_GREEN_GPIO      (36)
+#define LEDC_LS_CH0_GREEN_GPIO      (40)
 #define LEDC_LS_CH0_GREEN_CHANNEL   LEDC_CHANNEL_1
-#define LEDC_LS_CH0_BLUE_GPIO       (37)
+#define LEDC_LS_CH0_BLUE_GPIO       (38)
 #define LEDC_LS_CH0_BLUE_CHANNEL    LEDC_CHANNEL_2
 
 /* Second LED strip */
 #define LEDC_LS_TIMER_CH1           LEDC_TIMER_2
-#define LEDC_LS_CH1_RED_GPIO        (38)
+#define LEDC_LS_CH1_RED_GPIO        (36)
 #define LEDC_LS_CH1_RED_CHANNEL     LEDC_CHANNEL_3
-#define LEDC_LS_CH1_GREEN_GPIO      (39)
+#define LEDC_LS_CH1_GREEN_GPIO      (35)
 #define LEDC_LS_CH1_GREEN_CHANNEL   LEDC_CHANNEL_4
-#define LEDC_LS_CH1_BLUE_GPIO       (40)
+#define LEDC_LS_CH1_BLUE_GPIO       (37)
 #define LEDC_LS_CH1_BLUE_CHANNEL    LEDC_CHANNEL_5
 
 #define LEDC_SET_NUM                (2)
@@ -62,3 +62,6 @@
  * @return
  */
 void pp_led_init(void);
+
+
+void pp_update_led(uint8_t channel);
