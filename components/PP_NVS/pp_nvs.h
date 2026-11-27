@@ -32,6 +32,6 @@ void pp_nvs_init(void);
  *
  * @return
  */
-void pp_nvs_led_store(void);
+void pp_nvs_led_store(uint8_t channel_bitmask);
 
 #endif

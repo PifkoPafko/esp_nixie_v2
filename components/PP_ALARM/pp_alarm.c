@@ -20,10 +20,11 @@
 /* Declarations */
 static bool pp_alarm_timer_cb(gptimer_handle_t timer, const gptimer_alarm_event_data_t *edata, void *user_data);
 static void pp_alarm_main(void* arg);
-void static pp_set_timer_for_playing_alarm(void);
-void static pp_disable_current_alarm(void);
-uint8_t static pp_get_days_to_next_monthly(uint8_t year, uint8_t month);
-uint16_t static pp_get_days_to_next_yearly(uint8_t year);
+static void pp_set_timer_for_playing_alarm(void);
+static void pp_disable_current_alarm(void);
+static uint8_t pp_get_days_to_next_monthly(uint8_t year, uint8_t month);
+static uint16_t pp_get_days_to_next_yearly(uint8_t year);
+static int32_t wav_skip_header(FILE *f);
 
 /* Variables */
 static i2s_chan_handle_t tx_handle;
@@ -213,7 +214,7 @@ static void pp_alarm_main(void* arg)
                     strcat(file_name, ".wav");
                     ESP_LOGI(TAG, "Opening file path: %s", file_name);
 
-                    fh = fopen(file_name, "r");
+                    fh = fopen(file_name, "rb");
                 }
                 else
                 {
@@ -222,7 +223,7 @@ static void pp_alarm_main(void* arg)
                     itoa(next_ringtone_id, &file_name[8], 16);
                     ESP_LOGI(TAG, "Opening file path: %s", file_name);
 
-                    fh = fopen(file_name, "r");
+                    fh = fopen(file_name, "rb");
                 }
 
                 if (fh == NULL)
@@ -230,7 +231,7 @@ static void pp_alarm_main(void* arg)
                     ESP_LOGE(TAG, "Failed to open desired ringtone file id = %" PRIu64, next_ringtone_id);
                     ESP_LOGI(TAG, "Opening default ringtone");
                     next_ringtone_default = 1;
-                    fh = fopen(DEFAULT_ALARM, "r");
+                    fh = fopen(DEFAULT_ALARM, "rb");
                 }
                 
                 ESP_LOGI(TAG, "SET_RINGTONE -> SET_DATA_POSITION");
@@ -246,22 +247,27 @@ static void pp_alarm_main(void* arg)
                     alarm_play_sm = SET_NEXT_ALARM;
                     break;
                 }
+                
+                // Go to the beginning of the file
+                fseek(fh, 0, SEEK_SET);
 
-                // skip the header...
-                if(next_ringtone_default)
-                {
-                    fseek(fh, 44, SEEK_SET);
-                }
-                else
+                // Skip the file header
+                if(!next_ringtone_default)
                 {
                     char line[70];
 
-                    for(uint8_t skip_idx = 0; skip_idx < 8; ++skip_idx)
+                    for(uint8_t skip_idx = 0; skip_idx < 7; ++skip_idx)
                     {
                         fgets(line, sizeof(line), fh);
                     }
+                }
 
-                    fseek(fh, 44, SEEK_CUR);
+                // Skip the WAVE header
+                int32_t data_len = wav_skip_header(fh);
+
+                if (data_len < 0)
+                {
+                    ESP_LOGE(TAG, "Bad WAV file");
                 }
 
                 i2s_channel_enable(tx_handle);
@@ -291,7 +297,7 @@ static void pp_alarm_main(void* arg)
                 if(bytes_read > 0)
                 {
                     // write the buffer to the i2s
-                    esp_err_t ret = i2s_channel_write(tx_handle, buf, bytes_read * sizeof(int16_t), &bytes_written, portMAX_DELAY);
+                    i2s_channel_write(tx_handle, buf, bytes_read * sizeof(int16_t), &bytes_written, portMAX_DELAY);
                     // ESP_LOGI(TAG, "ret = %d, bytes_written = %d", ret, bytes_written);
                 }
                 else
@@ -578,10 +584,28 @@ otp_rsp_status_t pp_set_alarm_values(uint8_t *payload, uint16_t payload_len)
     }
 
     current_alarm.volume = *payload;
+    payload += ALARM_FIELD_SIZE;
 
     if(current_alarm.volume > ALARM_VOLUME_MAX)
     {
         ESP_LOGE(TAG, "Wrong Volume value");
+        return WRITE_REQUEST_REJECTED;
+    }
+    
+    current_alarm.ringtone_default = *payload;
+    payload += ALARM_FIELD_SIZE;
+
+    if(current_alarm.ringtone_default > 1)
+    {
+        ESP_LOGE(TAG, "Wrong ringtone default value");
+        return WRITE_REQUEST_REJECTED;
+    }
+    current_alarm.ringtone_id = 0;
+    memcpy(&current_alarm.ringtone_id, payload, ALARM_RING_ID_SIZE);
+
+    if(current_alarm.ringtone_id > MAX_INT_48_VAL)
+    {
+        ESP_LOGE(TAG, "Wrong ringtone id");
         return WRITE_REQUEST_REJECTED;
     }
 
@@ -839,4 +863,42 @@ void pp_set_next_ringtone_id(uint8_t new_ringtone_default, uint64_t new_ringtone
 {
     next_ringtone_default = new_ringtone_default;
     next_ringtone_id = new_ringtone_id;
+}
+
+/** @brief wav_skip_header: Skipping WAVE header
+ *
+ * @param[in]   f           (FILE*) File pointer
+ * @param[out]  size        (int32_t) Position of the data in header file
+ * 
+ * @return
+ */
+static int32_t wav_skip_header(FILE* f)
+{
+    uint8_t hdr[12];
+
+    if (fread(hdr, 1, 12, f) != 12 ||
+        memcmp(hdr, "RIFF", 4) || 
+        memcmp(hdr + 8, "WAVE", 4))
+    {
+        return -1;                          // not a WAV file
+    }
+
+    uint8_t chunk[8];
+    while (fread(chunk, 1, 8, f) == 8) 
+    {
+        uint32_t size = chunk[4] | (chunk[5] << 8) | (chunk[6] << 16) | ((uint32_t)chunk[7] << 24);
+
+        if (memcmp(chunk, "data", 4) == 0)
+        {
+            return (uint32_t)size;              // positioned at audio data
+        }
+
+        // skip this chunk (chunks are padded to an even size)
+        if (fseek(f, size + (size & 1), SEEK_CUR) != 0)
+        {
+            return -1;
+        }
+    }
+
+    return -1;                              // no data chunk found
 }

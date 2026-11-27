@@ -34,7 +34,7 @@ static void pp_led_main(void* arg)
         led_update_t led_params;
         if(xQueueReceive(led_update_queue, &led_params, portMAX_DELAY) != pdTRUE) continue;
 
-        ESP_LOGI(LED_TAG, "New LED settings: CHANNEL = %u, RED = 0x%04X, GREEN = 0x%04X, BLUE = 0x%04X", (unsigned int)led_params.channel, (unsigned int)led_params.red, (unsigned int)led_params.green, (unsigned int)led_params.blue);
+        ESP_LOGI(LED_TAG, "New LED settings: CHANNEL = %u, RED = 0x%04X, GREEN = 0x%04X, BLUE = 0x%04X, STORE = %u", (unsigned int)led_params.channel, (unsigned int)led_params.red, (unsigned int)led_params.green, (unsigned int)led_params.blue, (unsigned int)led_params.store);
 
         memcpy(&current_led[led_params.channel], &led_params, sizeof(led_params));
 
@@ -45,6 +45,11 @@ static void pp_led_main(void* arg)
         ledc_update_duty(ledc_channel_info[led_params.channel][LED_RED_INDEX].speed_mode,   ledc_channel_info[led_params.channel][LED_RED_INDEX].channel);
         ledc_update_duty(ledc_channel_info[led_params.channel][LED_GREEN_INDEX].speed_mode, ledc_channel_info[led_params.channel][LED_GREEN_INDEX].channel);
         ledc_update_duty(ledc_channel_info[led_params.channel][LED_BLUE_INDEX].speed_mode,  ledc_channel_info[led_params.channel][LED_BLUE_INDEX].channel);
+
+        if (led_params.store)
+        {
+            pp_nvs_led_store(led_params.channel + 1);
+        }
     }
 }
 
@@ -113,7 +118,7 @@ void pp_led_init(void)
 
     /* Second LED strip */
     ledc_channel_info[1][LED_RED_INDEX].channel    = LEDC_LS_CH1_RED_CHANNEL;
-    ledc_channel_info[1][LED_RED_INDEX].duty       = current_led[1].enable ? current_led[0].red : 0;
+    ledc_channel_info[1][LED_RED_INDEX].duty       = current_led[1].enable ? current_led[1].red : 0;
     ledc_channel_info[1][LED_RED_INDEX].gpio_num   = LEDC_LS_CH1_RED_GPIO;
     ledc_channel_info[1][LED_RED_INDEX].speed_mode = LEDC_LS_MODE;
     ledc_channel_info[1][LED_RED_INDEX].intr_type  = LEDC_INTR_DISABLE;
@@ -123,7 +128,7 @@ void pp_led_init(void)
     ledc_channel_info[1][LED_RED_INDEX].flags.output_invert = 0;
 
     ledc_channel_info[1][LED_GREEN_INDEX].channel    = LEDC_LS_CH1_GREEN_CHANNEL;
-    ledc_channel_info[1][LED_GREEN_INDEX].duty       = current_led[1].enable ? current_led[0].green : 0;
+    ledc_channel_info[1][LED_GREEN_INDEX].duty       = current_led[1].enable ? current_led[1].green : 0;
     ledc_channel_info[1][LED_GREEN_INDEX].gpio_num   = LEDC_LS_CH1_GREEN_GPIO;
     ledc_channel_info[1][LED_GREEN_INDEX].speed_mode = LEDC_LS_MODE;
     ledc_channel_info[1][LED_GREEN_INDEX].intr_type  = LEDC_INTR_DISABLE;
@@ -133,7 +138,7 @@ void pp_led_init(void)
     ledc_channel_info[1][LED_GREEN_INDEX].flags.output_invert = 0;
 
     ledc_channel_info[1][LED_BLUE_INDEX].channel    = LEDC_LS_CH1_BLUE_CHANNEL;
-    ledc_channel_info[1][LED_BLUE_INDEX].duty       = current_led[1].enable ? current_led[0].blue : 0;
+    ledc_channel_info[1][LED_BLUE_INDEX].duty       = current_led[1].enable ? current_led[1].blue : 0;
     ledc_channel_info[1][LED_BLUE_INDEX].gpio_num   = LEDC_LS_CH1_BLUE_GPIO;
     ledc_channel_info[1][LED_BLUE_INDEX].speed_mode = LEDC_LS_MODE;
     ledc_channel_info[1][LED_BLUE_INDEX].intr_type  = LEDC_INTR_DISABLE;

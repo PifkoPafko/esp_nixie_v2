@@ -57,6 +57,8 @@ esp_gatt_status_t pp_object_transfer_read_event(uint16_t handle, uint16_t *handl
             
             object_t* object = pp_object_manager_get_object();
             memcpy(rsp->attr_value.value, object->name, object->name_len);
+            ESP_LOGI(TAG, "Name: %s", object->name);
+            ESP_LOGI(TAG, "Name length: %d", object->name_len);
             rsp->attr_value.handle = handle;
             rsp->attr_value.offset = 0;
             rsp->attr_value.len = object->name_len;
@@ -275,6 +277,12 @@ esp_gatt_status_t pp_object_transfer_read_event(uint16_t handle, uint16_t *handl
             
             memcpy(payload, &current_alarm.volume, ALARM_FIELD_SIZE);
             payload += ALARM_FIELD_SIZE;
+
+            memcpy(payload, &current_alarm.ringtone_default, ALARM_FIELD_SIZE);
+            payload += ALARM_FIELD_SIZE;
+
+            memcpy(payload, &current_alarm.ringtone_id, ALARM_RING_ID_SIZE);
+            payload += ALARM_RING_ID_SIZE;
 
             rsp->attr_value.handle = handle;
             rsp->attr_value.offset = 0;

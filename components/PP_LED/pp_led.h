@@ -25,6 +25,7 @@
 #include "driver/ledc.h"
 
 #include "pp_global.h"
+#include "pp_nvs.h"
 
 
 /* Macros */

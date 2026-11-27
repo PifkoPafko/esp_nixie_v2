@@ -37,7 +37,6 @@ static alarm_add_sm_t alarm_add_sm = IDLE_ALARM_ADD;        // Alarm Adding Stat
 
 static uint16_t ringtone_index = 0;
 static uint8_t ringtone_default = 1;
-static bool is_playing = false;
 
 static alarm_mode_args_t alarm_add;         // Alarm description when in process of adding it
 time_t now;                                 // Timestamp variable for keeping time during adding alarms and changing time
@@ -2184,7 +2183,7 @@ static void pp_led_change_mode(button_action_t action_handler, bool start)
         pairing_sm = WAIT_FOR_LEFT;
         ringtone_sm = WAIT_FOR_LEFT_RINGTONE;
         device_mode = DEFAULT_MODE;
-        pp_nvs_led_store();
+        pp_nvs_led_store(0x1 | 0x2);
     }
 
     switch(led_lamps_sm)

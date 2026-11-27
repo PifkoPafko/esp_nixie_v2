@@ -17,14 +17,17 @@
 /* Macros */
 #define NVS_TAG "NVS"
 
-#define KEYS_COUNT 8
+#define LED_KEYS_COUNT 4
 
 /* Constant values */
-const char* nvs_keys[KEYS_COUNT] = {
+const char* nvs_keys_led_0[LED_KEYS_COUNT] = {
     "LED0_ENABLE_KEY",
     "LED0_RED_KEY",
     "LED0_GREEN_KEY",
     "LED0_BLUE_KEY",
+};
+
+const char* nvs_keys_led_1[LED_KEYS_COUNT] = {
     "LED1_ENABLE_KEY",
     "LED1_RED_KEY",
     "LED1_GREEN_KEY",
@@ -52,25 +55,38 @@ void pp_nvs_init(void)
 
     ESP_ERROR_CHECK(nvs_open("storage", NVS_READWRITE, &my_handle));
 
-    uint32_t read_nvs[KEYS_COUNT];
+    uint32_t read_nvs[LED_KEYS_COUNT];
     bool to_commit = false;
 
-    for (uint8_t i = 0; i < KEYS_COUNT; ++i)
+    for (uint8_t i = 0; i < LED_KEYS_COUNT; ++i)
     {
-        ret = nvs_get_u32(my_handle, nvs_keys[i], &read_nvs[i]);
+        ret = nvs_get_u32(my_handle, nvs_keys_led_0[i], &read_nvs[i]);
 
         if (ret != ESP_OK)
         {
             read_nvs[i] = 0;
-            ESP_ERROR_CHECK(nvs_set_u32(my_handle, nvs_keys[i], read_nvs[i]));
+            ESP_ERROR_CHECK(nvs_set_u32(my_handle, nvs_keys_led_0[i], read_nvs[i]));
             to_commit = true;
         }
     }
 
     current_led[0].enable = (bool)read_nvs[0];
     memcpy(&current_led[0].red, &read_nvs[1], sizeof(read_nvs[0]) * 3);
-    current_led[1].enable = (bool)read_nvs[4];
-    memcpy(&current_led[1].red, &read_nvs[5], sizeof(read_nvs[0]) * 3);
+
+    for (uint8_t i = 0; i < LED_KEYS_COUNT; ++i)
+    {
+        ret = nvs_get_u32(my_handle, nvs_keys_led_1[i], &read_nvs[i]);
+
+        if (ret != ESP_OK)
+        {
+            read_nvs[i] = 0;
+            ESP_ERROR_CHECK(nvs_set_u32(my_handle, nvs_keys_led_1[i], read_nvs[i]));
+            to_commit = true;
+        }
+    }
+
+    current_led[1].enable = (bool)read_nvs[0];
+    memcpy(&current_led[1].red, &read_nvs[1], sizeof(read_nvs[0]) * 3);
 
     if(to_commit)
     {
@@ -82,18 +98,32 @@ void pp_nvs_init(void)
  *
  * @return
  */
-void pp_nvs_led_store(void)
+void pp_nvs_led_store(uint8_t channel_bitmask)
 {
-    uint32_t write_nvs[KEYS_COUNT];
+    uint32_t write_nvs[LED_KEYS_COUNT];
 
-    write_nvs[0] = current_led[0].enable ? 1 : 0;
-    memcpy(&write_nvs[1], &current_led[0].red, sizeof(write_nvs[0]) * 3);
-    write_nvs[4] = current_led[1].enable ? 1 : 0;
-    memcpy(&write_nvs[5], &current_led[1].red, sizeof(write_nvs[0]) * 3);
-
-    for (uint8_t i = 0; i < KEYS_COUNT; ++i)
+    if (channel_bitmask & 0x1)
     {
-        ESP_ERROR_CHECK(nvs_set_u32(my_handle, nvs_keys[i], write_nvs[i]));
+        ESP_LOGI(NVS_TAG, "Storing channel 0");
+        write_nvs[0] = current_led[0].enable ? 1 : 0;
+        memcpy(&write_nvs[1], &current_led[0].red, sizeof(write_nvs[0]) * 3);
+
+        for (uint8_t i = 0; i < LED_KEYS_COUNT; ++i)
+        {
+            ESP_ERROR_CHECK(nvs_set_u32(my_handle, nvs_keys_led_0[i], write_nvs[i]));
+        }
+    }
+
+    if (channel_bitmask & 0x2)
+    {
+        ESP_LOGI(NVS_TAG, "Storing channel 1");
+        write_nvs[0] = current_led[1].enable ? 1 : 0;
+        memcpy(&write_nvs[1], &current_led[1].red, sizeof(write_nvs[0]) * 3);
+
+        for (uint8_t i = 0; i < LED_KEYS_COUNT; ++i)
+        {
+            ESP_ERROR_CHECK(nvs_set_u32(my_handle, nvs_keys_led_1[i], write_nvs[i]));
+        }
     }
 
     ESP_ERROR_CHECK(nvs_commit(my_handle));

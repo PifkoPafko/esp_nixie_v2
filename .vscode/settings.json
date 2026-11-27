@@ -131,6 +131,6 @@
   "idf.openOcdConfigs": [
     "board/esp32s3-bridge.cfg"
 ],
-"idf.currentSetup": "C:\\esp\\v5.4.4\\esp-idf",
-"idf.port": "COM4"
+"idf.currentSetup": "C:\\___\\Programowanie\\esp\\.espressif\\v5.4.4\\esp-idf",
+"idf.port": "COM3"
 }

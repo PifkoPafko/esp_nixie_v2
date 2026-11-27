@@ -483,7 +483,6 @@ esp_gatt_status_t pp_object_transfer_write_event(esp_ble_gatts_cb_param_t *param
                 case 0x02:
                 {
                     uint8_t offset = 1;
-
                     uint8_t *ssid;
                     uint8_t *password;
 
@@ -558,7 +557,7 @@ esp_gatt_status_t pp_object_transfer_write_event(esp_ble_gatts_cb_param_t *param
             ESP_LOGI(TAG, "Object LED Action WRITE EVENT");
             rsp->handle = handle;
 
-            if(param->write.len != 13)
+            if(param->write.len != 14)
             {
                 ESP_LOGE(TAG, "INVALID ATTR VAL LENGTH = %d", param->write.len);
                 rsp_status = INVALID_ATTR_VAL_LENGTH;
@@ -566,10 +565,18 @@ esp_gatt_status_t pp_object_transfer_write_event(esp_ble_gatts_cb_param_t *param
             }
 
             led_update_t led_params;
-            memcpy(&led_params.channel, &param->write.value[0], sizeof(led_params.channel));
-            memcpy(&led_params.red, &param->write.value[1],     sizeof(led_params.red));
-            memcpy(&led_params.green, &param->write.value[5],   sizeof(led_params.green));
-            memcpy(&led_params.blue, &param->write.value[9],    sizeof(led_params.blue));
+            memcpy(&led_params.channel, &param->write.value[0],  sizeof(led_params.channel));
+            memcpy(&led_params.red,     &param->write.value[1],  sizeof(led_params.red));
+            memcpy(&led_params.green,   &param->write.value[5],  sizeof(led_params.green));
+            memcpy(&led_params.blue,    &param->write.value[9],  sizeof(led_params.blue));
+            memcpy(&led_params.store,   &param->write.value[13], sizeof(led_params.store));
+
+            // for(uint8_t i = 0; i < param->write.len; ++i)
+            // {
+            //     printf("param->write.value[%d] = %X\n", i, param->write.value[i]);
+            // }
+
+
             led_params.enable = true;
             xQueueSend(led_update_queue, &led_params, 10);
 
@@ -623,6 +630,8 @@ void pp_object_transfer_write_event_indication(esp_ble_gatts_cb_param_t *param, 
 
     if(handle == handle_table[OPT_IDX_CHAR_OBJECT_OACP_VAL])
     {
+        ESP_LOGI(TAG, "OACP OP CODE: %d", param->write.value[0]);
+
         switch(param->write.value[0])
         {
             case OACP_OP_CODE_CREATE:
@@ -677,6 +686,8 @@ void pp_object_transfer_write_event_indication(esp_ble_gatts_cb_param_t *param, 
     }
     else if(handle == handle_table[OPT_IDX_CHAR_OBJECT_OLCP_VAL])
     {
+        ESP_LOGI(TAG, "OLCP OP CODE: %d", param->write.value[0]);
+
         switch(param->write.value[0])
         {
             case OLCP_OP_CODE_FIRST:
@@ -786,24 +797,6 @@ void pp_object_transfer_write_event_indication(esp_ble_gatts_cb_param_t *param, 
         }
     }
 }
-
-
-// static esp_err_t pp_object_transfer_write_Ringtone_Action(esp_gatt_if_t gatts_if, esp_ble_gatts_cb_param_t *param, uint16_t *handle_table)
-// {
-//     ESP_LOGD(TAG, "Object Ringtone Action WRITE EVENT");
-
-//     esp_gatt_rsp_t rsp;
-//     rsp.handle = handle_table[OPT_IDX_CHAR_OBJECT_RINGTONE_ACTION_VAL];
-//     esp_err_t ret;
-
-//     if(param->write.need_rsp)
-//     {
-//         ret = esp_ble_gatts_send_response(gatts_if, param->write.conn_id, param->write.trans_id, STATUS_OK, &rsp);
-//         if(ret) return ret;
-//     }
-
-//     return ESP_OK;
-// }
 
 /** @brief pp_object_transfer_send_found_wifi_ind: Sends found WiFi networks by indication
  * 

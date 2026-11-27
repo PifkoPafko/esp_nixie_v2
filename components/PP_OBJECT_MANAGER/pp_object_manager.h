@@ -68,11 +68,6 @@ typedef enum {
     ONGOING,
 } action_status_t;
 
-typedef struct file_transfer{
-    uint32_t bytes_done;
-    action_status_t status;
-} file_transfer_t;
-
 typedef struct object{
     int32_t index;
     size_t size;

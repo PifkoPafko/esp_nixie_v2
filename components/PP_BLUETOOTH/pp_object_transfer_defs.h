@@ -23,7 +23,8 @@ typedef enum {
     ERROR_INSUFFICIENT_RESOURCES    = 0x11,
     WRITE_REQUEST_REJECTED          = 0x80,
     ERROR_OBJECT_NOT_SELECTED       = 0x81,
-    ALARM_NOT_CONFIGURED            = 0x82
+    ALARM_NOT_CONFIGURED            = 0x82,
+    ERROR_OLD_DATA                  = 0x83
 }otp_rsp_status_t;
 
 /* OTP OACP RESULT CODES */

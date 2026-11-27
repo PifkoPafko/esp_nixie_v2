@@ -23,6 +23,7 @@ static void pp_object_manager_truncate_rest(uint64_t id, uint32_t offset);
 static void pp_object_manager_set_current_object_from_file(uint64_t id);
 static bool pp_seekfor(FILE *stream, const char* str, fpos_t *pos);
 static char* id_to_string(char* bfr, uint64_t id);
+static char* uuid_to_string(char* bfr, uint8_t* uuid);
 
 
 static esp_err_t pp_object_list_delete(uint32_t index);
@@ -55,11 +56,6 @@ static bool pp_object_list_marked_objects(uint64_t id);
 /***************************************************************************************************************/
 /*  Variables */
 static object_t current_object;
-    
-static file_transfer_t file_transfer = {
-    .bytes_done = 0,
-    .status = WAIT_FOR_ACTION,
-};
 
 /** @brief filter_func_table: Filter decision table
  * 
@@ -253,6 +249,32 @@ void pp_object_manager_init(void)
             if(ret_type == RINGTONE_TYPE)
             {
                 ESP_LOGI(TAG, "File id = %lld, type = RINGTONE", id);
+
+                #ifdef TEST_PRINT_RINGTONE
+                f = pp_object_manager_open_file("r", id);
+
+                for(uint8_t skip_idx = 0; skip_idx < 7; ++skip_idx)
+                {
+                    fgets(line, sizeof(line), f);
+                    printf("%s", line);
+                }
+                
+                int c;
+                
+                for(uint16_t char_cnt = 0; char_cnt < PRINT_RINGTONE_CNT / 16; ++char_cnt)
+                {
+                    for(uint16_t char_line_cnt = 0; char_line_cnt < 16; ++char_line_cnt)
+                    {
+                        c = fgetc(f);
+                        if(c == EOF) break;
+                        printf("%X ", c);
+                    }
+                    printf("\n");
+                    if(c == EOF) break;
+                }
+
+                fclose(f);
+                #endif
             }
             else if(ret_type == ALARM_TYPE)
             {
@@ -260,6 +282,18 @@ void pp_object_manager_init(void)
             }
             else
             {
+                char temp[40];
+                uuid_to_string(temp, (uint8_t*)type.uuid.uuid128);
+                ESP_LOGW(TAG, "Non-supported UUID file: %s", temp);
+
+                strcpy(temp, MOUNT_POINT);
+                strcat(temp, "/");
+                strcat(temp, temp_dir->d_name);
+
+                ESP_LOGI(TAG, "File to remove: %s", temp);
+                remove(temp);
+                ESP_LOGI(TAG, "File removed");
+
                 continue;
             }
 
@@ -362,8 +396,8 @@ oacp_op_code_result_t pp_object_manager_create_object(uint32_t size, esp_bt_uuid
 
     fprintf(f, "Size: %x\n", current_object.size);
     fprintf(f, "Allocated size: %x\n", current_object.alloc_size);
-    fprintf(f, "Name length: 0\n");
-    fprintf(f, "Name: \n");
+    fprintf(f, "Name length: 00\n");
+    fprintf(f, "Name: ********************************\n");
     fprintf(f, "UUID type: %u\n", 128);
     fprintf(f, "UUID: ");
 
@@ -374,6 +408,7 @@ oacp_op_code_result_t pp_object_manager_create_object(uint32_t size, esp_bt_uuid
     fprintf(f, "\n");
     fprintf(f, "Properties: %x\n", PROPERTY_ALL_WITHOUT_MARK);
     fclose(f);
+
     ESP_LOGI(TAG, "File created: %" PRIx64, new_id);
 
     switch(ret_type)
@@ -666,15 +701,6 @@ void pp_object_manager_change_name_in_file(void)
 
     fgets(line, sizeof(line), f);
     fgets(line, sizeof(line), f);
-    fseek(f, strlen("Name: "), SEEK_CUR);
-    fputs(current_object.name, f);
-
-    for(uint8_t i=0; i<NAME_LEN_MAX-strlen(current_object.name)-1; i++)
-    {
-        fputc('*', f);
-    }
-
-    fgets(line, sizeof(line), f);
     fseek(f, strlen("Name length: "), SEEK_CUR);
 
     char name_len_string[5];
@@ -685,6 +711,17 @@ void pp_object_manager_change_name_in_file(void)
         fputc('0', f);
     }
     fputs(name_len_string, f);
+
+    fgets(line, sizeof(line), f);
+    fseek(f, strlen("Name: "), SEEK_CUR);
+
+    fputs(current_object.name, f);
+
+    for(uint8_t i = 0; i < NAME_LEN_MAX - strlen(current_object.name); i++)
+    {
+        fputc('*', f);
+    }
+    
     fclose(f);
 }
 
@@ -1096,13 +1133,12 @@ static void pp_object_manager_set_current_object_from_file(uint64_t id)
     uint32_t alloc_size = strtol(&line[16], &ptr, 16);
     current_object.alloc_size = alloc_size;
 
-    fgets(line, sizeof(line), f);
-
     char name_len_str[20];
     fgets(name_len_str, sizeof(name_len_str), f);
     uint8_t name_len = atoi(&name_len_str[13]);
     current_object.name_len = name_len;
 
+    fgets(line, sizeof(line), f);
     strncpy(current_object.name, &line[6], name_len);
     current_object.name[name_len] = '\0';
 
@@ -1123,7 +1159,6 @@ static void pp_object_manager_set_current_object_from_file(uint64_t id)
 
     fgets(line, sizeof(line), f);
     current_object.properties = strtol(&line[12], &ptr, 16);
-
     current_object.id = id;
 
     object_type_t ret_type = pp_object_manager_check_type(current_object.type.uuid.uuid128);
@@ -1212,6 +1247,7 @@ static void pp_object_manager_set_current_object_from_file(uint64_t id)
         }
 
         case RINGTONE_TYPE:
+        {
             ESP_LOGI(TAG, "Requested object type: Ringtone file");
 
             fpos_t pos;
@@ -1225,6 +1261,7 @@ static void pp_object_manager_set_current_object_from_file(uint64_t id)
             current_object.set_custom_object = true;
 
             break;
+        }
     }
 
     fclose(f);
@@ -1269,7 +1306,7 @@ static bool pp_seekfor(FILE *stream, const char* str, fpos_t *pos)
  * @param[in]   bfr (char*)     Pointer to string to store
  * @param[in]   id  (uint64_t)  Object ID
  * 
- * @return   (bool)  True if string found, False otherwise
+ * @return   (char*)  Pointer to the result string.
  */
 static char* id_to_string(char* bfr, uint64_t id)
 {
@@ -1294,6 +1331,35 @@ static char* id_to_string(char* bfr, uint64_t id)
     }
 
     bfr[digit_count] = '\0';
+
+    return bfr;
+}
+
+/** @brief uuid_to_string: Convert object UUID into hexadicemal string.
+ * 
+ * This functions converts object UUID into hex string.
+ * 
+ * @param[in]   bfr  (char*)     Pointer to string to store
+ * @param[in]   uuid (uint8_t*)  Object UUID
+ * 
+ * @return   (char*)  Pointer to the result string.
+ */
+static char* uuid_to_string(char* bfr, uint8_t* uuid)
+{
+    if(bfr == NULL)
+    {
+        ESP_ERROR_CHECK(ESP_FAIL);
+    }
+
+    static const char hex[] = "0123456789abcdef";
+
+    for (uint8_t i = 0; i < 16; ++i) 
+    {
+        bfr[i * 2]     = hex[uuid[i] >> 4];    // high nibble
+        bfr[i * 2 + 1] = hex[uuid[i] & 0x0F];  // low nibble
+    }
+
+    bfr[32] = '\0';
 
     return bfr;
 }

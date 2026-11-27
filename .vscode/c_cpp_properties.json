@@ -2,25 +2,23 @@
     "configurations": [
         {
             "name": "ESP-IDF",
-            "compilerPath": "${config:idf.toolsPath}\\tools\\xtensa-esp32s3-elf\\esp-12.2.0_20230208\\xtensa-esp32s3-elf\\bin\\xtensa-esp32s3-elf-gcc.exe",
+            "compilerPath": "C:/Espressif/tools/xtensa-esp-elf/esp-14.2.0_20260121/xtensa-esp-elf/bin/xtensa-esp32s3-elf-gcc.exe",
             "cStandard": "c11",
             "cppStandard": "c++17",
             "includePath": [
-                "${config:idf.espIdfPath}/components/**",
-                "${config:idf.espIdfPathWin}/components/**",
-                "${config:idf.espAdfPath}/components/**",
-                "${config:idf.espAdfPathWin}/components/**",
-                "${workspaceFolder}/**"
+                "${workspaceFolder}/**",
+                "C:/Espressif/tools/components/**",
+                "C:/___/Programowanie/esp/.espressif/v5.4.4/esp-idf/components/**",
+                "C:/___/Programowanie/Projekty/ESP/esp_nixie_v2/components/**"
             ],
             "browse": {
                 "path": [
-                    "${config:idf.espIdfPath}/components",
-                    "${config:idf.espIdfPathWin}/components",
-                    "${config:idf.espAdfPath}/components/**",
-                    "${config:idf.espAdfPathWin}/components/**",
-                    "${workspaceFolder}"
+                    "${workspaceFolder}",
+                    "C:/Espressif/tools/components/**",
+                    "C:/___/Programowanie/esp/.espressif/v5.4.4/esp-idf/components/**",
+                    "C:/___/Programowanie/Projekty/ESP/esp_nixie_v2/components/**"
                 ],
-                "limitSymbolsToIncludedHeaders": false
+                "limitSymbolsToIncludedHeaders": true
             },
             "intelliSenseMode": "windows-gcc-x64"
         }

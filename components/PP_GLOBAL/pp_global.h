@@ -37,6 +37,12 @@
 #define ESP_UUID_LEN_128    16
 #define MAX_BONDED_DEVICES  5
 
+#define MAX_INT_48_VAL 281474976710655
+
+/* TEST */
+// #define TEST_PRINT_RINGTONE
+#define PRINT_RINGTONE_CNT  2000
+
 
 /* Structures */
 typedef enum {
@@ -168,6 +174,7 @@ typedef struct {
     uint32_t red;
     uint32_t green;
     uint32_t blue;
+    uint8_t store;
 }led_update_t;
 
 /* Variables declarations */
@@ -190,5 +197,6 @@ extern led_update_t current_led[2];
 extern uint8_t gatts_if_curr;
 extern uint8_t bt_connection_id_curr;
 extern uint8_t bt_wifi_handle;
+extern bool is_playing;
 
 #endif
